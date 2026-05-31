@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Virtualenvs
+.venv/
+venv/
+env/
+
+# Environments & secrets — NEVER commit real keys
+.env
+.env.*
+!.env.example
+!.env.demo.example
+
+# Local seed material (your demo episodes)
+episodes/
+*.mp4
+*.mov
+*.mkv
+*.webm
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/

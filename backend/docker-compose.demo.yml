@@ -1,0 +1,70 @@
+# docker-compose.demo.yml — the whole backend demo on one machine, one command:
+#
+#     cp .env.demo.example .env.demo      # then fill in R2 + Deepgram + Anthropic keys
+#     docker compose -f docker-compose.demo.yml up --build
+#
+# Brings up:
+#   postgres   — the demo database (migrations + demo-org seed run on api boot)
+#   api        — FastAPI in DEMO_MODE (no Clerk, no Stripe) + the Inngest worker
+#                functions (same process, served at /api/inngest)
+#   inngest    — Inngest dev server, so "try your own" live uploads actually
+#                process locally without an Inngest Cloud account
+#
+# The frontend runs separately (`npm run dev` in the Next.js project) and points
+# NEXT_PUBLIC_API_URL at http://localhost:8000.
+#
+# To populate the instant showcase, after the stack is up run (on the host,
+# with the same .env.demo loaded):
+#     python seed_demo.py ./episodes/one.mp4 ./episodes/two.mp4
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: clipper
+      POSTGRES_PASSWORD: clipper
+      POSTGRES_DB: clipper
+    ports:
+      - "5432:5432"
+    volumes:
+      - clipper_demo_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clipper -d clipper"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build: .
+    env_file: .env.demo
+    environment:
+      # DEMO_MODE is the whole point — overrides whatever's in .env.demo.
+      DEMO_MODE: "true"
+      DATABASE_URL: postgresql+asyncpg://clipper:clipper@postgres:5432/clipper
+      CORS_ORIGINS: http://localhost:3000
+      # APP_ENV=development makes the Inngest SDK use the local dev server
+      # instead of Inngest Cloud (verified: the client passes is_production=
+      # not is_dev). INNGEST_BASE_URL then points the SDK's API + event
+      # origins at the dev-server container (verified honored in dev mode).
+      APP_ENV: "development"
+      INNGEST_BASE_URL: "http://inngest:8288"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Dockerfile CMD already runs `alembic upgrade head` (creates tables +
+    # seeds the demo org via 0004) before launching uvicorn.
+
+  inngest:
+    image: inngest/inngest:latest
+    # -u tells the dev server where to find our function endpoint so it can
+    # sync the registered functions (process-job + the cleanup crons).
+    command: ["inngest", "dev", "-u", "http://api:8000/api/inngest"]
+    ports:
+      - "8288:8288" # Inngest dev UI — open to watch jobs run
+    depends_on:
+      - api
+
+volumes:
+  clipper_demo_pg:

@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: dark; }
+
+html,
+body {
+  background: #0c0c0b;
+  color: #e7e5e4;
+  padding: 0;
+  margin: 0;
+}
+
+/* `animate-pulse-soft` is referenced throughout the artifact but was never
+   defined there — restore it so the live status dots actually pulse. */
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.animate-pulse-soft {
+  animation: pulse-soft 2.2s ease-in-out infinite;
+}

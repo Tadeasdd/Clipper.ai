@@ -4,6 +4,7 @@ import { Router } from 'express';
 import { q } from '../db/index.js';
 import { id } from '../lib/ids.js';
 import { createUploadTarget, saveStream, objectInfo } from '../storage/index.js';
+import { enqueue } from '../pipeline/index.js';
 
 const r = Router();
 
@@ -26,6 +27,7 @@ r.post('/', async (req, res, next) => {
     );
     const upload = sourceUrl ? null : await createUploadTarget(recId, filename);
     if (upload) await q('UPDATE recordings SET storage_key = $1 WHERE id = $2', [upload.key, recId]);
+    if (sourceUrl) await enqueue(recId, 'ingest'); // file path enqueues on upload completion
     res.status(201).json({ recordingId: recId, status, upload });
   } catch (e) { next(e); }
 });
@@ -38,6 +40,7 @@ r.put('/upload/:id', async (req, res, next) => {
     if (rec.rows[0].status !== 'awaiting_upload') return res.status(409).json({ error: `recording is ${rec.rows[0].status}` });
     const { bytes } = await saveStream(rec.rows[0].storage_key, req);
     await q(`UPDATE recordings SET status = 'queued' WHERE id = $1`, [req.params.id]);
+    await enqueue(req.params.id, 'ingest'); // B3: the upload is what arms the pipeline
     res.json({ recordingId: req.params.id, bytes, status: 'queued' });
   } catch (e) { next(e); }
 });

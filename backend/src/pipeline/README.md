@@ -1,15 +1,11 @@
-# Pipeline workers (Stage B3)
+# Pipeline (Stage B3)
 
-Each module is one stage of the internal operating system. They run as queue
-workers (BullMQ/Redis or pg-boss recommended), never inside HTTP handlers.
+`pipeline_jobs` in Postgres IS the queue — `queue.js` claims rows with
+`FOR UPDATE SKIP LOCKED`, runs the stage handler, enqueues the next stage,
+and retries failures with backoff (3 attempts, then parked as `failed` for
+the ops retry button). Run in-process with the API (default) or as separate
+processes via `npm run worker`; SKIP LOCKED makes any mix safe.
 
-| Order | Module          | Responsibility                                              |
-|-------|-----------------|-------------------------------------------------------------|
-| 1     | `ingest.js`     | Pull file/URL into object storage, probe duration/format    |
-| 2     | `transcribe.js` | Provider-agnostic transcription (word-level timestamps)     |
-| 3     | `analyze.js`    | NLP + multimodal pass: retention moments, emotional peaks, hooks, educational/storytelling segments |
-| 4     | `score.js`      | Score candidates; later retrained on Stage B6 performance data |
-| 5     | `generate.js`   | Cut clips, reframe (9:16), burn captions, hook variants, platform formatting |
-
-Each worker: reads a job, updates `pipeline_jobs.stage_status`, writes outputs,
-enqueues the next stage. Failures are retryable and visible in the ops dashboard.
+ingest → transcribe → analyze → score → generate · see each module's header
+for what's real today vs. provider-gated (ASR via `TRANSCRIPTION_PROVIDER`,
+hooks via `LLM_PROVIDER`).

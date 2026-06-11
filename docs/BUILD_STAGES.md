@@ -89,7 +89,7 @@ Secondary by design. Four surfaces only:
   (`npm run smoke`) run in CI against a Postgres service container —
   including the done-criterion: bytes on disk, recording in the queue.
 
-### B3 — The pipeline (the heart of the company)
+### B3 — The pipeline (the heart of the company) (✅)
 Queue workers (BullMQ + Redis or pg-boss), one per stage — stubs are in
 `backend/src/pipeline/`:
 1. `ingest` — probe media, normalize, store
@@ -100,7 +100,17 @@ Queue workers (BullMQ + Redis or pg-boss), one per stage — stubs are in
 5. `generate` — cut, reframe to 9:16, caption burn-in, hook variants,
    platform-specific formatting (ffmpeg)
 - **Done when:** one recording in → scored, rendered clip candidates out,
-  visible in the ops board with per-stage status and retry.
+  visible in the ops board with per-stage status and retry. ✅
+  Done: `pipeline_jobs` is the queue itself (FOR UPDATE SKIP LOCKED; workers
+  run in-process or via `npm run worker`), with 3-attempt backoff and a retry
+  endpoint. The analyze stage works on REAL signal — ebur128 momentary
+  loudness → z-scored windows → region-grown moments; generate renders real
+  9:16 mp4s with ffmpeg (center-crop for video, branded waveform for audio).
+  ASR and hooks sit behind provider seams (`builtin` offline default;
+  Deepgram + Anthropic adapters written, gated on keys). The CI smoke plants
+  three loud bursts in a synthetic podcast and asserts the rendered clips
+  land on them, the asset endpoint serves playable mp4, and a failing
+  source URL parks → retries on demand.
 
 ### B4 — Review workflow
 - Internal QA decisions (`POST /api/review/:clipId/decision`) with the

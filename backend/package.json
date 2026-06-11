@@ -7,7 +7,9 @@
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "smoke": "node scripts/smoke.mjs",
-    "migrate": "node -e \"import('./src/db/index.js').then(m=>m.migrate()).then(()=>process.exit(0))\""
+    "migrate": "node -e \"import('./src/db/index.js').then(m=>m.migrate()).then(()=>process.exit(0))\"",
+    "worker": "node -e \"import('./src/pipeline/index.js').then(m=>m.startWorkers())\"",
+    "smoke:pipeline": "node scripts/smoke-pipeline.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1066.0",

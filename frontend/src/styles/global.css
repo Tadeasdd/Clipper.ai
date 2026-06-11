@@ -1,0 +1,38 @@
+/* Extracted from the monolith's runtime-injected A11Y_CSS + PROGRESS_CSS
+
+   (F2 refactor) — now a static stylesheet instead of head injection. */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  html { scroll-behavior: auto !important; }
+  .reveal { opacity: 1 !important; transform: none !important; }
+}
+.skip-link {
+  position: fixed; top: 0; left: 0; z-index: 100; margin: 8px; padding: 10px 16px;
+  background: #53fc18; color: #000; font-weight: 600; font-size: 14px;
+  border-radius: 8px; text-decoration: none; transform: translateY(-150%);
+  transition: transform 0.2s ease;
+}
+.skip-link:focus { transform: translateY(0); outline: none; box-shadow: 0 0 0 2px rgba(83,252,24,0.6); }
+
+@keyframes clipperSheen { 0% { transform: translateX(-185%); } 100% { transform: translateX(185%); } }
+.clip-pbar-fill {
+  position: relative; height: 100%; border-radius: 9999px; overflow: hidden;
+  background: linear-gradient(90deg, #2fcf0c 0%, #53fc18 58%, #a6ff63 100%);
+  box-shadow: 0 0 14px rgba(83,252,24,0.5), 0 0 4px rgba(83,252,24,0.9);
+  transition: none;
+}
+.clip-pbar-sheen {
+  position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background: linear-gradient(100deg, transparent 38%, rgba(255,255,255,0.5) 50%, transparent 62%);
+  animation: clipperSheen 1.5s linear infinite; will-change: transform;
+}
+.clip-pbar-edge {
+  position: absolute; top: 0; bottom: 0; right: 0; width: 9px; pointer-events: none; border-radius: 9999px;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.85) 100%);
+}

@@ -34,7 +34,7 @@ The Vite dev server proxies `/api` to `localhost:8080`.
 
 The full staged plan (F1–F5 frontend, B1–B7 backend, with dependencies and
 done-criteria) lives in [`docs/BUILD_STAGES.md`](docs/BUILD_STAGES.md).
-Current status: **F1 ✅ (site builds clean) · B1 ✅ (API boots, schema written)**.
+Current status: **F1 ✅ · F2 ✅ (modular + routed + code-split) · B1 ✅**.
 
 ## Deploy
 

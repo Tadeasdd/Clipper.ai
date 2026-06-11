@@ -20,7 +20,7 @@ Stages are ordered so every stage ships something usable. Frontend stages are
 - Deploy `frontend/dist` to any static host (Vercel/Netlify/Cloudflare Pages).
 - **Done when:** site is on a domain, PostHog receives real events.
 
-### F2 — Split the monolith
+### F2 — Split the monolith (✅)
 - Break `App.jsx` (~7.7k lines) into modules: `pages/`, `components/`,
   `lib/` (track, SEO, demo pipeline). No behavior change — pure refactor,
   protected by the F1 build as a regression check.
@@ -28,7 +28,10 @@ Stages are ordered so every stage ships something usable. Frontend stages are
   (better SEO than runtime-injected canonicals alone).
 - Remove `NEON_SHIM_CSS` (redundant now that real Tailwind generates the
   arbitrary-value classes).
-- **Done when:** every page has a URL, bundle is code-split per route.
+- **Done when:** every page has a URL, bundle is code-split per route. ✅
+  Done: 17 modules (lib/, components/, pages/, studio/), react-router URLs for
+  all 9 routes, shim removed, eager JS cut 409→270 KB, happy-dom route smoke
+  test (`npm run smoke`) wired into CI.
 
 ### F3 — Lead capture wired to backend
 - The waitlist/strategy-call forms currently capture to PostHog only.

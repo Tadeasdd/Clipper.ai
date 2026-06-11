@@ -1,7 +1,5 @@
 @import "tailwindcss";
+@import "./styles/global.css";
 
-/* The sandbox was built for a Tailwind-less artifact runtime and ships its own
-   arbitrary-value shim (NEON_SHIM_CSS). With a real Tailwind v4 build the JIT
-   generates those classes natively; the shim stays harmless. */
 html, body, #root { min-height: 100%; }
 body { background: #000; }

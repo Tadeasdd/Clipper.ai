@@ -23,9 +23,11 @@ docs/       BUILD_STAGES.md (the roadmap) · ARCHITECTURE.md
 cd frontend && npm install && npm run dev      # http://localhost:5173
 npm run build                                  # static output in dist/
 
-# Backend (Stage B1 skeleton)
+# Backend (needs Postgres; migrations run on boot)
+createdb clipper   # or: docker run -e POSTGRES_USER=clipper -e POSTGRES_PASSWORD=clipper -e POSTGRES_DB=clipper -p 5432:5432 postgres:16
 cd backend && npm install && cp .env.example .env && npm run dev   # :8080
-curl localhost:8080/api/health
+curl localhost:8080/api/health   # {"ok":true,"db":"up"}
+npm run smoke                    # 14-assertion end-to-end check
 ```
 
 The Vite dev server proxies `/api` to `localhost:8080`.
@@ -34,7 +36,7 @@ The Vite dev server proxies `/api` to `localhost:8080`.
 
 The full staged plan (F1–F5 frontend, B1–B7 backend, with dependencies and
 done-criteria) lives in [`docs/BUILD_STAGES.md`](docs/BUILD_STAGES.md).
-Current status: **F1 ✅ · F2 ✅ (modular + routed + code-split) · B1 ✅**.
+Current status: **F1–F3 ✅ · B1–B2 ✅** — site is modular/routed, lead form posts to the API, intake + clients + leads are live against Postgres.
 
 ## Deploy
 

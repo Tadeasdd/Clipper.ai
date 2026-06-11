@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ArrowUpRight, Briefcase, Check, CheckCircle2, Clock, Database, Globe, Heart, MessageCircle, Play, Scissors, Share2, Shield, Sparkles, Zap } from 'lucide-react';
 import { GlowOrb, Reveal, useReveal } from './ui.jsx';
 import { track } from '../lib/analytics.jsx';
+import { postLead } from '../lib/api.js';
 import { DEMO_CLIPS, SAMPLE_RECORDINGS } from '../lib/demo.jsx';
 import { prefersReducedMotion, useLoopProgress } from '../lib/motion.jsx';
 import { ClipFrame } from '../studio/views.jsx';
@@ -2019,32 +2020,13 @@ function Waitlist({ accent = '#53fc18' }) {
   const [email, setEmail] = useState('');
   const [kind, setKind] = useState(''); // optional lead qualifier — what they make
   const [submitted, setSubmitted] = useState(false);
-  const [count, setCount] = useState(0);
-  const [position, setPosition] = useState(1);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [todayCount, setTodayCount] = useState(0);
 
-  // Load real waitlist count on mount
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await window.storage.get('waitlist:meta', true);
-        if (res && res.value) {
-          const meta = JSON.parse(res.value);
-          setCount(meta.totalSignups || 0);
-          // Count signups from today
-          const today = new Date().toISOString().slice(0, 10);
-          if (meta.dailySignups && meta.dailySignups[today]) {
-            setTodayCount(meta.dailySignups[today]);
-          }
-        }
-      } catch (e) {
-        // No existing data — use defaults
-      }
-    })();
-  }, []);
-
+  // F3: submissions go to the operations backend (POST /api/leads) instead of
+  // the artifact sandbox's persistent-storage API, which doesn't exist on the real
+  // site. The endpoint is idempotent per email, so resubmits succeed quietly
+  // rather than erroring.
   const submit = async () => {
     const trimmed = email.trim().toLowerCase();
     setError('');
@@ -2054,46 +2036,16 @@ function Waitlist({ accent = '#53fc18' }) {
     }
     setLoading(true);
     try {
-      // Check for dedup
-      const existingRes = await window.storage.get(`waitlist:email:${trimmed}`, true).catch(() => null);
-      if (existingRes && existingRes.value) {
-        const existing = JSON.parse(existingRes.value);
-        setPosition(existing.position);
-        track('book_call_requested', { duplicate: true, contentKind: kind || undefined });
-        setSubmitted(true);
-        setLoading(false);
-        return;
-      }
-
-      // Load meta
-      let meta = { totalSignups: 0, dailySignups: {} };
-      try {
-        const metaRes = await window.storage.get('waitlist:meta', true);
-        if (metaRes && metaRes.value) meta = JSON.parse(metaRes.value);
-      } catch (e) {}
-
-      const today = new Date().toISOString().slice(0, 10);
-      meta.totalSignups = (meta.totalSignups || 0) + 1;
-      meta.dailySignups = meta.dailySignups || {};
-      meta.dailySignups[today] = (meta.dailySignups[today] || 0) + 1;
-
-      const newPosition = meta.totalSignups;
-
-      // Save email record
-      await window.storage.set(`waitlist:email:${trimmed}`, JSON.stringify({
+      const lead = await postLead({
         email: trimmed,
-        position: newPosition,
-        contentKind: kind || null,
-        signedUpAt: new Date().toISOString(),
-      }), true);
-
-      // Save meta
-      await window.storage.set('waitlist:meta', JSON.stringify(meta), true);
-
-      setCount(newPosition);
-      setPosition(newPosition);
-      setTodayCount(meta.dailySignups[today]);
-      track('book_call_requested', { position: newPosition, contentKind: kind || undefined });
+        contentKind: kind || undefined,
+        source: 'waitlist',
+        meta: {
+          page: typeof window !== 'undefined' ? window.location.pathname : undefined,
+          referrer: typeof document !== 'undefined' ? document.referrer || undefined : undefined,
+        },
+      });
+      track('book_call_requested', { duplicate: !!lead.duplicate, contentKind: kind || undefined });
       setSubmitted(true);
     } catch (e) {
       setError("Something went wrong. Please try again.");

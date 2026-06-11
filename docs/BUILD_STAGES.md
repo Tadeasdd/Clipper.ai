@@ -33,10 +33,16 @@ Stages are ordered so every stage ships something usable. Frontend stages are
   all 9 routes, shim removed, eager JS cut 409→270 KB, happy-dom route smoke
   test (`npm run smoke`) wired into CI.
 
-### F3 — Lead capture wired to backend
+### F3 — Lead capture wired to backend (✅)
 - The waitlist/strategy-call forms currently capture to PostHog only.
   Point them at `POST /api/clients` + a `/api/leads` endpoint (B2).
 - **Depends on:** B1–B2.
+- Done: the form was silently broken in production — it called the Claude
+  artifact sandbox's `window.storage`, which doesn't exist on a real site.
+  Now posts to `POST /api/leads` (idempotent per email) via `lib/api.js`;
+  verified by a DOM-driven integration test (`scripts/f3-integration.mjs`)
+  that types into the built form, clicks submit, and finds the row in
+  Postgres.
 
 ### F4 — Operations dashboard (the primary product)
 Internal app, separate route tree (`/ops`), role-gated:
@@ -71,12 +77,17 @@ Secondary by design. Four surfaces only:
   transcripts, clips, review_events, publish_jobs, clip_metrics.
 - **Done when:** schema applied to a real Postgres, API deployed.
 
-### B2 — Intake + client records
+### B2 — Intake + client records (✅)
 - Real `POST /api/intake`: presigned S3 upload or URL pull; create
   `recordings` row; feed the ops queue.
 - `clients` CRUD + `leads` endpoint for F3.
 - **Done when:** a real podcast file lands in object storage and shows up
-  in `GET /api/intake/queue`.
+  in `GET /api/intake/queue`. ✅
+  Done: pg pool + forward-only migration runner (`migrations/`), prefixed
+  ids, storage drivers behind one interface (local disk for dev, presigned
+  S3 for prod), real intake/clients/leads routes, and a 14-assertion smoke
+  (`npm run smoke`) run in CI against a Postgres service container —
+  including the done-criterion: bytes on disk, recording in the queue.
 
 ### B3 — The pipeline (the heart of the company)
 Queue workers (BullMQ + Redis or pg-boss), one per stage — stubs are in

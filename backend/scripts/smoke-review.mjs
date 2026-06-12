@@ -140,4 +140,14 @@ assert(r.data.events.map((e) => e.decision).join(',') === 'changes,resubmit,reje
   'the changes loop is fully audited');
 
 await db.end();
+
+// ── ops analytics (the F4.6 slice of B6) ────────────────────────────────────
+r = await j('GET', '/api/analytics/ops');
+assert(r.status === 200 && r.data.approvalRate >= 0 && r.data.approvalRate <= 1 && r.data.verdicts >= 5,
+  `approval rate computed from real verdicts (${r.data.approvalRate} over ${r.data.verdicts})`);
+assert(r.data.medianTurnaroundHours === null || r.data.medianTurnaroundHours > 0,
+  'median turnaround is null (no finished pipelines) or positive');
+assert(r.data.scoreCorrelation === null,
+  'score correlation stays honestly null until B6 has published performance');
+
 console.log('\nB4 smoke passed: the full status machine travels via the API — with sign-off enforced.');

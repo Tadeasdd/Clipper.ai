@@ -184,13 +184,39 @@ Queue workers (BullMQ + Redis or pg-boss), one per stage — stubs are in
   file. Both in CI. The ops publishing queue (F4.6) now renders live jobs
   with errors, retry, and delivery links.
 
-### B6 — Measurement + the optimization loop
+### B6 — Measurement + the optimization loop (✅)
 - Pollers pull per-post metrics into `clip_metrics`.
 - Client report aggregation (`GET /api/analytics/clients/:id`) for F5.
 - The differentiator: correlate `clips.score` with realized performance and
   feed it back into the B3 scoring stage. This loop is the moat.
 - **Done when:** weekly client report generates itself; score model retrains
-  on ≥ one cycle of real data.
+  on ≥ one cycle of real data. ✅
+  Done in three phases:
+  - **B6.1** ingestion: a capture poller (the third queue, same SKIP LOCKED
+    shape on purpose) claims published jobs whose `metrics_next_at` passed
+    and appends `clip_metrics` rows; first capture lands the moment a job
+    publishes. `METRICS_DRIVER` seam: `local` (default) simulates
+    deterministically from the publish id + elapsed time — never from
+    `clips.score`, so the loop can't be fooled by our own simulator; `live`
+    carries a real YouTube `videos.list` driver (fields the Data API doesn't
+    expose stay null rather than guessed).
+  - **B6.2** reports: `GET /api/analytics/clients/:id` is real — latest
+    capture per post, views-weighted retention, exact totals, `?days`
+    window. The weekly report IS this payload; it generates itself.
+  - **B6.3** the loop: Spearman correlation of score vs client-normalized
+    performance, per-signal correlations, and a retrain that steps the
+    weights toward the rewarded signals — bounded (LR 0.25), floored,
+    gated on a minimum sample, append-only `scoring_weights` history with
+    the evidence basis. `score.js` consumes the latest weights and records
+    which ones it used in its payload. `POST /api/analytics/retrain` runs a
+    cycle; the ops analytics surface shows ρ + weights with a retrain
+    button.
+  Smokes: `npm run smoke:metrics` (39 assertions, including a PLANTED
+  signal→performance relationship the loop must detect and move toward) and
+  the pipeline smoke's B6 continuation (the real published clip gets
+  captured, appears in the client report, and its score stage records the
+  retrained weights it used). Both in CI. Under the local driver the
+  correlation reads near zero by design; live drivers make it the model.
 
 ### B7 — Auth, roles, hardening
 - Roles per the org: ops, editor, reviewer, account_manager, client

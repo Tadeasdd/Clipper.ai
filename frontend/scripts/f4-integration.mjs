@@ -10,15 +10,24 @@ import { readdirSync } from 'node:fs';
 GlobalRegistrator.register({ url: 'http://localhost/ops/review' });
 document.body.innerHTML = '<div id="root"></div>';
 if (!window.IntersectionObserver) window.IntersectionObserver = class { observe(){} unobserve(){} disconnect(){} };
-sessionStorage.setItem('clipper_ops_gate', 'clipper-ops');
 
-const api = (m, p, b) => rawFetch('http://localhost:8080' + p, { method: m, headers: { 'content-type': 'application/json' }, body: b ? JSON.stringify(b) : undefined }).then((r) => r.json());
+// B7: sign in for real — bootstrap-or-login the fixed smoke ops account, then
+// hand the app the bearer token the way the login screen would.
+const OPS_CREDS = { email: 'ops@smoke.clipper.ai', password: 'smoke-ops-password' };
+let TOKEN = null;
+const api = (m, p, b) => rawFetch('http://localhost:8080' + p, {
+  method: m,
+  headers: { 'content-type': 'application/json', ...(TOKEN ? { authorization: `Bearer ${TOKEN}` } : {}) },
+  body: b ? JSON.stringify(b) : undefined,
+}).then((r) => r.json());
+await api('POST', '/api/auth/bootstrap', OPS_CREDS); // 201 once, 409 after
+TOKEN = (await api('POST', '/api/auth/login', OPS_CREDS)).token;
+if (!TOKEN) { console.error('FAIL: could not sign in as the smoke ops account'); process.exit(1); }
+localStorage.setItem('clipper_ops_token', TOKEN);
 
-// seed: a fresh clip in awaiting_review + a reviewer identity in localStorage
+// seed: a fresh clip in awaiting_review (decisions are by the ops session)
 const stamp = Date.now();
 const cli = (await api('POST', '/api/clients', { name: `F4 Desk Co ${stamp}` })).id;
-const me = await api('POST', '/api/users', { email: `desk+${stamp}@clipper.ai`, role: 'reviewer' });
-localStorage.setItem('clipper_ops_identity', JSON.stringify(me));
 // recording + clip rows via the seeding trick the B4 smoke uses (pg direct)
 const { default: pg } = await import('../../backend/node_modules/pg/lib/index.js');
 const db = new pg.Pool({ connectionString: 'postgres://clipper:clipper@localhost:5432/clipper' });
@@ -45,7 +54,7 @@ await settle(1800);
 const checks = [];
 let html = document.getElementById('root').innerHTML;
 checks.push(['desk renders the seeded clip', html.includes(`F4 Desk Co ${stamp}`) && html.includes(hook)]);
-checks.push(['identity badge shows the reviewer', html.includes(`desk+${stamp}@clipper.ai`)]);
+checks.push(['account badge shows the signed-in ops user', html.includes('ops@smoke.clipper.ai')]);
 checks.push(['worklist tabs with counts', /To review.*In edit.*To send.*With client/s.test(html)]);
 
 // type a note, click approve on OUR card (find the card containing our hook)
@@ -66,7 +75,7 @@ if (cards.length === 1) {
   const { rows } = await db.query('SELECT status FROM clips WHERE id = $1', [clip]);
   checks.push(['UI approve → approved_internal in Postgres', rows[0].status === 'approved_internal']);
   const hist = await api('GET', `/api/review/${clip}/history`);
-  checks.push(['audit row carries the typed note + reviewer', hist.events[0]?.notes === 'approved from the desk UI' && hist.events[0]?.reviewer_email === `desk+${stamp}@clipper.ai`]);
+  checks.push(['audit row carries the typed note + the session identity', hist.events[0]?.notes === 'approved from the desk UI' && hist.events[0]?.reviewer_email === 'ops@smoke.clipper.ai']);
   // after refresh, the card leaves "To review" (it's now in "To send")
   await settle(900);
   html = document.getElementById('root').innerHTML;

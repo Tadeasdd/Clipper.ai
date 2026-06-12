@@ -19,6 +19,7 @@ import publishRoutes from './routes/publish.js';
 import analyticsRoutes from './routes/analytics.js';
 import clientsRoutes from './routes/clients.js';
 import usersRoutes from './routes/users.js';
+import authRoutes from './routes/auth.js';
 import leadsRoutes from './routes/leads.js';
 import { migrate, q } from './db/index.js';
 import { startWorkers } from './pipeline/index.js';
@@ -47,7 +48,8 @@ app.use('/api/analytics', analyticsRoutes); // 9–10. performance + feedback lo
 
 // ── Account management + marketing-site lead capture ──────────────────────
 app.use('/api/clients', clientsRoutes);
-app.use('/api/users', usersRoutes);     // B4: attributable reviews (B7 precursor)
+app.use('/api/auth', authRoutes);       // B7: sessions, the only door
+app.use('/api/users', usersRoutes);     // B4→B7: account management (ops-gated)
 app.use('/api/leads', leadsRoutes);     // F3: waitlist / strategy-call form
 
 // Central error handler — routes call next(e); nothing leaks stack traces.

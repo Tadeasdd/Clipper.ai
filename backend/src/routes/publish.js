@@ -10,6 +10,7 @@ import { id } from '../lib/ids.js';
 import { encryptJson } from '../lib/crypto.js';
 import { objectInfo, localPathFor } from '../storage/index.js';
 import { PLATFORMS, scheduleClip } from '../publish/index.js';
+import { requireAuth, INTERNAL } from '../lib/auth.js';
 
 const r = Router();
 const CONN_COLS = 'id, client_id, platform, handle, status, created_at'; // never credentials_enc
@@ -17,7 +18,7 @@ const CONN_COLS = 'id, client_id, platform, handle, status, created_at'; // neve
 // POST /api/publish/connections { clientId, platform, handle?, credentials }
 // Re-connecting the same client+platform replaces the stored credentials
 // (that's what an OAuth re-auth is).
-r.post('/connections', async (req, res, next) => {
+r.post('/connections', requireAuth('ops', 'account_manager'), async (req, res, next) => {
   try {
     const { clientId, platform, handle, credentials } = req.body || {};
     if (!PLATFORMS.includes(platform)) return res.status(400).json({ error: `platform must be one of ${PLATFORMS.join(' | ')}` });
@@ -37,7 +38,7 @@ r.post('/connections', async (req, res, next) => {
 });
 
 // GET /api/publish/connections?clientId=
-r.get('/connections', async (req, res, next) => {
+r.get('/connections', requireAuth(...INTERNAL), async (req, res, next) => {
   try {
     const { clientId } = req.query;
     const { rows } = clientId
@@ -49,7 +50,7 @@ r.get('/connections', async (req, res, next) => {
 
 // POST /api/publish/connections/:id/revoke — kills future publishes; queued
 // jobs for it will park with a visible error.
-r.post('/connections/:id/revoke', async (req, res, next) => {
+r.post('/connections/:id/revoke', requireAuth('ops', 'account_manager'), async (req, res, next) => {
   try {
     const { rows } = await q(
       `UPDATE platform_connections SET status = 'revoked' WHERE id = $1 RETURNING ${CONN_COLS}`,
@@ -61,7 +62,7 @@ r.post('/connections/:id/revoke', async (req, res, next) => {
 
 // POST /api/publish { clipId, platform, scheduledAt? } — schedule one clip on
 // one platform. The client must have an active connection for it.
-r.post('/', async (req, res, next) => {
+r.post('/', requireAuth(...INTERNAL), async (req, res, next) => {
   try {
     const { clipId, platform, scheduledAt } = req.body || {};
     if (!clipId || !PLATFORMS.includes(platform)) {
@@ -76,7 +77,7 @@ r.post('/', async (req, res, next) => {
       [clip.rows[0].client_id, platform]);
     if (!conn.rowCount) return res.status(409).json({ error: `client has no active ${platform} connection — connect it first` });
 
-    const job = await scheduleClip({ clipId, connectionId: conn.rows[0].id, platform, scheduledAt });
+    const job = await scheduleClip({ clipId, connectionId: conn.rows[0].id, platform, scheduledAt, scheduledBy: req.user.id });
     if (!job) {
       return res.status(409).json({
         error: `clip is '${clip.rows[0].status}' — only approved clips can be scheduled (the sign-off guarantee)`,
@@ -89,13 +90,14 @@ r.post('/', async (req, res, next) => {
 
 // GET /api/publish/queue — the ops surface: what ships next, what shipped,
 // what parked. Failed first (they need a human), then by schedule.
-r.get('/queue', async (_req, res, next) => {
+r.get('/queue', requireAuth(...INTERNAL), async (_req, res, next) => {
   try {
     const { rows } = await q(`
       SELECT pj.id, pj.clip_id, pj.platform, pj.scheduled_at, pj.published_at,
              pj.status, pj.attempts, pj.error, pj.external_url,
-             cl.hook, c.name AS client_name, pc.handle
+             cl.hook, c.name AS client_name, pc.handle, u.email AS scheduled_by_email
       FROM publish_jobs pj
+      LEFT JOIN users u ON u.id = pj.scheduled_by
       JOIN clips cl ON cl.id = pj.clip_id
       JOIN recordings r ON r.id = cl.recording_id
       JOIN clients c ON c.id = r.client_id
@@ -107,12 +109,12 @@ r.get('/queue', async (_req, res, next) => {
 });
 
 // POST /api/publish/:id/retry — re-arm a parked publish.
-r.post('/:id/retry', async (req, res, next) => {
+r.post('/:id/retry', requireAuth(...INTERNAL), async (req, res, next) => {
   try {
     const { rows } = await q(`
       UPDATE publish_jobs SET status = 'scheduled', run_after = now(), error = NULL,
-             attempts = 0, updated_at = now()
-      WHERE id = $1 AND status = 'failed' RETURNING id, status`, [req.params.id]);
+             attempts = 0, updated_at = now(), scheduled_by = $2
+      WHERE id = $1 AND status = 'failed' RETURNING id, status`, [req.params.id, req.user.id]);
     if (!rows.length) return res.status(409).json({ error: 'only failed publishes can be retried' });
     res.status(202).json(rows[0]);
   } catch (e) { next(e); }
@@ -120,7 +122,7 @@ r.post('/:id/retry', async (req, res, next) => {
 
 // POST /api/publish/:id/cancel — pull a scheduled publish. The clip returns
 // to 'approved' only when no other live job still holds it.
-r.post('/:id/cancel', async (req, res, next) => {
+r.post('/:id/cancel', requireAuth(...INTERNAL), async (req, res, next) => {
   try {
     const { rows } = await q(`
       UPDATE publish_jobs SET status = 'canceled', updated_at = now()
@@ -138,7 +140,7 @@ r.post('/:id/cancel', async (req, res, next) => {
 
 // GET /api/publish/outbox/:platform/:file — serve what the local adapter
 // delivered (the receipt the smoke and the ops UI verify against).
-r.get('/outbox/:platform/:file', async (req, res, next) => {
+r.get('/outbox/:platform/:file', requireAuth(...INTERNAL), async (req, res, next) => {
   try {
     const { platform, file } = req.params;
     if (!PLATFORMS.includes(platform) || !/^[\w.-]+\.(mp4|json)$/.test(file)) {

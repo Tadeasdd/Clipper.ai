@@ -16,9 +16,11 @@ const BASE = process.env.BASE || 'http://localhost:8080';
 const STORAGE = process.env.STORAGE_DIR || path.resolve('storage');
 const db = new pg.Pool({ connectionString: process.env.DATABASE_URL || 'postgres://clipper:clipper@localhost:5432/clipper' });
 
-const j = async (method, p, body) => {
+import { opsSession, mintUser } from './lib-smoke-auth.mjs';
+const OPS = await opsSession(BASE); // B7: the API has one door now
+const j = async (method, p, body, token) => {
   const res = await fetch(BASE + p, {
-    method, headers: { 'content-type': 'application/json' },
+    method, headers: { 'content-type': 'application/json', authorization: `Bearer ${token || OPS}` },
     body: body ? JSON.stringify(body) : undefined,
   });
   return { status: res.status, data: await res.json().catch(() => ({})) };

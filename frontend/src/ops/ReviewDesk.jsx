@@ -12,7 +12,7 @@
    someone else decided first, and the desk just refreshes to the truth. */
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ops, usePoll, getIdentity, fmtAgo, fmtClock } from './api.js';
+import { ops, usePoll, fmtAgo, fmtClock } from './api.js';
 import { PageTitle, Panel, PanelHead, ErrorBand, Empty, StatusChip, Label, Mono, T, btnStyle } from './OpsApp.jsx';
 import { SignalBlock, ClipPreview } from './ClipGrid.jsx';
 
@@ -65,9 +65,7 @@ function Actions({ clip, tab, onDone }) {
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(null);
   const [err, setErr] = useState(null);
-  const me = getIdentity();
   const run = async (name, fn) => {
-    if (!me) { setErr(new Error('pick an identity first (top right)')); return; }
     setBusy(name); setErr(null);
     try { await fn(); onDone?.(); }
     catch (e) {
@@ -75,7 +73,7 @@ function Actions({ clip, tab, onDone }) {
       if (e.status === 409) onDone?.(); // someone got there first — show the truth
     } finally { setBusy(null); }
   };
-  const decide = (decision) => run(decision, () => ops.decide(clip.id, { userId: me.id, decision, notes: notes || undefined }));
+  const decide = (decision) => run(decision, () => ops.decide(clip.id, { decision, notes: notes || undefined }));
   const btn = (name, label, color, fn) => (
     <button key={name} onClick={fn} disabled={!!busy} className="mono" style={{ ...btnStyle(color), opacity: busy && busy !== name ? 0.4 : 1 }}>
       {busy === name ? '…' : label}
@@ -97,13 +95,13 @@ function Actions({ clip, tab, onDone }) {
         <>
           <Mono style={{ fontSize: 10.5, color: T.dim }}>fix the hook on the card, then put it back in review</Mono>
           <div style={{ display: 'flex', gap: 8 }}>
-            {btn('resubmit', 'resubmit for review', T.green, () => run('resubmit', () => ops.resubmit(clip.id, { userId: me?.id })))}
+            {btn('resubmit', 'resubmit for review', T.green, () => run('resubmit', () => ops.resubmit(clip.id, {})))}
           </div>
         </>
       )}
       {tab === 'approved_internal' && (
         <div style={{ display: 'flex', gap: 8 }}>
-          {btn('send', 'send to client', T.green, () => run('send', () => ops.send(clip.id, { userId: me?.id })))}
+          {btn('send', 'send to client', T.green, () => run('send', () => ops.send(clip.id, {})))}
         </div>
       )}
       {tab === 'awaiting_client' && (

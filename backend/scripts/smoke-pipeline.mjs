@@ -13,10 +13,15 @@ import path from 'node:path';
 const BASE = process.env.BASE || 'http://localhost:8080';
 const BURSTS = [[30, 55], [90, 120], [150, 170]];
 
-const j = async (method, p, body, raw) => {
+import { opsSession, mintUser } from './lib-smoke-auth.mjs';
+const OPS = await opsSession(BASE); // B7: the API has one door now
+const j = async (method, p, body, raw, token) => {
   const res = await fetch(BASE + p, {
     method,
-    headers: raw ? { 'content-type': 'video/mp4' } : { 'content-type': 'application/json' },
+    headers: {
+      ...(raw ? { 'content-type': 'video/mp4' } : { 'content-type': 'application/json' }),
+      authorization: `Bearer ${token || OPS}`,
+    },
     body: raw ? body : body ? JSON.stringify(body) : undefined,
   });
   return { status: res.status, data: await res.json().catch(() => ({})) };
@@ -94,7 +99,7 @@ r = await j('POST', `/api/jobs/${rec}/retry`);
 assert(r.status === 409, 'retry refuses when nothing failed');
 
 // ── the asset endpoint serves a real playable mp4 ───────────────────────────
-const assetRes = await fetch(`${BASE}/api/clips/${top.id}/asset`);
+const assetRes = await fetch(`${BASE}/api/clips/${top.id}/asset`, { headers: { authorization: `Bearer ${OPS}` } });
 assert(assetRes.status === 200 && assetRes.headers.get('content-type')?.includes('video/mp4'), 'asset endpoint serves video/mp4');
 const bytes = Buffer.from(await assetRes.arrayBuffer());
 const assetPath = path.join(tmp, 'served.mp4');
@@ -126,16 +131,16 @@ assert(bad.status === 'processing', 'recording back to processing after retry');
 
 // ── B4 continuation: the REAL rendered clip travels the full machine ────────
 const stamp = Date.now();
-const qa = (await j('POST', '/api/users', { email: `b3qa+${stamp}@clipper.ai`, role: 'reviewer' })).data.id;
-const mgr = (await j('POST', '/api/users', { email: `b3am+${stamp}@clipper.ai`, role: 'account_manager' })).data.id;
-const owner = (await j('POST', '/api/users', { email: `b3client+${stamp}@clipper.ai`, role: 'client', clientId: cli })).data.id;
+const qa = (await mintUser(BASE, OPS, { email: `b3qa+${stamp}@clipper.ai`, role: 'reviewer' })).token;
+const mgr = (await mintUser(BASE, OPS, { email: `b3am+${stamp}@clipper.ai`, role: 'account_manager' })).token;
+const owner = (await mintUser(BASE, OPS, { email: `b3client+${stamp}@clipper.ai`, role: 'client', clientId: cli })).token;
 r = await j('GET', '/api/review/queue');
 assert(r.data.items.some((i) => i.id === top.id && i.rendered), 'rendered clip sits in the review queue');
-r = await j('POST', `/api/review/${top.id}/decision`, { userId: qa, decision: 'approve', notes: 'real cut, real signal' });
+r = await j('POST', `/api/review/${top.id}/decision`, { decision: 'approve', notes: 'real cut, real signal' }, false, qa);
 assert(r.status === 200 && r.data.to === 'approved_internal', 'QA approves the rendered clip');
-r = await j('POST', `/api/review/${top.id}/send`, { userId: mgr });
+r = await j('POST', `/api/review/${top.id}/send`, {}, false, mgr);
 assert(r.status === 200 && r.data.to === 'awaiting_client', 'account manager sends it to the client');
-r = await j('POST', `/api/review/${top.id}/decision`, { userId: owner, decision: 'approve' });
+r = await j('POST', `/api/review/${top.id}/decision`, { decision: 'approve' }, false, owner);
 assert(r.status === 200 && r.data.to === 'approved', 'client signs off → approved');
 r = await j('GET', `/api/jobs/${rec}`);
 assert(r.data.clips.by_status?.approved === 1, 'board rollup shows the approved clip');
@@ -156,14 +161,14 @@ for (;;) {
   if (Date.now() > pubDeadline) { console.error('FAIL: publish never completed'); process.exit(1); }
 }
 assert(pub.status === 'published' && pub.external_url, `scheduler published the real clip (${pub.external_url})`);
-const delivered = await fetch(BASE + pub.external_url);
+const delivered = await fetch(BASE + pub.external_url, { headers: { authorization: `Bearer ${OPS}` } });
 const deliveredBytes = Buffer.from(await delivered.arrayBuffer());
 const deliveredPath = path.join(tmp, 'delivered.mp4');
 await import('node:fs').then((fs) => fs.writeFileSync(deliveredPath, deliveredBytes));
 const deliveredProbe = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-print_format', 'json', '-show_format', deliveredPath]));
 assert(Math.abs(Number(deliveredProbe.format.duration) - clipDur) < 2,
   `delivered file is the playable rendered clip (${Number(deliveredProbe.format.duration).toFixed(1)}s)`);
-const deliveredManifest = await (await fetch(BASE + pub.external_url.replace('.mp4', '.json'))).json();
+const deliveredManifest = await (await fetch(BASE + pub.external_url.replace('.mp4', '.json'), { headers: { authorization: `Bearer ${OPS}` } })).json();
 assert(deliveredManifest.caption === 'The moment the room got loud',
   'delivery manifest carries the editor-rewritten hook as the caption');
 r = await j('GET', `/api/jobs/${rec}`);

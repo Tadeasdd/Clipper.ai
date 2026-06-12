@@ -16,16 +16,16 @@
  *  The FAQ promise is honored in one place: an internal approve goes straight
  *  to 'approved' ONLY if the client opted into auto-publish
  *  (clients.brand_config.auto_publish = true); otherwise it must pass through
- *  the client's own queue. Until B7 adds sessions, callers identify themselves
- *  with userId — the role checks below are real, the identity is trusted.
+ *  the client's own queue. B7: identity comes from the session — req.user is
+ *  who decided, and the audit trail is attributable by construction.
  */
 import { Router } from 'express';
 import { q } from '../db/index.js';
 import { id } from '../lib/ids.js';
 import { autoScheduleApproved } from '../publish/index.js';
+import { requireAuth, INTERNAL } from '../lib/auth.js';
 
 const r = Router();
-const INTERNAL = ['ops', 'editor', 'reviewer', 'account_manager'];
 const DECISIONS = ['approve', 'reject', 'changes'];
 
 /** Load clip + its recording's client (incl. brand_config) in one query. */
@@ -37,11 +37,6 @@ async function clipContext(clipId) {
     JOIN recordings r ON r.id = cl.recording_id
     JOIN clients c ON c.id = r.client_id
     WHERE cl.id = $1`, [clipId]);
-  return rows[0] || null;
-}
-
-async function user(userId) {
-  const { rows } = await q('SELECT * FROM users WHERE id = $1', [userId]);
   return rows[0] || null;
 }
 
@@ -67,15 +62,21 @@ const conflict = (res, clip) =>
 //   default 'awaiting_review' (reviewers) · 'changes_requested' (editors)
 //   'approved_internal' (account managers) · 'awaiting_client' (client portal, F5)
 // Oldest first: until clients carry an SLA field, age IS the SLA order.
-r.get('/queue', async (req, res, next) => {
+r.get('/queue', requireAuth(), async (req, res, next) => {
   try {
-    const status = req.query.status || 'awaiting_review';
+    let status = req.query.status || 'awaiting_review';
+    let clientId = req.query.clientId;
+    if (req.user.role === 'client') {
+      // client users see exactly one worklist: their own sign-off queue (F5)
+      status = 'awaiting_client';
+      clientId = req.user.client_id;
+    }
     if (!['awaiting_review', 'changes_requested', 'approved_internal', 'awaiting_client'].includes(status)) {
       return res.status(400).json({ error: 'unreviewable status' });
     }
     const params = [status];
     let clientCond = '';
-    if (req.query.clientId) { params.push(req.query.clientId); clientCond = `AND r.client_id = $2`; }
+    if (clientId) { params.push(clientId); clientCond = `AND r.client_id = $2`; }
     const { rows } = await q(`
       SELECT cl.id, cl.recording_id, cl.t_start_s, cl.t_end_s, cl.score, cl.signals,
              cl.hook, cl.captions, cl.format, cl.asset_key IS NOT NULL AS rendered,
@@ -91,8 +92,14 @@ r.get('/queue', async (req, res, next) => {
 });
 
 // GET /api/review/:clipId/history — the audit trail for one clip.
-r.get('/:clipId/history', async (req, res, next) => {
+r.get('/:clipId/history', requireAuth(), async (req, res, next) => {
   try {
+    if (req.user.role === 'client') {
+      const clip = await clipContext(req.params.clipId);
+      if (!clip || clip.client_id !== req.user.client_id) {
+        return res.status(403).json({ error: 'client users can only see their own clips' });
+      }
+    }
     const { rows } = await q(`
       SELECT e.id, e.decision, e.notes, e.created_at, u.email AS reviewer_email, u.role AS reviewer_role
       FROM review_events e JOIN users u ON u.id = e.reviewer_id
@@ -101,18 +108,18 @@ r.get('/:clipId/history', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// POST /api/review/:clipId/decision { userId, decision, notes? }
+// POST /api/review/:clipId/decision { decision, notes? }
 // Role-aware (the "single API, role-gated" principle): internal roles decide
 // from awaiting_review; client users decide from awaiting_client — and only
-// for their own clips.
-r.post('/:clipId/decision', async (req, res, next) => {
+// for their own clips. The decider is the session user — attributable by
+// construction (the B7 done-criterion).
+r.post('/:clipId/decision', requireAuth(), async (req, res, next) => {
   try {
-    const { userId, decision, notes } = req.body || {};
+    const { decision, notes } = req.body || {};
     if (!DECISIONS.includes(decision)) {
       return res.status(400).json({ error: 'decision must be approve | reject | changes' });
     }
-    const u = await user(userId);
-    if (!u) return res.status(404).json({ error: 'unknown userId' });
+    const u = req.user;
     const clip = await clipContext(req.params.clipId);
     if (!clip) return res.status(404).json({ error: 'unknown clip' });
 
@@ -139,18 +146,16 @@ r.post('/:clipId/decision', async (req, res, next) => {
     // B5: a clip that just reached 'approved' is the service's to ship —
     // schedule it now on every platform the client has connected. Best-effort:
     // a scheduling hiccup never rolls back the decision.
-    const scheduled = to === 'approved' ? await autoScheduleApproved(clip.id) : [];
+    const scheduled = to === 'approved' ? await autoScheduleApproved(clip.id, u.id) : [];
     res.json({ clipId: clip.id, from, to, autoPublished, scheduled, event });
   } catch (e) { next(e); }
 });
 
 // POST /api/review/:clipId/send { userId } — route an internally-approved clip
 // into the client's queue (the account-manager step between QA and sign-off).
-r.post('/:clipId/send', async (req, res, next) => {
+r.post('/:clipId/send', requireAuth(...INTERNAL), async (req, res, next) => {
   try {
-    const u = await user(req.body?.userId);
-    if (!u) return res.status(404).json({ error: 'unknown userId' });
-    if (!INTERNAL.includes(u.role)) return res.status(403).json({ error: 'internal roles only' });
+    const u = req.user;
     const clip = await clipContext(req.params.clipId);
     if (!clip) return res.status(404).json({ error: 'unknown clip' });
     const event = await transition(clip.id, 'approved_internal', 'awaiting_client', u.id, 'send_to_client', req.body?.notes);
@@ -161,11 +166,9 @@ r.post('/:clipId/send', async (req, res, next) => {
 
 // POST /api/review/:clipId/resubmit { userId } — an editor fixed the hook /
 // captions (PATCH /api/clips/:id) and puts the clip back in the review queue.
-r.post('/:clipId/resubmit', async (req, res, next) => {
+r.post('/:clipId/resubmit', requireAuth(...INTERNAL), async (req, res, next) => {
   try {
-    const u = await user(req.body?.userId);
-    if (!u) return res.status(404).json({ error: 'unknown userId' });
-    if (!INTERNAL.includes(u.role)) return res.status(403).json({ error: 'internal roles only' });
+    const u = req.user;
     const clip = await clipContext(req.params.clipId);
     if (!clip) return res.status(404).json({ error: 'unknown clip' });
     const event = await transition(clip.id, 'changes_requested', 'awaiting_review', u.id, 'resubmit', req.body?.notes);

@@ -6,8 +6,8 @@
    utilitarian command deck. Mono everywhere data lives, serif only for the
    page title. No marketing chrome, no orbs; a faint engineering grid. */
 import React, { useEffect, useState } from 'react';
-import { Routes, Route, NavLink, Link, useNavigate } from 'react-router-dom';
-import { gateUnlocked, tryUnlock, getIdentity, setIdentity, ops, usePoll } from './api.js';
+import { Routes, Route, NavLink, Link } from 'react-router-dom';
+import { auth, setSession, getUser, ops, usePoll } from './api.js';
 
 /* ── design tokens (one place) ────────────────────────────────────────── */
 export const T = {
@@ -77,96 +77,78 @@ export const btnStyle = (accent) => ({
   color: accent || T.text, background: accent ? accent + '14' : 'transparent',
 });
 
-/* ── the gate (B7 placeholder — see api.js) ───────────────────────────── */
-function Gate({ onUnlock }) {
-  const [key, setKey] = useState('');
-  const [shake, setShake] = useState(false);
-  const submit = () => {
-    if (tryUnlock(key)) onUnlock();
-    else { setShake(true); setTimeout(() => setShake(false), 450); }
+/* ── sign in (B7: real sessions against /api/auth) ────────────────────── */
+function Login({ onAuthed }) {
+  const [mode, setMode] = useState('login'); // login | bootstrap
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [err, setErr] = useState(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    auth.status().then((st) => st.bootstrapRequired && setMode('bootstrap')).catch(() => {});
+  }, []);
+  const submit = async () => {
+    setBusy(true); setErr(null);
+    try {
+      const r = mode === 'bootstrap' ? await auth.bootstrap(email, password) : await auth.login(email, password);
+      setSession(r.token, r.user);
+      onAuthed(r.user);
+    } catch (e) { setErr(e); }
+    finally { setBusy(false); }
+  };
+  const field = {
+    width: '100%', boxSizing: 'border-box', fontSize: 13, padding: '10px 14px',
+    background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.line}`,
+    borderRadius: 8, color: T.text, outline: 'none',
   };
   return (
     <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24 }}>
       <div style={{ maxWidth: 460, width: '100%' }}>
         <Label style={{ marginBottom: 10 }}>Clipper.ai · internal</Label>
-        <h1 className="serif" style={{ fontSize: 34, color: T.text, marginBottom: 14 }}>Operations console</h1>
+        <h1 className="serif" style={{ fontSize: 34, color: T.text, marginBottom: 14 }}>
+          {mode === 'bootstrap' ? 'Create the first ops account' : 'Operations console'}
+        </h1>
         <p style={{ fontSize: 13.5, color: T.dim, lineHeight: 1.65, marginBottom: 22 }}>
-          This is the machinery behind the managed service — the content queue, the pipeline
-          board, clip review, and client management. It is for the operations team, editors,
-          reviewers, and account managers. Clients never see this; their window is the
-          deliverables portal.
+          {mode === 'bootstrap'
+            ? 'No accounts exist yet. This creates the founding ops account — every later account is created from inside, by an ops user, with an initial password its holder then changes.'
+            : 'The machinery behind the managed service — the content queue, the pipeline board, clip review, publishing, and the loop. Sessions are server-side and revocable; client users land in their own portal, never here.'}
         </p>
-        <div style={{ display: 'flex', gap: 8, animation: shake ? 'ops-shake 0.4s' : 'none' }}>
-          <input
-            type="password" value={key} placeholder="ops key"
-            onChange={(e) => setKey(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && submit()}
-            className="mono"
-            style={{ flex: 1, fontSize: 13, padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.line}`, borderRadius: 8, color: T.text, outline: 'none' }}
-          />
-          <button onClick={submit} className="mono" style={{ ...btnStyle(T.green), padding: '10px 18px' }}>enter</button>
+        <div style={{ display: 'grid', gap: 8 }}>
+          <input type="email" value={email} placeholder="email" autoComplete="username"
+            onChange={(e) => setEmail(e.target.value)} className="mono" style={field} />
+          <input type="password" value={password} placeholder={mode === 'bootstrap' ? 'password (≥ 8 characters)' : 'password'}
+            autoComplete="current-password"
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && submit()} className="mono" style={field} />
+          <button onClick={submit} disabled={busy} className="mono" style={{ ...btnStyle(T.green), padding: '10px 18px', opacity: busy ? 0.5 : 1 }}>
+            {busy ? '…' : mode === 'bootstrap' ? 'create account & enter' : 'sign in'}
+          </button>
         </div>
+        {err && <Mono style={{ display: 'block', fontSize: 11, color: T.red, marginTop: 10 }}>{String(err.message)}</Mono>}
         <p className="mono" style={{ fontSize: 10.5, color: '#52525b', marginTop: 14, lineHeight: 1.6 }}>
-          shared-key gate · placeholder until B7 ships sessions &amp; roles · deployments must
-          also gate /ops at the proxy
+          server-side sessions · bearer for the API, httpOnly cookie for media · rate-limited
         </p>
       </div>
     </div>
   );
 }
 
-/* ── identity picker (B7 placeholder) ─────────────────────────────────── */
-function IdentityBadge() {
-  const [me, setMe] = useState(getIdentity());
-  const [open, setOpen] = useState(false);
-  const [usersList, setUsersList] = useState(null);
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState('reviewer');
-  const [err, setErr] = useState(null);
-  const load = async () => {
-    try { setUsersList((await ops.users()).users.filter((u) => u.role !== 'client')); }
-    catch (e) { setErr(e); }
-  };
-  const pick = (u) => { setIdentity(u); setMe(u); setOpen(false); };
-  const create = async () => {
-    try { pick(await ops.createUser({ email, role })); setErr(null); }
-    catch (e) { setErr(e); }
+/* ── account badge (the session user; every action is theirs) ─────────── */
+function AccountBadge({ user, onLogout }) {
+  const [busy, setBusy] = useState(false);
+  const logout = async () => {
+    setBusy(true);
+    try { await auth.logout(); } catch { /* session may already be dead */ }
+    setSession(null, null);
+    onLogout();
   };
   return (
-    <div style={{ position: 'relative' }}>
-      <button onClick={() => { setOpen(!open); if (!usersList) load(); }} className="mono"
-        style={{ ...btnStyle(me ? T.green : T.amber), display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Dot color={me ? T.green : T.amber} />
-        {me ? `${me.email} · ${me.role}` : 'acting as — pick identity'}
-      </button>
-      {open && (
-        <div style={{ position: 'absolute', right: 0, top: '110%', zIndex: 50, width: 320, background: '#0a0a0a', border: `1px solid ${T.line}`, borderRadius: 10, padding: 12 }}>
-          <Label style={{ marginBottom: 8 }}>review actions are attributed to</Label>
-          {err && <div className="mono" style={{ fontSize: 11, color: T.red, marginBottom: 8 }}>{String(err.message)}</div>}
-          <div style={{ display: 'grid', gap: 4, maxHeight: 160, overflow: 'auto', marginBottom: 10 }}>
-            {(usersList || []).map((u) => (
-              <button key={u.id} onClick={() => pick(u)} className="mono"
-                style={{ ...btnStyle(), textAlign: 'left', borderColor: me?.id === u.id ? T.green + '66' : T.line }}>
-                {u.email} <span style={{ color: T.dim }}>· {u.role}</span>
-              </button>
-            ))}
-            {usersList && !usersList.length && <Empty>no internal users yet — create one below</Empty>}
-          </div>
-          <div style={{ display: 'grid', gap: 6 }}>
-            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email" className="mono"
-              style={{ fontSize: 12, padding: '7px 10px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.line}`, borderRadius: 6, color: T.text, outline: 'none' }} />
-            <div style={{ display: 'flex', gap: 6 }}>
-              <select value={role} onChange={(e) => setRole(e.target.value)} className="mono"
-                style={{ flex: 1, fontSize: 12, padding: '7px 10px', background: '#0a0a0a', border: `1px solid ${T.line}`, borderRadius: 6, color: T.text }}>
-                {['ops', 'editor', 'reviewer', 'account_manager'].map((r) => <option key={r} value={r}>{r}</option>)}
-              </select>
-              <button onClick={create} className="mono" style={btnStyle(T.green)}>create</button>
-            </div>
-            <div className="mono" style={{ fontSize: 10, color: '#52525b' }}>trusted identity until B7 sessions</div>
-          </div>
-        </div>
-      )}
-    </div>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+      <Mono style={{ fontSize: 11, color: T.text }}>
+        <Dot color={T.green} />{user.email} <span style={{ color: T.dim }}>· {user.role}</span>
+      </Mono>
+      <button onClick={logout} disabled={busy} className="mono" style={btnStyle()}>{busy ? '…' : 'sign out'}</button>
+    </span>
   );
 }
 
@@ -179,7 +161,7 @@ const NAV = [
   { to: '/ops/analytics', label: 'Analytics' },
 ];
 
-function Shell({ children }) {
+function Shell({ user, onLogout, children }) {
   const { data: health } = usePoll(() => fetch(((import.meta.env && import.meta.env.VITE_API_BASE) || '') + '/api/health').then((r) => r.json()), { ms: 10000 });
   return (
     <div style={{ minHeight: '100vh', position: 'relative' }}>
@@ -211,7 +193,7 @@ function Shell({ children }) {
             <Mono style={{ fontSize: 10.5, color: health?.ok ? T.dim : T.red }}>
               <Dot color={health?.ok ? T.green : T.red} pulse={!!health?.ok} />api {health?.ok ? 'up' : 'down'}
             </Mono>
-            <IdentityBadge />
+            <AccountBadge user={user} onLogout={onLogout} />
           </div>
         </div>
       </header>
@@ -247,13 +229,20 @@ import Clients from './Clients.jsx';
 import Measure from './Measure.jsx';
 
 export default function OpsApp() {
-  const [unlocked, setUnlocked] = useState(gateUnlocked());
-  const navigate = useNavigate();
+  const [authState, setAuthState] = useState({ phase: 'checking', user: null });
   useEffect(() => { document.title = 'Clipper.ai · Operations'; }, []);
-  if (!unlocked) return <OpsStyles><Gate onUnlock={() => setUnlocked(true)} /></OpsStyles>;
+  useEffect(() => {
+    auth.me()
+      .then((r) => { setSession(localStorage.getItem('clipper_ops_token'), r.user); setAuthState({ phase: 'in', user: r.user }); })
+      .catch(() => setAuthState({ phase: 'out', user: null }));
+  }, []);
+  if (authState.phase === 'checking') return <OpsStyles><div /></OpsStyles>;
+  if (authState.phase === 'out') {
+    return <OpsStyles><Login onAuthed={(user) => setAuthState({ phase: 'in', user })} /></OpsStyles>;
+  }
   return (
     <OpsStyles>
-      <Shell>
+      <Shell user={authState.user} onLogout={() => setAuthState({ phase: 'out', user: null })}>
         <Routes>
           <Route index element={<Board />} />
           <Route path="recordings/:id" element={<RecordingDetail />} />
@@ -261,7 +250,7 @@ export default function OpsApp() {
           <Route path="clients" element={<Clients />} />
           <Route path="publish" element={<Measure surface="publish" />} />
           <Route path="analytics" element={<Measure surface="analytics" />} />
-          <Route path="*" element={<Stub kicker="404" title="No such surface" body={<button onClick={() => navigate('/ops')} className="mono" style={btnStyle()}>back to the board</button>} />} />
+          <Route path="*" element={<Stub kicker="404" title="No such surface" body={<Link to="/ops" className="mono" style={btnStyle()}>back to the board</Link>} />} />
         </Routes>
       </Shell>
     </OpsStyles>

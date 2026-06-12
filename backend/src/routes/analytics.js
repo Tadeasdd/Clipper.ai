@@ -6,6 +6,7 @@
 import { Router } from 'express';
 import { q } from '../db/index.js';
 import { computeCorrelation, retrain, loadWeights } from '../metrics/loop.js';
+import { requireAuth, INTERNAL } from '../lib/auth.js';
 
 const r = Router();
 
@@ -13,7 +14,11 @@ const r = Router();
 // this; B6.2 made it real). Per published clip: the LATEST capture per
 // platform post, plus exact totals over the period. Weekly report = this
 // payload + a date filter; it generates itself.
-r.get('/clients/:id', async (req, res, next) => {
+r.get('/clients/:id', requireAuth(), async (req, res, next) => {
+  // internal roles read any client's report; client users exactly their own (F5)
+  if (req.user.role === 'client' && req.user.client_id !== req.params.id) {
+    return res.status(403).json({ error: 'client users can only see their own report' });
+  }
   try {
     const client = await q('SELECT id, name FROM clients WHERE id = $1', [req.params.id]);
     if (!client.rowCount) return res.status(404).json({ error: 'unknown client' });
@@ -70,7 +75,7 @@ r.get('/clients/:id', async (req, res, next) => {
 
 // GET /api/analytics/ops — internal: QA pass rate, pipeline turnaround, and
 // (B6) scoring-model precision vs. published performance.
-r.get('/ops', async (_req, res, next) => {
+r.get('/ops', requireAuth(...INTERNAL), async (_req, res, next) => {
   try {
     // First-pass internal QA: of every verdict by a non-client reviewer,
     // what share approved? (send_to_client / resubmit are routing, not verdicts.)
@@ -120,7 +125,7 @@ r.get('/ops', async (_req, res, next) => {
 // POST /api/analytics/retrain — one cycle of the loop: correlate, step the
 // weights toward the evidence, append the new row. 409 below the sample
 // gate. An ops action for now; B7 puts it behind auth.
-r.post('/retrain', async (req, res, next) => {
+r.post('/retrain', requireAuth('ops'), async (req, res, next) => {
   try {
     const row = await retrain(undefined, req.body?.note || null);
     if (!row) {

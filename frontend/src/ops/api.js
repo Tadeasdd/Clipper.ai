@@ -9,7 +9,7 @@ const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) || '';
 async function json(method, path, body) {
   const res = await fetch(API_BASE + path, {
     method,
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', ...authHeader() },
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
@@ -74,36 +74,33 @@ export function usePoll(fn, { ms = 3000, deps = [] } = {}) {
   return { ...state, refresh: tick };
 }
 
-/* ── identity (B7 placeholder) ────────────────────────────────────────────
-   Until sessions exist, the operator picks/creates a users row and we send
-   its id with every review action. Trusted identity, real role checks. */
-const ID_KEY = 'clipper_ops_identity';
+/* ── session (B7) ─────────────────────────────────────────────────────────
+   The bearer token rides every API call; the server also sets an httpOnly
+   cookie at login, which is what <video src> asset requests authenticate
+   with (you can't put a header on a media element). Logout revokes the
+   session server-side. */
+const TOKEN_KEY = 'clipper_ops_token';
+let currentUser = null;
 
-export function getIdentity() {
-  try { return JSON.parse(localStorage.getItem(ID_KEY)) || null; } catch { return null; }
-}
-export function setIdentity(user) {
+export function authHeader() {
   try {
-    if (user) localStorage.setItem(ID_KEY, JSON.stringify(user));
-    else localStorage.removeItem(ID_KEY);
-  } catch { /* storage unavailable — identity just won't persist */ }
+    const t = localStorage.getItem(TOKEN_KEY);
+    return t ? { authorization: `Bearer ${t}` } : {};
+  } catch { return {}; }
 }
+export function setSession(token, user) {
+  try { token ? localStorage.setItem(TOKEN_KEY, token) : localStorage.removeItem(TOKEN_KEY); } catch { /* no storage */ }
+  currentUser = user || null;
+}
+export function getUser() { return currentUser; }
 
-/* ── gate (B7 placeholder) ────────────────────────────────────────────────
-   A shared key in sessionStorage. This is NOT auth — it keeps the ops route
-   out of casual reach until B7 ships sessions + roles. Deployments must also
-   gate /ops at the proxy layer. */
-const GATE_KEY = 'clipper_ops_gate';
-const EXPECTED = (import.meta.env && import.meta.env.VITE_OPS_KEY) || 'clipper-ops';
-
-export function gateUnlocked() {
-  try { return sessionStorage.getItem(GATE_KEY) === EXPECTED; } catch { return false; }
-}
-export function tryUnlock(key) {
-  if (key !== EXPECTED) return false;
-  try { sessionStorage.setItem(GATE_KEY, key); } catch { /* still unlocked for this render */ }
-  return true;
-}
+export const auth = {
+  status: () => json('GET', '/api/auth/status'),
+  login: (email, password) => json('POST', '/api/auth/login', { email, password }),
+  bootstrap: (email, password) => json('POST', '/api/auth/bootstrap', { email, password }),
+  me: () => json('GET', '/api/auth/me'),
+  logout: () => json('POST', '/api/auth/logout'),
+};
 
 /* ── tiny shared formatters ─────────────────────────────────────────────── */
 export const fmtClock = (s) => {

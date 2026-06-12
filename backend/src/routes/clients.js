@@ -2,10 +2,11 @@
 import { Router } from 'express';
 import { q } from '../db/index.js';
 import { id } from '../lib/ids.js';
+import { requireAuth, INTERNAL } from '../lib/auth.js';
 
 const r = Router();
 
-r.get('/', async (_req, res, next) => {
+r.get('/', requireAuth(...INTERNAL), async (_req, res, next) => {
   try {
     const { rows } = await q(`
       SELECT c.*, count(r.id) FILTER (WHERE r.status NOT IN ('published')) AS open_recordings
@@ -15,7 +16,7 @@ r.get('/', async (_req, res, next) => {
   } catch (e) { next(e); }
 });
 
-r.post('/', async (req, res, next) => {
+r.post('/', requireAuth('ops', 'account_manager'), async (req, res, next) => {
   try {
     const { name, plan, cadence, brandConfig } = req.body || {};
     if (!name || !String(name).trim()) return res.status(400).json({ error: 'name required' });
@@ -28,7 +29,11 @@ r.post('/', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-r.get('/:id', async (req, res, next) => {
+r.get('/:id', requireAuth(), async (req, res, next) => {
+  // internal roles see any client; client users see exactly their own (F5)
+  if (req.user.role === 'client' && req.user.client_id !== req.params.id) {
+    return res.status(403).json({ error: 'client users can only see their own account' });
+  }
   try {
     const { rows } = await q('SELECT * FROM clients WHERE id = $1', [req.params.id]);
     if (!rows.length) return res.status(404).json({ error: 'unknown client' });
@@ -36,7 +41,7 @@ r.get('/:id', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-r.patch('/:id', async (req, res, next) => {
+r.patch('/:id', requireAuth('ops', 'account_manager'), async (req, res, next) => {
   try {
     const { name, plan, cadence, brandConfig } = req.body || {};
     const { rows } = await q(

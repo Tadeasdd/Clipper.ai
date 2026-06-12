@@ -1,12 +1,13 @@
 /** Stage B3 — the ops processing board: per-recording stage timelines + retry. */
 import { Router } from 'express';
 import { q } from '../db/index.js';
+import { requireAuth, INTERNAL } from '../lib/auth.js';
 import { retryRecording, STAGES } from '../pipeline/index.js';
 
 const r = Router();
 
 // GET /api/jobs — board: every non-idle recording with its stage statuses.
-r.get('/', async (_req, res, next) => {
+r.get('/', requireAuth(...INTERNAL), async (_req, res, next) => {
   try {
     const { rows } = await q(`
       SELECT r.id, r.client_id, c.name AS client_name, r.kind, r.status, r.duration_s, r.created_at,
@@ -24,7 +25,7 @@ r.get('/', async (_req, res, next) => {
 });
 
 // GET /api/jobs/:recordingId — one recording's stage timeline + clip rollup.
-r.get('/:id', async (req, res, next) => {
+r.get('/:id', requireAuth(...INTERNAL), async (req, res, next) => {
   try {
     const rec = await q(`
       SELECT r.*, c.name AS client_name FROM recordings r
@@ -45,7 +46,7 @@ r.get('/:id', async (req, res, next) => {
 });
 
 // POST /api/jobs/:recordingId/retry — re-arm every failed stage.
-r.post('/:id/retry', async (req, res, next) => {
+r.post('/:id/retry', requireAuth(...INTERNAL), async (req, res, next) => {
   try {
     const n = await retryRecording(req.params.id);
     if (!n) return res.status(409).json({ error: 'no failed stages to retry' });

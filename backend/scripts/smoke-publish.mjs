@@ -18,9 +18,11 @@ const BASE = process.env.BASE || 'http://localhost:8080';
 const STORAGE = process.env.STORAGE_DIR || path.resolve('storage');
 const db = new pg.Pool({ connectionString: process.env.DATABASE_URL || 'postgres://clipper:clipper@localhost:5432/clipper' });
 
-const j = async (method, p, body) => {
+import { opsSession, mintUser } from './lib-smoke-auth.mjs';
+const OPS = await opsSession(BASE); // B7: the API has one door now
+const j = async (method, p, body, token) => {
   const res = await fetch(BASE + p, {
-    method, headers: { 'content-type': 'application/json' },
+    method, headers: { 'content-type': 'application/json', authorization: `Bearer ${token || OPS}` },
     body: body ? JSON.stringify(body) : undefined,
   });
   return { status: res.status, data: await res.json().catch(() => ({})) };
@@ -95,9 +97,9 @@ assert(job.status === 'published' && job.external_url && job.client_name.startsW
   `scheduler published it (${job.external_url})`);
 st = await db.query('SELECT status FROM clips WHERE id = $1', [clipHappy]);
 assert(st.rows[0].status === 'published', "clip is 'published'");
-let out = await fetch(BASE + job.external_url);
+let out = await fetch(BASE + job.external_url, { headers: { authorization: `Bearer ${OPS}` } });
 assert(out.status === 200 && (await out.arrayBuffer()).byteLength > 0, 'outbox serves the delivered file');
-out = await fetch(BASE + job.external_url.replace('.mp4', '.json'));
+out = await fetch(BASE + job.external_url.replace('.mp4', '.json'), { headers: { authorization: `Bearer ${OPS}` } });
 const manifest = await out.json();
 assert(manifest.caption === `Publish smoke hook ${run}` && manifest.handle === '@b5smoke',
   'delivery manifest carries the caption and handle');
@@ -121,8 +123,8 @@ assert(r.status === 409, 'double-cancel refused');
 
 // ── auto-schedule: the B4 → B5 hook ─────────────────────────────────────────
 const clipAuto = await seedClip('awaiting_client', true);
-const owner = (await j('POST', '/api/users', { email: `b5owner+${run}@clipper.ai`, role: 'client', clientId: cli })).data.id;
-r = await j('POST', `/api/review/${clipAuto}/decision`, { userId: owner, decision: 'approve' });
+const owner = (await mintUser(BASE, OPS, { email: `b5owner+${run}@clipper.ai`, role: 'client', clientId: cli })).token;
+r = await j('POST', `/api/review/${clipAuto}/decision`, { decision: 'approve' }, owner);
 assert(r.status === 200 && r.data.to === 'approved' && r.data.scheduled.includes('youtube'),
   'client sign-off auto-scheduled the clip on every connected platform');
 deadline = Date.now() + 20_000;

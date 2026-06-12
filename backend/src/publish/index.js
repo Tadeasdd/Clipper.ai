@@ -31,21 +31,21 @@ export async function runAdapter(ctx) {
  *  the same statement that proves it was eligible; the job row is upserted so
  *  re-scheduling re-arms instead of duplicating. Returns the job, or null if
  *  the clip wasn't approved/scheduled. */
-export async function scheduleClip({ clipId, connectionId, platform, scheduledAt }) {
+export async function scheduleClip({ clipId, connectionId, platform, scheduledAt, scheduledBy }) {
   const { rows } = await q(`
     WITH eligible AS (
       UPDATE clips SET status = 'scheduled'
       WHERE id = $1 AND status IN ('approved', 'scheduled')
       RETURNING id
     )
-    INSERT INTO publish_jobs (id, clip_id, connection_id, platform, scheduled_at, run_after, status)
-    SELECT $2, id, $3, $4, $5, $5, 'scheduled' FROM eligible
+    INSERT INTO publish_jobs (id, clip_id, connection_id, platform, scheduled_at, run_after, status, scheduled_by)
+    SELECT $2, id, $3, $4, $5, $5, 'scheduled', $6 FROM eligible
     ON CONFLICT (clip_id, platform) DO UPDATE
       SET connection_id = EXCLUDED.connection_id, scheduled_at = EXCLUDED.scheduled_at,
           run_after = EXCLUDED.run_after, status = 'scheduled', error = NULL,
-          attempts = 0, updated_at = now()
+          attempts = 0, updated_at = now(), scheduled_by = EXCLUDED.scheduled_by
     RETURNING *`,
-    [clipId, id('pub'), connectionId, platform, scheduledAt || new Date()]);
+    [clipId, id('pub'), connectionId, platform, scheduledAt || new Date(), scheduledBy || null]);
   return rows[0] || null;
 }
 
@@ -53,7 +53,7 @@ export async function scheduleClip({ clipId, connectionId, platform, scheduledAt
  *  active connection the client has. Best-effort by design — a scheduling
  *  hiccup must never roll back a review decision; failures land in the log
  *  and the clip stays 'approved' for manual scheduling from the ops queue. */
-export async function autoScheduleApproved(clipId) {
+export async function autoScheduleApproved(clipId, actorId) {
   try {
     const { rows: conns } = await q(`
       SELECT pc.id, pc.platform
@@ -63,7 +63,7 @@ export async function autoScheduleApproved(clipId) {
       WHERE cl.id = $1 AND pc.status = 'active'`, [clipId]);
     const scheduled = [];
     for (const c of conns) {
-      const job = await scheduleClip({ clipId, connectionId: c.id, platform: c.platform });
+      const job = await scheduleClip({ clipId, connectionId: c.id, platform: c.platform, scheduledBy: actorId });
       if (job) scheduled.push(c.platform);
     }
     return scheduled;

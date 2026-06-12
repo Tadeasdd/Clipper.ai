@@ -33,18 +33,18 @@ for (const path of routes) {
 
 if (errors.length) { console.error('\nFAILURES:'); errors.forEach((e) => console.error(' -', e)); process.exit(1); }
 
-/* ── F4: the ops dashboard ────────────────────────────────────────────────
-   Locked: /ops must show the gate. Unlocked (sessionStorage key): the shell
-   must render every surface WITHOUT a backend — usePoll catches fetch
-   failures and shows error bands; any unhandled rejection fails this smoke. */
+/* ── F4/B7: the ops dashboard ────────────────────────────────────────────
+   Unauthenticated (and with NO backend — /api/auth/me fails), every /ops
+   route must land on the sign-in screen and render it fully; any unhandled
+   rejection fails this smoke. Authenticated surfaces are exercised by
+   integration:f4 against the live stack. */
 history.pushState({}, '', '/ops');
 window.dispatchEvent(new PopStateEvent('popstate'));
 await settle(700); // lazy OpsApp chunk
 let html = document.getElementById('root').innerHTML;
-if (!/ops key/i.test(html)) errors.push('/ops did not render the gate');
-console.log(`/ops (locked)   gate=${/ops key/i.test(html) ? 'YES' : 'NO'}`);
+if (!/sign in|create the first ops account/i.test(html)) errors.push('/ops did not render the sign-in screen');
+console.log(`/ops (anon)     login=${/sign in|create the first/i.test(html) ? 'YES' : 'NO'}`);
 
-sessionStorage.setItem('clipper_ops_gate', 'clipper-ops');
 const opsRoutes = ['/ops', '/ops/review', '/ops/clients', '/ops/publish', '/ops/analytics', '/ops/nowhere'];
 for (const path of opsRoutes) {
   history.pushState({}, '', '/');

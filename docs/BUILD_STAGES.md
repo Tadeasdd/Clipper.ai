@@ -218,12 +218,37 @@ Queue workers (BullMQ + Redis or pg-boss), one per stage — stubs are in
   retrained weights it used). Both in CI. Under the local driver the
   correlation reads near zero by design; live drivers make it the model.
 
-### B7 — Auth, roles, hardening
+### B7 — Auth, roles, hardening (✅)
 - Roles per the org: ops, editor, reviewer, account_manager, client
   (already in the `users` schema). Session auth, rate limits, audit log
   (review_events is the start), backups.
 - **Done when:** client users can only see their own data; every publish
-  and approval is attributable.
+  and approval is attributable. ✅
+  Done: the API has one door. Server-side sessions (revocable rows holding
+  only the sha256 of the token; bearer for API clients, httpOnly cookie for
+  browsers and media elements), scrypt passwords, a bootstrap endpoint that
+  works exactly once to create the founding ops account — every later
+  account is created from inside with an initial password (≥ 8 chars) its
+  holder changes after first sign-in. Login is rate-limited and refuses to
+  distinguish wrong-password from unknown-email. Role walls on every
+  endpoint (`requireAuth(...roles)`); the marketing lead form is the one
+  deliberately open door. Client users are fenced structurally: clip lists,
+  assets, metrics, audit trails, reports, accounts, intake, and the review
+  queue are all pinned to their own client regardless of what parameters
+  they send. Identity comes from the session everywhere — `userId` left
+  every request body — so approvals are attributable by construction, and
+  `publish_jobs.scheduled_by` records who queued each publish (a human from
+  ops, or the approver whose sign-off auto-scheduled it; visible in the ops
+  queue). The `/ops` shared-key gate became a real login screen (bootstrap
+  mode on a fresh database); the identity picker became the session badge
+  with server-side logout. Smokes: `npm run smoke:auth` (33 assertions);
+  every other smoke migrated to real per-role sessions
+  (`scripts/lib-smoke-auth.mjs`), and `integration:f4` signs in for real —
+  the audit rows it verifies carry the session identity. Hash material
+  never leaves the API (`has_credentials` flag only). Still deliberately
+  out of scope, noted for ops runbooks: DB backups are an infrastructure
+  task, and CORS stays wide-open for dev (same-origin deploys; tighten
+  `cors()` per environment when a separate origin appears).
 
 ---
 

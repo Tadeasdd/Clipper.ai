@@ -1,10 +1,15 @@
 /* B2 end-to-end smoke against a real Postgres + local storage:
    client → lead (dedup) → URL intake → file intake → upload → queue → detail. */
 const BASE = process.env.BASE || 'http://localhost:8080';
+import { opsSession } from './lib-smoke-auth.mjs';
+const OPS = await opsSession(BASE); // B7: the API has one door now
 const j = async (method, path, body, raw) => {
   const res = await fetch(BASE + path, {
     method,
-    headers: raw ? { 'content-type': 'application/octet-stream' } : { 'content-type': 'application/json' },
+    headers: {
+      ...(raw ? { 'content-type': 'application/octet-stream' } : { 'content-type': 'application/json' }),
+      authorization: `Bearer ${OPS}`,
+    },
     body: raw ? body : body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));

@@ -12,7 +12,8 @@
     "smoke:pipeline": "node scripts/smoke-pipeline.mjs",
     "smoke:review": "node scripts/smoke-review.mjs",
     "smoke:publish": "node scripts/smoke-publish.mjs",
-    "smoke:metrics": "node scripts/smoke-metrics.mjs"
+    "smoke:metrics": "node scripts/smoke-metrics.mjs",
+    "smoke:auth": "node scripts/smoke-auth.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1066.0",

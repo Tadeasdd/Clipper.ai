@@ -13,10 +13,12 @@ import pg from 'pg';
 const BASE = process.env.BASE || 'http://localhost:8080';
 const db = new pg.Pool({ connectionString: process.env.DATABASE_URL || 'postgres://clipper:clipper@localhost:5432/clipper' });
 
-const j = async (method, p, body) => {
+import { opsSession, mintUser } from './lib-smoke-auth.mjs';
+const OPS = await opsSession(BASE); // B7: the API has one door now
+const j = async (method, p, body, token) => {
   const res = await fetch(BASE + p, {
     method,
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token || OPS}` },
     body: body ? JSON.stringify(body) : undefined,
   });
   return { status: res.status, data: await res.json().catch(() => ({})) };
@@ -53,25 +55,28 @@ const clipChanges = await seedClip(recA);   // the changes → resubmit → reje
 const clipAuto = await seedClip(recAuto);   // the auto-publish opt-in
 console.log(`seeded: ${clipHappy}, ${clipChanges}, ${clipAuto}`);
 
-// ── users: records + validation (B7 precursor) ──────────────────────────────
-r = await j('POST', '/api/users', { email: `qa+${run}@clipper.ai`, role: 'reviewer' });
-assert(r.status === 201 && r.data.id.startsWith('usr_'), 'reviewer user created');
-const reviewer = r.data.id;
-r = await j('POST', '/api/users', { email: `qa+${run}@clipper.ai`, role: 'reviewer' });
-assert(r.status === 200 && r.data.id === reviewer, 'user create is idempotent per email');
-r = await j('POST', '/api/users', { email: `qa+${run}@clipper.ai`, role: 'ops' });
+// ── users: accounts + validation (B7: passwords + sessions) ─────────────────
+r = await j('POST', '/api/users', { email: `qa+${run}@clipper.ai`, role: 'reviewer', password: 'first-password' });
+assert(r.status === 201 && r.data.id.startsWith('usr_'), 'reviewer account created');
+const reviewerId = r.data.id;
+r = await j('POST', '/api/users', { email: `qa+${run}@clipper.ai`, role: 'reviewer', password: 'first-password' });
+assert(r.status === 200 && r.data.id === reviewerId, 'account create is idempotent per email');
+r = await j('POST', '/api/users', { email: `qa+${run}@clipper.ai`, role: 'ops', password: 'first-password' });
 assert(r.status === 409, 'same email with a different role is a 409');
-r = await j('POST', '/api/users', { email: `x+${run}@clipper.ai`, role: 'janitor' });
+r = await j('POST', '/api/users', { email: `x+${run}@clipper.ai`, role: 'janitor', password: 'first-password' });
 assert(r.status === 400, 'unknown role rejected');
-r = await j('POST', '/api/users', { email: `c+${run}@clipper.ai`, role: 'client' });
+r = await j('POST', '/api/users', { email: `c+${run}@clipper.ai`, role: 'client', password: 'first-password' });
 assert(r.status === 400, 'client role without clientId rejected');
 
-const mkUser = async (email, role, clientId) =>
-  (await j('POST', '/api/users', { email: `${email}+${run}@clipper.ai`, role, clientId })).data.id;
-const editor = await mkUser('editor', 'editor');
-const am = await mkUser('am', 'account_manager');
-const clientUser = await mkUser('client', 'client', cli);
-const otherClientUser = await mkUser('intruder', 'client', cliOther);
+const reviewer = (await (async () => {
+  const login = await j('POST', '/api/auth/login', { email: `qa+${run}@clipper.ai`, password: 'first-password' });
+  return { token: login.data.token };
+})()).token;
+const mk = async (email, role, clientId) => (await mintUser(BASE, OPS, { email: `${email}+${run}@clipper.ai`, role, clientId })).token;
+const editor = await mk('editor', 'editor');
+const am = await mk('am', 'account_manager');
+const clientUser = await mk('client', 'client', cli);
+const otherClientUser = await mk('intruder', 'client', cliOther);
 
 // ── the worklist ─────────────────────────────────────────────────────────────
 r = await j('GET', '/api/review/queue');
@@ -83,48 +88,48 @@ r = await j('GET', '/api/review/queue?status=published');
 assert(r.status === 400, 'unreviewable queue status rejected');
 
 // ── guards before the happy path ─────────────────────────────────────────────
-r = await j('POST', `/api/review/${clipHappy}/decision`, { userId: 'usr_nobody', decision: 'approve' });
-assert(r.status === 404, 'unknown user is a 404');
-r = await j('POST', `/api/review/${clipHappy}/decision`, { userId: reviewer, decision: 'ship-it' });
+r = await j('POST', `/api/review/${clipHappy}/decision`, { decision: 'approve' }, 'tok_nobody');
+assert(r.status === 401, 'a dead token cannot decide anything');
+r = await j('POST', `/api/review/${clipHappy}/decision`, { decision: 'ship-it' }, reviewer);
 assert(r.status === 400, 'unknown decision is a 400');
-r = await j('POST', `/api/review/${clipHappy}/send`, { userId: am });
+r = await j('POST', `/api/review/${clipHappy}/send`, {}, am);
 assert(r.status === 409, 'cannot send to client before internal approval');
-r = await j('POST', `/api/review/${clipHappy}/decision`, { userId: clientUser, decision: 'approve' });
+r = await j('POST', `/api/review/${clipHappy}/decision`, { decision: 'approve' }, clientUser);
 assert(r.status === 409, 'client cannot approve while the clip is still in internal review');
 
 // ── happy path: awaiting_review → approved_internal → awaiting_client → approved
-r = await j('POST', `/api/review/${clipHappy}/decision`, { userId: reviewer, decision: 'approve', notes: 'clean cut' });
+r = await j('POST', `/api/review/${clipHappy}/decision`, { decision: 'approve', notes: 'clean cut' }, reviewer);
 assert(r.status === 200 && r.data.to === 'approved_internal' && !r.data.autoPublished,
   'internal approve → approved_internal (no auto-publish)');
-r = await j('POST', `/api/review/${clipHappy}/decision`, { userId: reviewer, decision: 'approve' });
+r = await j('POST', `/api/review/${clipHappy}/decision`, { decision: 'approve' }, reviewer);
 assert(r.status === 409, 'double-decision is a 409 (atomic transition held)');
-r = await j('POST', `/api/review/${clipHappy}/send`, { userId: clientUser });
+r = await j('POST', `/api/review/${clipHappy}/send`, {}, clientUser);
 assert(r.status === 403, 'client users cannot perform the send step');
-r = await j('POST', `/api/review/${clipHappy}/send`, { userId: am });
+r = await j('POST', `/api/review/${clipHappy}/send`, {}, am);
 assert(r.status === 200 && r.data.to === 'awaiting_client', 'account manager sends → awaiting_client');
-r = await j('POST', `/api/review/${clipHappy}/decision`, { userId: otherClientUser, decision: 'approve' });
+r = await j('POST', `/api/review/${clipHappy}/decision`, { decision: 'approve' }, otherClientUser);
 assert(r.status === 403, "another client's user cannot decide on this clip");
-r = await j('POST', `/api/review/${clipHappy}/decision`, { userId: clientUser, decision: 'approve', notes: 'love it' });
+r = await j('POST', `/api/review/${clipHappy}/decision`, { decision: 'approve', notes: 'love it' }, clientUser);
 assert(r.status === 200 && r.data.to === 'approved', 'client approve → approved (FULL MACHINE TRAVELLED)');
 
 // ── changes loop: changes_requested → edit → resubmit → reject ──────────────
-r = await j('POST', `/api/review/${clipChanges}/decision`, { userId: reviewer, decision: 'changes', notes: 'hook is flat' });
+r = await j('POST', `/api/review/${clipChanges}/decision`, { decision: 'changes', notes: 'hook is flat' }, reviewer);
 assert(r.status === 200 && r.data.to === 'changes_requested', 'changes → changes_requested');
 r = await j('GET', '/api/review/queue?status=changes_requested');
 assert(r.data.items.some((i) => i.id === clipChanges), 'editor worklist shows the clip');
 r = await j('PATCH', `/api/clips/${clipChanges}`, { hook: 'The number nobody in the room expected' });
 assert(r.status === 200, 'editor rewrites the hook');
-r = await j('POST', `/api/review/${clipChanges}/resubmit`, { userId: clientUser });
+r = await j('POST', `/api/review/${clipChanges}/resubmit`, {}, clientUser);
 assert(r.status === 403, 'client users cannot resubmit');
-r = await j('POST', `/api/review/${clipChanges}/resubmit`, { userId: editor });
+r = await j('POST', `/api/review/${clipChanges}/resubmit`, {}, editor);
 assert(r.status === 200 && r.data.to === 'awaiting_review', 'resubmit → back in the review queue');
-r = await j('POST', `/api/review/${clipChanges}/resubmit`, { userId: editor });
+r = await j('POST', `/api/review/${clipChanges}/resubmit`, {}, editor);
 assert(r.status === 409, 'resubmit only works from changes_requested');
-r = await j('POST', `/api/review/${clipChanges}/decision`, { userId: reviewer, decision: 'reject', notes: 'still flat' });
+r = await j('POST', `/api/review/${clipChanges}/decision`, { decision: 'reject', notes: 'still flat' }, reviewer);
 assert(r.status === 200 && r.data.to === 'rejected', 'second review can reject');
 
 // ── auto-publish opt-in: the one legal way to skip client sign-off ──────────
-r = await j('POST', `/api/review/${clipAuto}/decision`, { userId: reviewer, decision: 'approve' });
+r = await j('POST', `/api/review/${clipAuto}/decision`, { decision: 'approve' }, reviewer);
 assert(r.status === 200 && r.data.to === 'approved' && r.data.autoPublished === true,
   'auto-publish client: internal approve → approved directly');
 

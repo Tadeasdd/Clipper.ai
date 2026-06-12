@@ -63,6 +63,11 @@ jobs:
       # on sign-off.
       - run: npm run smoke:publish
         timeout-minutes: 4
+      # B7: one door — bootstrap-once, sessions, rate limit, role walls on
+      # every endpoint, client users fenced to their own data, approvals and
+      # publishes attributable to the session identity.
+      - run: npm run smoke:auth
+        timeout-minutes: 3
       # B6: metrics ingestion (capture rotation, claim clock, monotonic
       # growth), report aggregation asserted to the digit, and the loop —
       # a planted signal→performance relationship the retrain must detect,

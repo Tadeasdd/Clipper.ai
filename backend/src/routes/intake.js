@@ -5,16 +5,20 @@ import { q } from '../db/index.js';
 import { id } from '../lib/ids.js';
 import { createUploadTarget, saveStream, objectInfo } from '../storage/index.js';
 import { enqueue } from '../pipeline/index.js';
+import { requireAuth, INTERNAL } from '../lib/auth.js';
 
 const r = Router();
 
 // POST /api/intake
 //   { clientId, sourceUrl }              → queued immediately (B3 ingest pulls it)
 //   { clientId, filename, kind? }        → awaiting_upload + an upload target
-r.post('/', async (req, res, next) => {
+r.post('/', requireAuth(), async (req, res, next) => {
   try {
     const { clientId, sourceUrl, filename, kind } = req.body || {};
     if (!clientId) return res.status(400).json({ error: 'clientId required' });
+    if (req.user.role === 'client' && req.user.client_id !== clientId) {
+      return res.status(403).json({ error: 'client users can only submit for their own account' });
+    }
     if (!sourceUrl && !filename) return res.status(400).json({ error: 'sourceUrl or filename required' });
     const client = await q('SELECT id FROM clients WHERE id = $1', [clientId]);
     if (!client.rowCount) return res.status(404).json({ error: 'unknown clientId' });
@@ -33,7 +37,11 @@ r.post('/', async (req, res, next) => {
 });
 
 // PUT /api/intake/upload/:id — local driver only: the file body lands here.
-r.put('/upload/:id', async (req, res, next) => {
+r.put('/upload/:id', requireAuth(), async (req, res, next) => {
+  if (req.user.role === 'client') {
+    const own = await q('SELECT 1 FROM recordings WHERE id = $1 AND client_id = $2', [req.params.id, req.user.client_id]).catch(() => null);
+    if (!own?.rowCount) return res.status(403).json({ error: 'client users can only upload to their own submissions' });
+  }
   try {
     const rec = await q('SELECT id, storage_key, status FROM recordings WHERE id = $1', [req.params.id]);
     if (!rec.rowCount) return res.status(404).json({ error: 'unknown recording' });
@@ -46,7 +54,7 @@ r.put('/upload/:id', async (req, res, next) => {
 });
 
 // GET /api/intake/queue — ops dashboard: incoming content queue.
-r.get('/queue', async (_req, res, next) => {
+r.get('/queue', requireAuth(...INTERNAL), async (_req, res, next) => {
   try {
     const { rows } = await q(`
       SELECT r.id, r.client_id, c.name AS client_name, r.source_url, r.storage_key,
@@ -59,7 +67,7 @@ r.get('/queue', async (_req, res, next) => {
 });
 
 // GET /api/intake/:id — single recording with storage state (ops detail view).
-r.get('/:id', async (req, res, next) => {
+r.get('/:id', requireAuth(...INTERNAL), async (req, res, next) => {
   try {
     const { rows } = await q('SELECT * FROM recordings WHERE id = $1', [req.params.id]);
     if (!rows.length) return res.status(404).json({ error: 'unknown recording' });

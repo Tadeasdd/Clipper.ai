@@ -140,4 +140,33 @@ assert(r.status === 200 && r.data.to === 'approved', 'client signs off → appro
 r = await j('GET', `/api/jobs/${rec}`);
 assert(r.data.clips.by_status?.approved === 1, 'board rollup shows the approved clip');
 
-console.log('\nB3+B4 smoke passed: media in → scored, rendered 9:16 clips out → reviewed, signed off, approved.');
+// ── B5 continuation: the approved REAL clip publishes end-to-end ────────────
+r = await j('POST', '/api/publish/connections', {
+  clientId: cli, platform: 'youtube', handle: '@b3pipeline',
+  credentials: { refreshToken: `smoke-${stamp}` },
+});
+assert(r.status === 201, 'platform connection created');
+r = await j('POST', '/api/publish', { clipId: top.id, platform: 'youtube' });
+assert(r.status === 202, 'approved clip scheduled for publish');
+let pub, pubDeadline = Date.now() + 30_000;
+for (;;) {
+  await sleep(1000);
+  pub = (await j('GET', '/api/publish/queue')).data.items.find((i) => i.clip_id === top.id);
+  if (pub?.status === 'published' || pub?.status === 'failed') break;
+  if (Date.now() > pubDeadline) { console.error('FAIL: publish never completed'); process.exit(1); }
+}
+assert(pub.status === 'published' && pub.external_url, `scheduler published the real clip (${pub.external_url})`);
+const delivered = await fetch(BASE + pub.external_url);
+const deliveredBytes = Buffer.from(await delivered.arrayBuffer());
+const deliveredPath = path.join(tmp, 'delivered.mp4');
+await import('node:fs').then((fs) => fs.writeFileSync(deliveredPath, deliveredBytes));
+const deliveredProbe = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-print_format', 'json', '-show_format', deliveredPath]));
+assert(Math.abs(Number(deliveredProbe.format.duration) - clipDur) < 2,
+  `delivered file is the playable rendered clip (${Number(deliveredProbe.format.duration).toFixed(1)}s)`);
+const deliveredManifest = await (await fetch(BASE + pub.external_url.replace('.mp4', '.json'))).json();
+assert(deliveredManifest.caption === 'The moment the room got loud',
+  'delivery manifest carries the editor-rewritten hook as the caption');
+r = await j('GET', `/api/jobs/${rec}`);
+assert(r.data.clips.by_status?.published === 1, 'board rollup shows the published clip');
+
+console.log('\nB3+B4+B5 smoke passed: media in → scored, rendered 9:16 clips out → reviewed, signed off → published end-to-end.');

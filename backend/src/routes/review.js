@@ -22,6 +22,7 @@
 import { Router } from 'express';
 import { q } from '../db/index.js';
 import { id } from '../lib/ids.js';
+import { autoScheduleApproved } from '../publish/index.js';
 
 const r = Router();
 const INTERNAL = ['ops', 'editor', 'reviewer', 'account_manager'];
@@ -135,7 +136,11 @@ r.post('/:clipId/decision', async (req, res, next) => {
 
     const event = await transition(clip.id, from, to, u.id, decision, notes);
     if (!event) return conflict(res, await clipContext(clip.id));
-    res.json({ clipId: clip.id, from, to, autoPublished, event });
+    // B5: a clip that just reached 'approved' is the service's to ship —
+    // schedule it now on every platform the client has connected. Best-effort:
+    // a scheduling hiccup never rolls back the decision.
+    const scheduled = to === 'approved' ? await autoScheduleApproved(clip.id) : [];
+    res.json({ clipId: clip.id, from, to, autoPublished, scheduled, event });
   } catch (e) { next(e); }
 });
 

@@ -23,13 +23,14 @@ function Signal({ name, value, display }) {
   );
 }
 
-export function SignalBlock({ signals = {} }) {
-  const z = Number(signals.energyZ ?? 0);
+export function SignalBlock({ signals }) {
+  const s = signals || {}; // signals is nullable in the schema; null skips a `= {}` default
+  const z = Number(s.energyZ ?? 0);
   return (
     <div style={{ display: 'grid', gap: 6 }}>
       <Signal name="energy" value={(z + 1) / 3} display={`${z >= 0 ? '+' : ''}${z.toFixed(1)}σ`} />
-      <Signal name="dur fit" value={signals.durationFit} display={Number(signals.durationFit ?? 0).toFixed(2)} />
-      <Signal name="position" value={signals.positionBonus} display={Number(signals.positionBonus ?? 0).toFixed(2)} />
+      <Signal name="dur fit" value={s.durationFit} display={Number(s.durationFit ?? 0).toFixed(2)} />
+      <Signal name="position" value={s.positionBonus} display={Number(s.positionBonus ?? 0).toFixed(2)} />
     </div>
   );
 }

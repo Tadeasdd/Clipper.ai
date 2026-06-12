@@ -28,8 +28,9 @@ createdb clipper   # or: docker run -e POSTGRES_USER=clipper -e POSTGRES_PASSWOR
 cd backend && npm install && cp .env.example .env && npm run dev   # :8080
 curl localhost:8080/api/health   # {"ok":true,"db":"up"}
 npm run smoke                    # B2: intake/clients/leads end-to-end
-npm run smoke:pipeline           # B3+B4: full pipeline on a synthetic podcast, then review sign-off
+npm run smoke:pipeline           # B3+B4+B5: synthetic podcast → review sign-off → published
 npm run smoke:review             # B4: the review status machine, roles, audit trail
+npm run smoke:publish            # B5: connections, scheduler lifecycle, sign-off guarantee
 ```
 
 The ops dashboard lives at `/ops` (dev gate key: `clipper-ops`, override with
@@ -43,7 +44,7 @@ The Vite dev server proxies `/api` to `localhost:8080`.
 
 The full staged plan (F1–F5 frontend, B1–B7 backend, with dependencies and
 done-criteria) lives in [`docs/BUILD_STAGES.md`](docs/BUILD_STAGES.md).
-Current status: **F1–F4 ✅ · B1–B4 ✅** — site is modular/routed, the pipeline is live (intake → ingest → transcribe → analyze → score → generate → rendered 9:16 clips), the B4 review machine enforces client sign-off (auto-publish is an explicit opt-out), and the `/ops` dashboard operates all of it: processing board, recording detail with stage evidence, clip grid with hook editing, review desk, client management, and the first real ops metrics. Next: B5 publishing, B6 the measurement loop, B7 auth, F5 client portal.
+Current status: **F1–F4 ✅ · B1–B5 ✅** — site is modular/routed, the pipeline is live (intake → ingest → transcribe → analyze → score → generate → rendered 9:16 clips), the B4 review machine enforces client sign-off (auto-publish is an explicit opt-out), B5 publishing ships signed-off clips through platform adapters (offline-real `local` driver by default, real YouTube adapter behind `PUBLISH_DRIVER=live`; credentials encrypted at rest), and the `/ops` dashboard operates all of it end to end. Next: B6 the measurement loop, B7 auth, F5 client portal.
 
 ## Deploy
 

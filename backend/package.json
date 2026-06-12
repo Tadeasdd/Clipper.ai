@@ -10,7 +10,8 @@
     "migrate": "node -e \"import('./src/db/index.js').then(m=>m.migrate()).then(()=>process.exit(0))\"",
     "worker": "node -e \"import('./src/pipeline/index.js').then(m=>m.startWorkers())\"",
     "smoke:pipeline": "node scripts/smoke-pipeline.mjs",
-    "smoke:review": "node scripts/smoke-review.mjs"
+    "smoke:review": "node scripts/smoke-review.mjs",
+    "smoke:publish": "node scripts/smoke-publish.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1066.0",

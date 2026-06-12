@@ -22,6 +22,7 @@ import usersRoutes from './routes/users.js';
 import leadsRoutes from './routes/leads.js';
 import { migrate, q } from './db/index.js';
 import { startWorkers } from './pipeline/index.js';
+import { startPublisher } from './publish/scheduler.js';
 
 const app = express();
 app.use(cors());
@@ -58,5 +59,5 @@ const port = process.env.PORT || 8080;
 await migrate();
 // B3: pipeline workers run in-process by default; set WORKERS_ENABLED=false
 // to run them separately via `npm run worker` (SKIP LOCKED makes both safe).
-if (process.env.WORKERS_ENABLED !== 'false') startWorkers();
+if (process.env.WORKERS_ENABLED !== 'false') { startWorkers(); startPublisher(); }
 app.listen(port, () => console.log(`clipper-ops listening on :${port}`));

@@ -57,3 +57,9 @@ jobs:
       # atomic double-decision guard, the changes/resubmit loop, auto-publish
       # opt-in, and the audit trail.
       - run: npm run smoke:review
+      # B5: publishing — connections (encrypted at rest), only-approved
+      # scheduling, the scheduler lifecycle to a delivered outbox file,
+      # scheduled_at honored, failure/park/retry, cancel, auto-schedule
+      # on sign-off.
+      - run: npm run smoke:publish
+        timeout-minutes: 4

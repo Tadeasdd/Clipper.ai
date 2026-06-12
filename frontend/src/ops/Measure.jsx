@@ -10,7 +10,7 @@
    until platform adapters exist. */
 import React from 'react';
 import { ops, usePoll } from './api.js';
-import { PageTitle, Panel, PanelHead, ErrorBand, Empty, Label, Mono, T } from './OpsApp.jsx';
+import { PageTitle, Panel, PanelHead, ErrorBand, Empty, Label, Mono, T, StatusChip } from './OpsApp.jsx';
 
 function Metric({ label, value, unit, note, accent }) {
   return (
@@ -51,33 +51,56 @@ function Analytics() {
 }
 
 function Publish() {
-  const { data, error, loading, refresh } = usePoll(ops.publishQueue, { ms: 8000 });
+  const { data, error, loading, refresh } = usePoll(ops.publishQueue, { ms: 5000 });
+  const [actErr, setActErr] = React.useState(null);
   const items = data?.items || [];
-  const cols = ['clip', 'client', 'platform', 'scheduled', 'status'];
+  const retry = async (id) => {
+    setActErr(null);
+    try { await fetch(((import.meta.env && import.meta.env.VITE_API_BASE) || '') + `/api/publish/${id}/retry`, { method: 'POST' }); refresh(); }
+    catch (e) { setActErr(e); }
+  };
+  const cols = ['clip', 'client', 'platform', 'scheduled', 'status', ''];
   return (
     <>
-      <PageTitle kicker="Operations · distribution" title="Publishing queue" />
+      <PageTitle kicker="Operations · distribution" title="Publishing queue"
+        right={actErr && <Mono style={{ fontSize: 11, color: T.red }}>{String(actErr.message)}</Mono>} />
       <Panel className="ops-rise">
-        <PanelHead title="Scheduled — per client, per platform" right={<Label>{items.length} queued</Label>} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr 1fr 1fr', gap: 12, padding: '9px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
-          {cols.map((c) => <Label key={c}>{c}</Label>)}
+        <PanelHead title="Per client, per platform — failed first" right={<Label>{items.length} jobs</Label>} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr 0.7fr 1fr 1.3fr 80px', gap: 12, padding: '9px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
+          {cols.map((c, i) => <Label key={i}>{c}</Label>)}
         </div>
         {error && !data && <ErrorBand error={error} retry={refresh} />}
         {loading && !data && !error && <Empty>loading…</Empty>}
         {data && !items.length && (
           <Empty>
-            empty until B5 — platform adapters (YouTube Shorts · TikTok · Reels · LinkedIn · X)
-            drain publish_jobs at scheduled_at; approved clips queue here, and only approved
-            clips: the status machine guarantees it
+            nothing queued — clips land here on sign-off (auto-scheduled onto every
+            connected platform) or via POST /api/publish; the scheduler drains them
+            at their scheduled time
           </Empty>
         )}
         {items.map((i) => (
-          <div key={i.id} className="ops-row" style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr 1fr 1fr', gap: 12, padding: '10px 16px', borderTop: `1px solid ${T.lineSoft}` }}>
-            <Mono style={{ fontSize: 11 }}>{i.clip_id}</Mono>
+          <div key={i.id} className="ops-row" style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr 0.7fr 1fr 1.3fr 80px', gap: 12, alignItems: 'center', padding: '10px 16px', borderTop: `1px solid ${T.lineSoft}` }}>
+            <div style={{ minWidth: 0 }}>
+              <Mono style={{ fontSize: 11, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{i.hook || i.clip_id}</Mono>
+              <Mono style={{ fontSize: 9.5, color: T.dim }}>{i.clip_id}</Mono>
+            </div>
             <Mono style={{ fontSize: 11 }}>{i.client_name || '—'}</Mono>
-            <Mono style={{ fontSize: 11 }}>{i.platform}</Mono>
-            <Mono style={{ fontSize: 11 }}>{i.scheduled_at || '—'}</Mono>
-            <Mono style={{ fontSize: 11 }}>{i.status}</Mono>
+            <Mono style={{ fontSize: 11 }}>{i.platform}{i.handle ? ` ${i.handle}` : ''}</Mono>
+            <Mono style={{ fontSize: 11, color: T.dim }}>{i.scheduled_at ? new Date(i.scheduled_at).toLocaleString() : 'asap'}</Mono>
+            <div style={{ minWidth: 0 }}>
+              <StatusChip status={i.status === 'publishing' ? 'running' : i.status === 'published' ? 'published' : i.status === 'failed' ? 'failed' : 'scheduled'} pulse={i.status === 'publishing'} />
+              {i.status === 'failed' && i.error && (
+                <Mono title={i.error} style={{ fontSize: 9.5, color: T.red, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {i.attempts}× · {i.error}
+                </Mono>
+              )}
+              {i.status === 'published' && i.external_url && (
+                <a href={(import.meta.env && import.meta.env.VITE_API_BASE || '') + i.external_url} target="_blank" rel="noreferrer" className="mono" style={{ fontSize: 9.5, color: T.green }}>
+                  view delivery →
+                </a>
+              )}
+            </div>
+            <div>{i.status === 'failed' && <button onClick={() => retry(i.id)} className="mono" style={{ fontSize: 10, padding: '4px 10px', borderRadius: 6, cursor: 'pointer', border: `1px solid ${T.amber}55`, color: T.amber, background: T.amber + '14' }}>retry</button>}</div>
           </div>
         ))}
       </Panel>

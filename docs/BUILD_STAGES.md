@@ -158,12 +158,31 @@ Queue workers (BullMQ + Redis or pg-boss), one per stage — stubs are in
   continuation in the pipeline smoke that takes a REAL rendered clip through
   QA → send → client sign-off. Both in CI.
 
-### B5 — Publishing
+### B5 — Publishing (✅)
 - Platform adapters (YouTube Shorts, TikTok, Instagram Reels, LinkedIn, X)
   behind one interface; per-client OAuth tokens stored encrypted.
 - Scheduler drains `publish_jobs` at `scheduled_at`; failures retry and
   surface in the ops queue.
-- **Done when:** an approved clip auto-publishes to one platform end-to-end.
+- **Done when:** an approved clip auto-publishes to one platform end-to-end. ✅
+  Done: `publish_jobs` is a real queue with the same runtime shape as the
+  pipeline (FOR UPDATE SKIP LOCKED claims, 3-attempt backoff, parked
+  'failed', retry/cancel from the ops queue) and it honors `scheduled_at`.
+  Adapters sit behind `PUBLISH_DRIVER`: `local` (default) is a REAL offline
+  delivery — asset + manifest copied to a per-platform storage outbox and
+  served back via `/api/publish/outbox/...` — same honest pattern as the
+  builtin ASR provider; `live` has a real YouTube Shorts adapter (token
+  refresh + multipart videos.insert), others throw until written.
+  `platform_connections` stores credentials AES-256-GCM-encrypted
+  (`PUBLISH_TOKEN_KEY`; the API never returns them). Scheduling is one
+  atomic CTE that only accepts clips in 'approved' — client sign-off is
+  structurally unskippable — and arrival at 'approved' auto-schedules onto
+  every connected platform (the B4→B5 hook; best-effort, never rolls back a
+  decision). Smokes: `npm run smoke:publish` (27 assertions: encryption at
+  rest, sign-off guarantee, full lifecycle, scheduled_at honored,
+  failure/park/retry, cancel, auto-schedule) and the pipeline smoke's B5
+  continuation publishes the REAL rendered clip and ffprobes the delivered
+  file. Both in CI. The ops publishing queue (F4.6) now renders live jobs
+  with errors, retry, and delivery links.
 
 ### B6 — Measurement + the optimization loop
 - Pollers pull per-post metrics into `clip_metrics`.

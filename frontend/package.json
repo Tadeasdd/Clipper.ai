@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "smoke": "node scripts/smoke.mjs",
-    "integration:f4": "node scripts/f4-integration.mjs"
+    "integration:f4": "node scripts/f4-integration.mjs",
+    "integration:f5": "node scripts/f5-integration.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.460.0",

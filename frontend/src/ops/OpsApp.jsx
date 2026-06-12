@@ -233,12 +233,18 @@ export default function OpsApp() {
   useEffect(() => { document.title = 'Clipper.ai · Operations'; }, []);
   useEffect(() => {
     auth.me()
-      .then((r) => { setSession(localStorage.getItem('clipper_ops_token'), r.user); setAuthState({ phase: 'in', user: r.user }); })
+      .then((r) => { setSession(localStorage.getItem('clipper_session'), r.user); setAuthState({ phase: 'in', user: r.user }); })
       .catch(() => setAuthState({ phase: 'out', user: null }));
   }, []);
   if (authState.phase === 'checking') return <OpsStyles><div /></OpsStyles>;
   if (authState.phase === 'out') {
     return <OpsStyles><Login onAuthed={(user) => setAuthState({ phase: 'in', user })} /></OpsStyles>;
+  }
+  if (authState.user?.role === 'client') {
+    // The login screen promises "client users land in their own portal, never here."
+    // One shared session key makes that a plain navigation, no token handoff.
+    window.location.replace('/portal');
+    return <OpsStyles><div /></OpsStyles>;
   }
   return (
     <OpsStyles>

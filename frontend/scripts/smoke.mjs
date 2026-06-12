@@ -59,5 +59,31 @@ for (const path of opsRoutes) {
 }
 
 if (errors.length) { console.error('\nFAILURES:'); errors.forEach((e) => console.error(' -', e)); process.exit(1); }
+
+/* ── F5/B7: the client portal ────────────────────────────────────────────
+   Same contract as /ops: unauthenticated with NO backend, every /portal
+   route must land on the client sign-in screen and render it fully.
+   Authenticated surfaces are exercised by integration:f5. */
+history.pushState({}, '', '/portal');
+window.dispatchEvent(new PopStateEvent('popstate'));
+await settle(700); // lazy PortalApp chunk
+html = document.getElementById('root').innerHTML;
+if (!/client portal/i.test(html) || !/sign in/i.test(html)) errors.push('/portal did not render the client sign-in screen');
+console.log(`/portal (anon)  login=${/client portal/i.test(html) && /sign in/i.test(html) ? 'YES' : 'NO'}`);
+
+const portalRoutes = ['/portal', '/portal/review', '/portal/upload', '/portal/report', '/portal/nowhere'];
+for (const path of portalRoutes) {
+  history.pushState({}, '', '/');
+  window.dispatchEvent(new PopStateEvent('popstate'));
+  await settle(150);
+  history.pushState({}, '', path);
+  window.dispatchEvent(new PopStateEvent('popstate'));
+  await settle(500);
+  const len = document.getElementById('root').innerHTML.length;
+  console.log(`${path.padEnd(15)} rendered=${len > 500 ? 'YES' : 'NO (' + len + ' chars)'}`);
+  if (len < 500) errors.push(`portal route ${path} rendered almost nothing (${len} chars)`);
+}
+
+if (errors.length) { console.error('\nFAILURES:'); errors.forEach((e) => console.error(' -', e)); process.exit(1); }
 console.log('\nAll routes render. Smoke passed.');
 process.exit(0);

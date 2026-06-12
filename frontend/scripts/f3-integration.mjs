@@ -11,7 +11,7 @@ if (!window.IntersectionObserver) window.IntersectionObserver = class { observe(
 const realFetch = globalThis.fetch.bind(globalThis);
 globalThis.fetch = (input, init) => {
   let url = typeof input === 'string' ? input : input.url;
-  if (url.startsWith('/api/')) url = 'http://localhost:8090' + url;
+  if (url.startsWith('/api/')) url = 'http://localhost:8080' + url;
   return realFetch(url, init);
 };
 window.fetch = globalThis.fetch;
@@ -39,7 +39,7 @@ console.log('clicking:', JSON.stringify(btn.textContent.trim().slice(0, 40)));
 btn.click();
 await settle(900);
 
-const res = await realFetch('http://localhost:8090/api/leads');
+const res = await realFetch('http://localhost:8080/api/leads');
 const { leads } = await res.json();
 const found = leads.find((l) => l.email === email);
 if (!found) { console.error('FAIL: lead not found in backend after form submit'); process.exit(1); }

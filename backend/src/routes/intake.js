@@ -54,8 +54,17 @@ r.put('/upload/:id', requireAuth(), async (req, res, next) => {
 });
 
 // GET /api/intake/queue — ops dashboard: incoming content queue.
-r.get('/queue', requireAuth(...INTERNAL), async (_req, res, next) => {
+// Client users get their own recent submissions instead — pinned to their
+// client in the query (F5 portal upload surface), whatever params they send.
+r.get('/queue', requireAuth(), async (req, res, next) => {
   try {
+    if (req.user.role === 'client') {
+      const { rows } = await q(`
+        SELECT id, source_url, kind, status, duration_s, created_at
+        FROM recordings WHERE client_id = $1
+        ORDER BY created_at DESC LIMIT 50`, [req.user.client_id]);
+      return res.json({ items: rows });
+    }
     const { rows } = await q(`
       SELECT r.id, r.client_id, c.name AS client_name, r.source_url, r.storage_key,
              r.kind, r.status, r.created_at

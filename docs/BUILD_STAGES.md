@@ -87,7 +87,26 @@ Secondary by design. Four surfaces only:
 - View deliverables
 - Approve content (the client side of the review workflow)
 - Analytics reports
-- **Depends on:** B4, B6, plus client-role auth (B7).
+- **Depends on:** B4, B6, plus client-role auth (B7). ✅
+  Done. `/portal` is its own lazy chunk (`frontend/src/portal/`), sharing
+  the session plumbing with `/ops` (one token key, one cookie). Client
+  logins land here; ops logins get bounced to `/ops` and vice versa.
+  - **Sign-off** is the client side of the B4 machine: clips awaiting the
+    client, inline preview, approve / request changes with a typed note —
+    the note lands in the audit trail attributed to the client session.
+  - **Deliverables** lists approved + published clips with client-facing
+    status labels (no internal pipeline vocabulary).
+  - **Submit** posts a URL or file into the same intake the ops queue
+    drains; `GET /api/intake/queue` now serves client users their own
+    pinned submissions (ops still see the full queue).
+  - **Report** renders the B6 client report (`/api/analytics/clients/:id`),
+    which 403s server-side if a client asks for a different client.
+  `npm run integration:f5` runs the whole thing in happy-dom against the
+  live backend with two clients seeded: verifies the fence (the neighbor's
+  data never renders), clicks approve with a note and checks the status
+  transition + audit attribution in Postgres, submits a URL through the
+  built UI and checks the `recordings` row, and renders the report.
+  `smoke-auth` also asserts the intake-queue fence at the API level.
 
 ---
 

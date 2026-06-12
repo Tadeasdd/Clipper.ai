@@ -24,6 +24,9 @@ const Studio = lazy(() => import('./studio/Studio.jsx'));
 // F4: the operations dashboard — its own chunk, its own world. The marketing
 // site never links here; this is the internal product.
 const OpsApp = lazy(() => import('./ops/OpsApp.jsx'));
+// F5: the client portal — secondary by design, the client's window into the
+// same machinery. Its own chunk; shares only the session/API layer with /ops.
+const PortalApp = lazy(() => import('./portal/PortalApp.jsx'));
 
 const PAGE_BY_PATH = {
   '/': 'home', '/product': 'product', '/pricing': 'pricing', '/docs': 'docs',
@@ -45,12 +48,13 @@ function ClipperAppInner() {
   const navigate = useNavigate();
   const path = location.pathname.replace(/\/+$/, '') || '/';
   const isOps = path === '/ops' || path.startsWith('/ops/'); // F4: internal route tree
+  const isPortal = path === '/portal' || path.startsWith('/portal/'); // F5: client route tree
   const view = path === '/studio' ? 'app' : 'landing'; // landing | app
   const page = PAGE_BY_PATH[path] || 'home'; // home | product | pricing | docs | status | company
-  // Unknown URLs canonicalize to home (never /ops — it owns its own 404).
+  // Unknown URLs canonicalize to home (never /ops or /portal — each owns its own 404).
   useEffect(() => {
-    if (!isOps && view !== 'app' && !PAGE_BY_PATH[path]) navigate('/', { replace: true });
-  }, [isOps, view, path, navigate]);
+    if (!isOps && !isPortal && view !== 'app' && !PAGE_BY_PATH[path]) navigate('/', { replace: true });
+  }, [isOps, isPortal, view, path, navigate]);
   const [stage, setStage] = useState('upload'); // upload | analyzing | results | pulse
   const [progress, setProgress] = useState(0);
   const [analysisStep, setAnalysisStep] = useState(0);
@@ -273,8 +277,8 @@ function ClipperAppInner() {
 
   // Phase 1: fire a real page_view on mount and on every in-app navigation.
   // (Not on /ops — internal traffic doesn't belong in the marketing funnel.)
-  useEffect(() => { if (!isOps) track('page_view', { page }); }, [isOps, page]);
-  useEffect(() => { if (!isOps) applySeo(page, view); }, [isOps, page, view]);
+  useEffect(() => { if (!isOps && !isPortal) track('page_view', { page }); }, [isOps, isPortal, page]);
+  useEffect(() => { if (!isOps && !isPortal) applySeo(page, view); }, [isOps, isPortal, page, view]);
   useEffect(() => { injectJsonLd(); }, []);
   useEffect(() => { injectPerfHints(); }, []);
 
@@ -324,6 +328,17 @@ function ClipperAppInner() {
       <Suspense fallback={null}>
         <Routes>
           <Route path="/ops/*" element={<OpsApp />} />
+        </Routes>
+      </Suspense>
+    );
+  }
+
+  // F5: the client portal — separate chunk, no marketing shell, no tracking.
+  if (isPortal) {
+    return (
+      <Suspense fallback={null}>
+        <Routes>
+          <Route path="/portal/*" element={<PortalApp />} />
         </Routes>
       </Suspense>
     );

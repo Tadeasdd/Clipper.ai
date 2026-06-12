@@ -133,6 +133,12 @@ assert(r.status === 200 && r.data.status === 'awaiting_client'
   'client queue requests are PINNED to own sign-off list whatever params they send');
 r = await j('POST', '/api/intake', { clientId: cliB, sourceUrl: 'https://x/y.mp3' }, clientA.token);
 assert(r.status === 403, 'client A cannot submit content as client B');
+r = await j('GET', '/api/intake/queue?clientId=' + cliB, null, clientA.token);
+assert(r.status === 200 && r.data.items.some((i) => i.id === recA) && r.data.items.every((i) => i.client_name === undefined),
+  'client intake queue is PINNED to own submissions whatever params they send (F5 upload surface)');
+r = await j('GET', '/api/intake/queue', null, clientB.token);
+assert(r.status === 200 && !r.data.items.some((i) => i.id === recA),
+  "client B's submission list does NOT include client A's recordings");
 
 // ── attribution: approval and publish carry the session identity ───────────
 await j('POST', '/api/publish/connections', { clientId: cliA, platform: 'youtube', credentials: { t: run } }, ops);

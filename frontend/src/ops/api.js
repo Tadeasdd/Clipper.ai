@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) || '';
 
-async function json(method, path, body) {
+export async function json(method, path, body) {
   const res = await fetch(API_BASE + path, {
     method,
     headers: { 'content-type': 'application/json', ...authHeader() },
@@ -79,7 +79,7 @@ export function usePoll(fn, { ms = 3000, deps = [] } = {}) {
    cookie at login, which is what <video src> asset requests authenticate
    with (you can't put a header on a media element). Logout revokes the
    session server-side. */
-const TOKEN_KEY = 'clipper_ops_token';
+const TOKEN_KEY = 'clipper_session'; // shared by /ops and /portal — one session, the server decides access
 let currentUser = null;
 
 export function authHeader() {

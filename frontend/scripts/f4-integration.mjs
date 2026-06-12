@@ -23,7 +23,7 @@ const api = (m, p, b) => rawFetch('http://localhost:8080' + p, {
 await api('POST', '/api/auth/bootstrap', OPS_CREDS); // 201 once, 409 after
 TOKEN = (await api('POST', '/api/auth/login', OPS_CREDS)).token;
 if (!TOKEN) { console.error('FAIL: could not sign in as the smoke ops account'); process.exit(1); }
-localStorage.setItem('clipper_ops_token', TOKEN);
+localStorage.setItem('clipper_session', TOKEN);
 
 // seed: a fresh clip in awaiting_review (decisions are by the ops session)
 const stamp = Date.now();

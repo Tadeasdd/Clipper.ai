@@ -42,7 +42,10 @@ account is created from inside by an ops user. The API has one door —
 (media elements authenticate with the cookie; API clients use the bearer).
 With both servers up, `cd frontend && npm run integration:f4` signs in,
 clicks through a real review in the built UI, and verifies the transitions —
-and their attribution — in Postgres.
+and their attribution — in Postgres. `npm run integration:f5` does the same
+for the client portal at `/portal`: two clients seeded, the fence verified
+(the neighbor's data never renders), a sign-off and an upload driven through
+the built UI and checked in the database.
 
 The Vite dev server proxies `/api` to `localhost:8080`.
 
@@ -50,7 +53,7 @@ The Vite dev server proxies `/api` to `localhost:8080`.
 
 The full staged plan (F1–F5 frontend, B1–B7 backend, with dependencies and
 done-criteria) lives in [`docs/BUILD_STAGES.md`](docs/BUILD_STAGES.md).
-Current status: **F1–F4 ✅ · B1–B7 ✅** — site is modular/routed, the pipeline is live (intake → ingest → transcribe → analyze → score → generate → rendered 9:16 clips), the B4 review machine enforces client sign-off (auto-publish is an explicit opt-out), B5 publishing ships signed-off clips through platform adapters (offline-real `local` driver by default, real YouTube adapter behind `PUBLISH_DRIVER=live`; credentials encrypted at rest), and B6 closes the loop: published posts get measured into `clip_metrics`, the client report generates itself, and score↔performance correlation retrains the scoring weights (bounded, gated, append-only — `score.js` records which weights it used). B7 put it all behind one door: server-side sessions, role walls on every endpoint, client users fenced to their own data, and every approval and publish attributable to the session that made it. The `/ops` dashboard operates all of it end to end. Next: F5 client portal (every backend it needs is ready and scoped).
+Current status: **F1–F5 ✅ · B1–B7 ✅** — the full staged plan is built. The site is modular/routed, the pipeline is live (intake → ingest → transcribe → analyze → score → generate → rendered 9:16 clips), the B4 review machine enforces client sign-off (auto-publish is an explicit opt-out), B5 publishing ships signed-off clips through platform adapters (offline-real `local` driver by default, real YouTube adapter behind `PUBLISH_DRIVER=live`; credentials encrypted at rest), and B6 closes the loop: published posts get measured into `clip_metrics`, the client report generates itself, and score↔performance correlation retrains the scoring weights (bounded, gated, append-only — `score.js` records which weights it used). B7 put it all behind one door: server-side sessions, role walls on every endpoint, client users fenced to their own data, and every approval and publish attributable to the session that made it. The `/ops` dashboard operates all of it; the `/portal` client dashboard (F5) gives clients their four surfaces — submit, deliverables, sign-off, report — fenced to their own data on both sides of the wire.
 
 ## Deploy
 

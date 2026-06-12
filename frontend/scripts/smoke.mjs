@@ -32,5 +32,32 @@ for (const path of routes) {
 }
 
 if (errors.length) { console.error('\nFAILURES:'); errors.forEach((e) => console.error(' -', e)); process.exit(1); }
+
+/* ── F4: the ops dashboard ────────────────────────────────────────────────
+   Locked: /ops must show the gate. Unlocked (sessionStorage key): the shell
+   must render every surface WITHOUT a backend — usePoll catches fetch
+   failures and shows error bands; any unhandled rejection fails this smoke. */
+history.pushState({}, '', '/ops');
+window.dispatchEvent(new PopStateEvent('popstate'));
+await settle(700); // lazy OpsApp chunk
+let html = document.getElementById('root').innerHTML;
+if (!/ops key/i.test(html)) errors.push('/ops did not render the gate');
+console.log(`/ops (locked)   gate=${/ops key/i.test(html) ? 'YES' : 'NO'}`);
+
+sessionStorage.setItem('clipper_ops_gate', 'clipper-ops');
+const opsRoutes = ['/ops', '/ops/review', '/ops/clients', '/ops/publish', '/ops/analytics', '/ops/nowhere'];
+for (const path of opsRoutes) {
+  history.pushState({}, '', '/');
+  window.dispatchEvent(new PopStateEvent('popstate'));
+  await settle(150);
+  history.pushState({}, '', path);
+  window.dispatchEvent(new PopStateEvent('popstate'));
+  await settle(500);
+  const len = document.getElementById('root').innerHTML.length;
+  console.log(`${path.padEnd(15)} rendered=${len > 500 ? 'YES' : 'NO (' + len + ' chars)'}`);
+  if (len < 500) errors.push(`ops route ${path} rendered almost nothing (${len} chars)`);
+}
+
+if (errors.length) { console.error('\nFAILURES:'); errors.forEach((e) => console.error(' -', e)); process.exit(1); }
 console.log('\nAll routes render. Smoke passed.');
 process.exit(0);

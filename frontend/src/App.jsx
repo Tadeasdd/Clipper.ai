@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Routes, Route } from 'react-router-dom';
 import { track } from './lib/analytics.jsx';
 import { applySeo, injectJsonLd } from './lib/seo.jsx';
 import { injectPerfHints } from './lib/perf.jsx';
@@ -21,6 +21,9 @@ const CompanyPage = lazy(() => import('./pages/Company.jsx').then((m) => ({ defa
 const PrivacyPage = lazy(() => import('./pages/Legal.jsx').then((m) => ({ default: m.PrivacyPage })));
 const TermsPage = lazy(() => import('./pages/Legal.jsx').then((m) => ({ default: m.TermsPage })));
 const Studio = lazy(() => import('./studio/Studio.jsx'));
+// F4: the operations dashboard — its own chunk, its own world. The marketing
+// site never links here; this is the internal product.
+const OpsApp = lazy(() => import('./ops/OpsApp.jsx'));
 
 const PAGE_BY_PATH = {
   '/': 'home', '/product': 'product', '/pricing': 'pricing', '/docs': 'docs',
@@ -41,12 +44,13 @@ function ClipperAppInner() {
   const location = useLocation();
   const navigate = useNavigate();
   const path = location.pathname.replace(/\/+$/, '') || '/';
+  const isOps = path === '/ops' || path.startsWith('/ops/'); // F4: internal route tree
   const view = path === '/studio' ? 'app' : 'landing'; // landing | app
   const page = PAGE_BY_PATH[path] || 'home'; // home | product | pricing | docs | status | company
-  // Unknown URLs canonicalize to home.
+  // Unknown URLs canonicalize to home (never /ops — it owns its own 404).
   useEffect(() => {
-    if (view !== 'app' && !PAGE_BY_PATH[path]) navigate('/', { replace: true });
-  }, [view, path, navigate]);
+    if (!isOps && view !== 'app' && !PAGE_BY_PATH[path]) navigate('/', { replace: true });
+  }, [isOps, view, path, navigate]);
   const [stage, setStage] = useState('upload'); // upload | analyzing | results | pulse
   const [progress, setProgress] = useState(0);
   const [analysisStep, setAnalysisStep] = useState(0);
@@ -268,8 +272,9 @@ function ClipperAppInner() {
   };
 
   // Phase 1: fire a real page_view on mount and on every in-app navigation.
-  useEffect(() => { track('page_view', { page }); }, [page]);
-  useEffect(() => { applySeo(page, view); }, [page, view]);
+  // (Not on /ops — internal traffic doesn't belong in the marketing funnel.)
+  useEffect(() => { if (!isOps) track('page_view', { page }); }, [isOps, page]);
+  useEffect(() => { if (!isOps) applySeo(page, view); }, [isOps, page, view]);
   useEffect(() => { injectJsonLd(); }, []);
   useEffect(() => { injectPerfHints(); }, []);
 
@@ -311,6 +316,18 @@ function ClipperAppInner() {
   }, [page]);
 
   const goto = (p) => navigate(p === 'home' ? '/' : `/${p}`);
+
+  // F4: the internal operations dashboard — separate chunk, no marketing shell.
+  // The /ops/* splat gives OpsApp's nested <Routes> their base path.
+  if (isOps) {
+    return (
+      <Suspense fallback={null}>
+        <Routes>
+          <Route path="/ops/*" element={<OpsApp />} />
+        </Routes>
+      </Suspense>
+    );
+  }
 
   if (view === 'landing') {
     const pageProps = { goto, openApp: watchSample, bookCall, page };

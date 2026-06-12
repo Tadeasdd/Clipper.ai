@@ -110,5 +110,56 @@ assert(r.status === 200 && r.data.platforms.youtube.series.length === 2
 r = await j('GET', '/api/clips/clip_nobody/metrics');
 assert(r.status === 404, 'unknown clip rejected');
 
+// ── B6.2: report aggregation — crafted rows, exact expected numbers ─────────
+// Fresh client, two clips: clip A published on two platforms (the per-post
+// granularity), clip B with two captures (latest must win), plus a post
+// outside the window (must be excluded).
+const cli2 = (await j('POST', '/api/clients', { name: `B6 Report Co ${run}` })).data.id;
+const rec2 = `rec_rep_${run}`;
+await db.query(`INSERT INTO recordings (id, client_id, kind, status) VALUES ($1,$2,'podcast','ready')`, [rec2, cli2]);
+const mkClip = async (id, score, hook) => db.query(
+  `INSERT INTO clips (id, recording_id, t_start_s, t_end_s, score, hook, status)
+   VALUES ($1,$2,0,30,$3,$4,'published')`, [id, rec2, score, hook]);
+const mkPub = async (id, clipId, platform, agoDays) => db.query(
+  `INSERT INTO publish_jobs (id, clip_id, platform, status, published_at, external_url)
+   VALUES ($1,$2,$3,'published', now() - ($4 || ' days')::interval, '/x/'||$1)`, [id, clipId, platform, String(agoDays)]);
+const mkCap = async (pubId, views, retention, agoHours) => db.query(
+  `INSERT INTO clip_metrics (id, publish_id, views, watch_time_s, retention, likes, comments, shares, follows, captured_at)
+   VALUES ('met_'||$1::text||'_'||$4::text, $1, $2::bigint, $2::bigint * 10, $3, 10, 5, 3, 2, now() - ($4::text || ' hours')::interval)`,
+  [pubId, views, retention, String(agoHours)]);
+
+await mkClip(`clip_repA_${run}`, 90, 'Report clip A');
+await mkClip(`clip_repB_${run}`, 70, 'Report clip B');
+await mkPub(`pub_repA_yt_${run}`, `clip_repA_${run}`, 'youtube', 2);
+await mkPub(`pub_repA_tt_${run}`, `clip_repA_${run}`, 'tiktok', 2);
+await mkPub(`pub_repB_yt_${run}`, `clip_repB_${run}`, 'youtube', 5);
+await mkPub(`pub_old_${run}`, `clip_repB_${run}`, 'x', 40); // outside 30d
+await mkCap(`pub_repA_yt_${run}`, 1000, 0.5, 1);
+await mkCap(`pub_repA_tt_${run}`, 3000, 0.8, 1);
+await mkCap(`pub_repB_yt_${run}`, 500, 0.4, 9);   // stale capture…
+await mkCap(`pub_repB_yt_${run}`, 2000, 0.4, 1);  // …superseded by this one
+await mkCap(`pub_old_${run}`, 999999, 0.9, 1);    // must NOT count
+
+r = await j('GET', `/api/analytics/clients/${cli2}`);
+const t = r.data.totals;
+assert(r.status === 200 && t.postsPublished === 3 && t.clipsPublished === 2,
+  'report counts posts (per platform) and distinct clips in the window');
+assert(t.views === 6000, `latest capture per post wins, window respected (views ${t.views} === 6000)`);
+// weighted retention: (1000*0.5 + 3000*0.8 + 2000*0.4) / 6000 = 0.6166…
+assert(t.avgRetention === 0.617, `retention is views-weighted (${t.avgRetention} === 0.617)`);
+assert(r.data.posts[0].views === 3000 && r.data.posts[0].platform === 'tiktok',
+  'posts ranked by views, the report leads with the winner');
+assert(r.data.posts.every((p) => p.publishId !== `pub_old_${run}`), 'posts outside the window are excluded');
+r = await j('GET', `/api/analytics/clients/${cli2}?days=60`);
+assert(r.data.totals.postsPublished === 4 && r.data.totals.views === 1005999,
+  'the window is a parameter — widen it and the old post returns');
+r = await j('GET', '/api/analytics/clients/cli_nobody');
+assert(r.status === 404, 'unknown client rejected');
+
+// ops totals ride the same latest-per-post logic
+r = await j('GET', '/api/analytics/ops');
+assert(r.data.postsMeasured >= 5 && r.data.totalViews >= 6000,
+  `ops analytics carries distribution totals (${r.data.postsMeasured} posts, ${r.data.totalViews} views)`);
+
 await db.end();
-console.log('\nB6.1 smoke passed: published posts enter the capture rotation and build an honest metrics series.');
+console.log('\nB6.1+B6.2 smoke passed: captures roll in, and the client report aggregates them to the digit.');

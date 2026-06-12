@@ -62,11 +62,12 @@ r.get('/:id/metrics', async (req, res, next) => {
       WHERE pj.clip_id = $1
       ORDER BY pj.platform, m.captured_at DESC`, [req.params.id]);
     const platforms = {};
+    const num = (v) => (v === null ? null : Number(v));
     for (const row of rows) {
       (platforms[row.platform] ||= { externalUrl: row.external_url, series: [] })
-        .series.push({ capturedAt: row.captured_at, views: row.views, watchTimeS: row.watch_time_s,
-                       retention: row.retention, likes: row.likes, comments: row.comments,
-                       shares: row.shares, follows: row.follows });
+        .series.push({ capturedAt: row.captured_at, views: num(row.views), watchTimeS: num(row.watch_time_s),
+                       retention: num(row.retention), likes: num(row.likes), comments: num(row.comments),
+                       shares: num(row.shares), follows: num(row.follows) });
     }
     res.json({ clipId: req.params.id, platforms });
   } catch (e) { next(e); }

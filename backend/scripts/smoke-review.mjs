@@ -147,7 +147,9 @@ assert(r.status === 200 && r.data.approvalRate >= 0 && r.data.approvalRate <= 1 
   `approval rate computed from real verdicts (${r.data.approvalRate} over ${r.data.verdicts})`);
 assert(r.data.medianTurnaroundHours === null || r.data.medianTurnaroundHours > 0,
   'median turnaround is null (no finished pipelines) or positive');
-assert(r.data.scoreCorrelation === null,
-  'score correlation stays honestly null until B6 has published performance');
+const corr = r.data.scoreCorrelation;
+assert(corr && typeof corr.sample === 'number'
+  && (corr.value === null ? corr.sample < corr.needed : Math.abs(corr.value) <= 1),
+  `score correlation is the B6 loop's live reading (ρ=${corr.value}, n=${corr.sample}) — null only below the gate`);
 
 console.log('\nB4 smoke passed: the full status machine travels via the API — with sign-off enforced.');

@@ -27,24 +27,65 @@ function Metric({ label, value, unit, note, accent }) {
 
 function Analytics() {
   const { data, error, loading, refresh } = usePoll(ops.opsAnalytics, { ms: 10000 });
+  const [busy, setBusy] = React.useState(false);
+  const [msg, setMsg] = React.useState(null);
   const fmtH = (h) => (h == null ? '—' : h < 1 ? `${Math.round(h * 60)}` : h.toFixed(1));
+  const corr = data?.scoreCorrelation;
+  const w = data?.scoringWeights;
+  const retrain = async () => {
+    setBusy(true); setMsg(null);
+    try {
+      const res = await fetch(((import.meta.env && import.meta.env.VITE_API_BASE) || '') + '/api/analytics/retrain', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ note: 'from ops dashboard' }),
+      });
+      const body = await res.json();
+      setMsg(res.ok ? { ok: true, text: `weights updated (n=${body.basis.sample})` } : { ok: false, text: body.error });
+      refresh();
+    } catch (e) { setMsg({ ok: false, text: String(e.message) }); }
+    finally { setBusy(false); }
+  };
   return (
     <>
       <PageTitle kicker="Operations · the loop" title="Ops analytics" />
       {error && !data && <Panel><ErrorBand error={error} retry={refresh} /></Panel>}
       {loading && !data && !error && <Panel><Empty>loading…</Empty></Panel>}
       {data && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }} className="ops-rise">
-          <Metric label="First-pass QA approval" accent={T.green}
-            value={data.approvalRate == null ? '—' : `${Math.round(data.approvalRate * 100)}%`}
-            note={data.approvalRate == null ? 'no verdicts yet' : `${data.verdicts} internal verdicts in review_events — when this drifts, the scoring weights are off`} />
-          <Metric label="Median pipeline turnaround"
-            value={fmtH(data.medianTurnaroundHours)}
-            unit={data.medianTurnaroundHours == null ? '' : data.medianTurnaroundHours < 1 ? 'min' : 'h'}
-            note={data.medianTurnaroundHours == null ? 'no completed pipelines yet' : 'ingest start → last render, recordings with all five stages done'} />
-          <Metric label="Score ↔ performance" value="awaits B6" accent={T.amber}
-            note="the moat: correlate clips.score with realized views/retention from clip_metrics, then retrain the scoring weights. Needs published clips — stays honest until then." />
-        </div>
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, marginBottom: 14 }} className="ops-rise">
+            <Metric label="First-pass QA approval" accent={T.green}
+              value={data.approvalRate == null ? '—' : `${Math.round(data.approvalRate * 100)}%`}
+              note={data.approvalRate == null ? 'no verdicts yet' : `${data.verdicts} internal verdicts in review_events — when this drifts, the scoring weights are off`} />
+            <Metric label="Median pipeline turnaround"
+              value={fmtH(data.medianTurnaroundHours)}
+              unit={data.medianTurnaroundHours == null ? '' : data.medianTurnaroundHours < 1 ? 'min' : 'h'}
+              note={data.medianTurnaroundHours == null ? 'no completed pipelines yet' : 'ingest start → last render, recordings with all five stages done'} />
+            <Metric label="Distribution" accent={T.green}
+              value={data.totalViews?.toLocaleString?.() ?? '—'} unit="views"
+              note={`latest capture per post, ${data.postsMeasured} posts measured`} />
+            <Metric label="Score ↔ performance"
+              accent={corr?.value == null ? T.amber : T.green}
+              value={corr?.value == null ? '—' : `ρ ${corr.value}`}
+              note={corr?.value == null
+                ? `the loop needs ≥ ${corr?.needed ?? 8} published clips with captures (have ${corr?.sample ?? 0})`
+                : `Spearman over ${corr.sample} published clips, performance client-normalized. Near zero under the local metrics driver is the honest reading — the simulator never peeks at the score.`} />
+          </div>
+          <Panel className="ops-rise" style={{ animationDelay: '0.06s' }}>
+            <PanelHead title="Scoring weights — what the model currently believes"
+              right={<button onClick={retrain} disabled={busy} className="mono" style={{ fontSize: 10, padding: '4px 12px', borderRadius: 6, cursor: 'pointer', border: `1px solid ${T.green}55`, color: T.green, background: T.green + '14', opacity: busy ? 0.5 : 1 }}>{busy ? 'running…' : 'run retrain cycle'}</button>} />
+            <div style={{ display: 'flex', gap: 26, alignItems: 'baseline', padding: '13px 16px', flexWrap: 'wrap' }}>
+              {w && Object.entries(w.weights).map(([k, v]) => (
+                <Mono key={k} style={{ fontSize: 13 }}>
+                  <span style={{ color: T.dim, fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{k} </span>
+                  <span style={{ color: T.green }}>{Number(v).toFixed(3)}</span>
+                </Mono>
+              ))}
+              <Mono style={{ fontSize: 10.5, color: T.dim }}>
+                {w?.source === 'retrained' ? `retrained · ${w.id}` : 'built-in defaults — no retrain cycle yet'}
+              </Mono>
+              {msg && <Mono style={{ fontSize: 10.5, color: msg.ok ? T.green : T.amber }}>{msg.text}</Mono>}
+            </div>
+          </Panel>
+        </>
       )}
     </>
   );

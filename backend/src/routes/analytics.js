@@ -5,6 +5,7 @@
  *  published clips and clip_metrics, so it stays null until B6 proper. */
 import { Router } from 'express';
 import { q } from '../db/index.js';
+import { computeCorrelation, retrain, loadWeights } from '../metrics/loop.js';
 
 const r = Router();
 
@@ -108,8 +109,25 @@ r.get('/ops', async (_req, res, next) => {
       medianTurnaroundHours: turn.rows[0].median_h === null ? null : Number(Number(turn.rows[0].median_h).toFixed(3)),
       postsMeasured: dist.rows[0].posts,
       totalViews: Number(dist.rows[0].views),
-      scoreCorrelation: null, // B6.3: needs the correlation pass over clip_metrics
+      // B6.3: the loop, live. Under the local metrics driver this hovers
+      // near zero by design (the simulator never peeks at the score).
+      scoreCorrelation: await computeCorrelation(),
+      scoringWeights: await loadWeights(),
     });
+  } catch (e) { next(e); }
+});
+
+// POST /api/analytics/retrain — one cycle of the loop: correlate, step the
+// weights toward the evidence, append the new row. 409 below the sample
+// gate. An ops action for now; B7 puts it behind auth.
+r.post('/retrain', async (req, res, next) => {
+  try {
+    const row = await retrain(undefined, req.body?.note || null);
+    if (!row) {
+      const corr = await computeCorrelation();
+      return res.status(409).json({ error: `retraining needs ≥ ${corr.needed} published clips with captures (have ${corr.sample})` });
+    }
+    res.status(201).json(row);
   } catch (e) { next(e); }
 });
 

@@ -161,5 +161,78 @@ r = await j('GET', '/api/analytics/ops');
 assert(r.data.postsMeasured >= 5 && r.data.totalViews >= 6000,
   `ops analytics carries distribution totals (${r.data.postsMeasured} posts, ${r.data.totalViews} views)`);
 
+// ── B6.3: the loop — exact math, the gate, one real retrain cycle ───────────
+// Reset loop state so the defaults-first assertions hold on re-runs (CI is
+// always fresh; local re-runs start the loop over).
+await db.query('DELETE FROM scoring_weights');
+// Craft a cohort with a PLANTED relationship (same trick as the pipeline
+// smoke's loud bursts): 10 clips for one client where durationFit perfectly
+// predicts performance, energy is flat, and position anti-predicts. The loop
+// must detect exactly that — and only clips with real signals qualify, so the
+// global sample is this cohort plus the few real pipeline clips.
+const cli3 = (await j('POST', '/api/clients', { name: `B6 Loop Co ${run}` })).data.id;
+const rec3 = `rec_loop_${run}`;
+await db.query(`INSERT INTO recordings (id, client_id, kind, status) VALUES ($1,$2,'podcast','ready')`, [rec3, cli3]);
+for (let i = 1; i <= 10; i++) {
+  const cid = `clip_loop_${run}_${i}`, pid = `pub_loop_${run}_${i}`;
+  await db.query(
+    `INSERT INTO clips (id, recording_id, t_start_s, t_end_s, score, signals, hook, status)
+     VALUES ($1,$2,0,30,$3,$4,'loop cohort','published')`,
+    [cid, rec3, 50 + i, JSON.stringify({ energyZ: 1.0, durationFit: i / 10, positionBonus: (11 - i) / 10 })]);
+  await db.query(
+    `INSERT INTO publish_jobs (id, clip_id, platform, status, published_at, external_url)
+     VALUES ($1,$2,'youtube','published', now() - interval '1 day', '/x/'||$1)`, [pid, cid]);
+  await db.query(
+    `INSERT INTO clip_metrics (id, publish_id, views, retention, captured_at)
+     VALUES ('met_'||$1, $1, $2::bigint, 0.5, now())`, [pid, 1000 * i]);
+}
+
+const { spearman, ranks } = await import('../src/lib/stats.js');assert(spearman([1, 2, 3, 4], [10, 20, 30, 40]) === 1, 'spearman: perfect monotonic = 1');
+assert(spearman([1, 2, 3, 4], [40, 30, 20, 10]) === -1, 'spearman: perfect inverse = -1');
+assert(JSON.stringify(ranks([10, 20, 20, 30])) === '[1,2.5,2.5,4]', 'ranks: ties averaged');
+assert(spearman([1, 1, 1], [5, 9, 2]) === null && spearman([1], [2]) === null,
+  'spearman: constant series and n<2 are honestly undefined');
+
+const { computeCorrelation, retrain: retrainDirect } = await import('../src/metrics/loop.js');
+const gated = await computeCorrelation(10_000);
+assert(gated.value === null && gated.sample > 0 && gated.needed === 10_000,
+  `the sample gate holds (have ${gated.sample}, demanded 10000 → null)`);
+assert((await retrainDirect(10_000)) === null, 'retrain refuses to move weights below the gate');
+
+// live correlation over everything captured so far — machinery, not magic:
+// under the local driver the value floats near zero by design
+r = await j('GET', '/api/analytics/ops');
+const corr = r.data.scoreCorrelation;
+assert(corr.sample >= 10 && corr.value > 0.5,
+  `the loop detects the planted score↔performance relationship (ρ=${corr.value}, n=${corr.sample})`);
+assert(corr.perSignal.durationFit > 0.7 && corr.perSignal.position < 0,
+  `per-signal correlations find the planted structure (durFit ${corr.perSignal.durationFit}, position ${corr.perSignal.position})`);
+assert(r.data.scoringWeights.source === 'default' && r.data.scoringWeights.weights.energy === 0.6,
+  'weights start at the defaults before any retrain');
+
+// one real cycle through the API
+r = await j('POST', '/api/analytics/retrain', { note: `b6 smoke ${run}` });
+assert(r.status === 201 && r.data.id.startsWith('wts_'), 'retrain cycle ran');
+const w = r.data.weights;
+const sum = Number((w.energy + w.durationFit + w.position).toFixed(3));
+assert(Math.abs(sum - 1) < 0.002, `new weights normalized (Σ=${sum})`);
+assert(Object.values(w).every((v) => v >= 0.05), 'no signal dies: every weight floored');
+assert(r.data.basis.sample === corr.sample && 'scoreCorrelation' in r.data.basis && r.data.basis.before.energy === 0.6,
+  'the evidence basis is stored with the weights (sample, correlations, prior)');
+const moved = Math.abs(w.energy - 0.6) + Math.abs(w.durationFit - 0.25) + Math.abs(w.position - 0.15);
+assert(moved < 0.5 && moved > 0.01, `the step is bounded, not a jump (moved ${moved.toFixed(3)})`);
+assert(w.durationFit > 0.25 && w.position < 0.15,
+  `the weights moved TOWARD the rewarded signal and away from the punished one (durFit 0.25→${w.durationFit}, position 0.15→${w.position})`);
+
+// the score stage now consumes the stored weights; history is append-only
+r = await j('GET', '/api/analytics/ops');
+assert(r.data.scoringWeights.source === 'retrained' && r.data.scoringWeights.weights.energy === w.energy,
+  'the pipeline scores with the retrained weights from here on');
+r = await j('POST', '/api/analytics/retrain', { note: `b6 smoke second ${run}` });
+assert(r.status === 201, 'second cycle appends');
+const hist = (await db.query(`SELECT count(*)::int AS n FROM scoring_weights`)).rows[0];
+assert(hist.n >= 2, `weight history is append-only (${hist.n} rows) — every score is auditable`);
+
 await db.end();
-console.log('\nB6.1+B6.2 smoke passed: captures roll in, and the client report aggregates them to the digit.');
+console.log('\nB6.1+B6.2+B6.3 smoke passed: captures roll in, reports aggregate to the digit, and the loop retrains the weights on real cycles — bounded, gated, and audited.');
+process.exit(0); // the imported src modules hold their own pg pool open

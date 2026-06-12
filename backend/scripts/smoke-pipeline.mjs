@@ -169,4 +169,23 @@ assert(deliveredManifest.caption === 'The moment the room got loud',
 r = await j('GET', `/api/jobs/${rec}`);
 assert(r.data.clips.by_status?.published === 1, 'board rollup shows the published clip');
 
-console.log('\nB3+B4+B5 smoke passed: media in → scored, rendered 9:16 clips out → reviewed, signed off → published end-to-end.');
+// ── B6 continuation: the published clip gets measured and reported ─────────
+let report, repDeadline = Date.now() + 20_000;
+for (;;) {
+  await sleep(1000);
+  report = (await j('GET', `/api/analytics/clients/${cli}`)).data;
+  const post = report.posts.find((p) => p.clipId === top.id);
+  if (post && post.views !== null) break;
+  if (Date.now() > repDeadline) { console.error('FAIL: published clip never got a metrics capture'); process.exit(1); }
+}
+const post = report.posts.find((p) => p.clipId === top.id);
+assert(post.views >= 0 && post.platform === 'youtube' && post.hook === 'The moment the room got loud',
+  `the client report carries the published clip with real captures (${post.views} views)`);
+assert(report.totals.postsPublished >= 1 && report.totals.views >= post.views,
+  'report totals aggregate the capture (the weekly report generates itself)');
+r = await j('GET', `/api/jobs/${rec}`);
+const scoreStage = r.data.stages.find((s) => s.stage === 'score');
+assert(scoreStage.payload.weightsSource && scoreStage.payload.weights,
+  `score stage recorded which weights it used (${scoreStage.payload.weightsSource})`);
+
+console.log('\nB3+B4+B5+B6 smoke passed: media in → scored, rendered, reviewed, signed off, published → measured and reported.');

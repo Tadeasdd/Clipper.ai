@@ -49,6 +49,11 @@ jobs:
           npm run smoke
       # B3: synthetic podcast through ingest → transcribe → analyze → score →
       # generate; asserts rendered 9:16 clips land on planted loud segments,
-      # the asset endpoint serves playable mp4, and failed stages retry.
+      # the asset endpoint serves playable mp4, failed stages retry — then the
+      # B4 continuation takes a real rendered clip through QA → client sign-off.
       - run: npm run smoke:pipeline
         timeout-minutes: 6
+      # B4: the full review status machine via the API — role enforcement,
+      # atomic double-decision guard, the changes/resubmit loop, auto-publish
+      # opt-in, and the audit trail.
+      - run: npm run smoke:review

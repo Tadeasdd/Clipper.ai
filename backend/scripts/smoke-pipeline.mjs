@@ -124,4 +124,20 @@ assert(r.status === 202 && r.data.rearmed === 1, 'retry re-arms the failed stage
 bad = (await j('GET', `/api/jobs/${badRec}`)).data;
 assert(bad.status === 'processing', 'recording back to processing after retry');
 
-console.log('\nB3 smoke passed: recording in → scored, rendered 9:16 clips out, on the board — with retry.');
+// ── B4 continuation: the REAL rendered clip travels the full machine ────────
+const stamp = Date.now();
+const qa = (await j('POST', '/api/users', { email: `b3qa+${stamp}@clipper.ai`, role: 'reviewer' })).data.id;
+const mgr = (await j('POST', '/api/users', { email: `b3am+${stamp}@clipper.ai`, role: 'account_manager' })).data.id;
+const owner = (await j('POST', '/api/users', { email: `b3client+${stamp}@clipper.ai`, role: 'client', clientId: cli })).data.id;
+r = await j('GET', '/api/review/queue');
+assert(r.data.items.some((i) => i.id === top.id && i.rendered), 'rendered clip sits in the review queue');
+r = await j('POST', `/api/review/${top.id}/decision`, { userId: qa, decision: 'approve', notes: 'real cut, real signal' });
+assert(r.status === 200 && r.data.to === 'approved_internal', 'QA approves the rendered clip');
+r = await j('POST', `/api/review/${top.id}/send`, { userId: mgr });
+assert(r.status === 200 && r.data.to === 'awaiting_client', 'account manager sends it to the client');
+r = await j('POST', `/api/review/${top.id}/decision`, { userId: owner, decision: 'approve' });
+assert(r.status === 200 && r.data.to === 'approved', 'client signs off → approved');
+r = await j('GET', `/api/jobs/${rec}`);
+assert(r.data.clips.by_status?.approved === 1, 'board rollup shows the approved clip');
+
+console.log('\nB3+B4 smoke passed: media in → scored, rendered 9:16 clips out → reviewed, signed off, approved.');

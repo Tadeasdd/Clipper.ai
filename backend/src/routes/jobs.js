@@ -36,9 +36,11 @@ r.get('/:id', async (req, res, next) => {
        ORDER BY array_position($2, stage)`, [req.params.id, STAGES]);
     const clips = await q(
       `SELECT count(*)::int AS total,
-              count(*) FILTER (WHERE status = 'awaiting_review')::int AS awaiting_review
-       FROM clips WHERE recording_id = $1`, [req.params.id]);
-    res.json({ ...rec.rows[0], stages: stages.rows, clips: clips.rows[0] });
+              json_object_agg(status, n) AS by_status
+       FROM (SELECT status, count(*)::int AS n FROM clips
+             WHERE recording_id = $1 GROUP BY status) s`, [req.params.id]);
+    res.json({ ...rec.rows[0], stages: stages.rows,
+               clips: { total: clips.rows[0].total, by_status: clips.rows[0].by_status || {} } });
   } catch (e) { next(e); }
 });
 

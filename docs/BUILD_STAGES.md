@@ -44,7 +44,7 @@ Stages are ordered so every stage ships something usable. Frontend stages are
   that types into the built form, clicks submit, and finds the row in
   Postgres.
 
-### F4 — Operations dashboard (the primary product)
+### F4 — Operations dashboard (the primary product) (✅)
 Internal app, separate route tree (`/ops`), role-gated:
 1. **Incoming content queue** — `GET /api/intake/queue`
 2. **Processing status board** — per-recording stage timeline
@@ -55,7 +55,31 @@ Internal app, separate route tree (`/ops`), role-gated:
 6. **Client management** — plans, cadence, brand config
 7. **Ops analytics** — approval rate, turnaround SLA, score-vs-performance
 - Reuse the Studio demo's visual language (it's effectively the ops UI mockup).
-- **Depends on:** B2–B4.
+- **Depends on:** B2–B4. ✅
+  Done, built in phases (one commit each, each live-verified against the
+  real backend before landing):
+  - **F4.0** shell: lazy `/ops` chunk, shared-key gate (B7 placeholder —
+    deployments must also gate `/ops` at the proxy), identity picker,
+    `usePoll` that degrades to error bands (the route smoke runs the whole
+    dashboard with NO backend and fails on any unhandled rejection)
+  - **F4.1** processing board: five-segment stage rails (pulse on running),
+    verbatim parked errors, retry, incoming-queue panel
+  - **F4.2** recording detail: per-stage evidence one-liners straight from
+    `pipeline_jobs` payloads (probe, provider+words, moments+LUFS baseline,
+    candidates+top, rendered count), expandable raw payloads
+  - **F4.3** clip grid: score + the three stored signals as meters, inline
+    mp4 preview from the asset endpoint, click-to-edit hooks (PATCH)
+  - **F4.4** review desk: the four worklists, decisions with notes,
+    send/resubmit, inline audit trails; 409 = lost race = refresh to truth
+  - **F4.5** clients: plan/cadence editor + the auto-publish toggle labelled
+    as what it is (opting out of per-clip sign-off)
+  - **F4.6** measure: real QA approval rate + median pipeline turnaround
+    (the B6 slice computable today, in `/api/analytics/ops`); publish queue
+    renders the B5 contract; score↔performance stays honestly "awaits B6"
+  `npm run integration:f4` renders the BUILT dashboard in happy-dom against
+  the live backend, clicks approve (typed note) + send through two
+  worklists, and verifies both transitions + audit rows in Postgres.
+  Publish/analytics surfaces fill in as B5/B6 land.
 
 ### F5 — Client dashboard (limited visibility)
 Secondary by design. Four surfaces only:
@@ -112,13 +136,27 @@ Queue workers (BullMQ + Redis or pg-boss), one per stage — stubs are in
   land on them, the asset endpoint serves playable mp4, and a failing
   source URL parks → retries on demand.
 
-### B4 — Review workflow
+### B4 — Review workflow (✅)
 - Internal QA decisions (`POST /api/review/:clipId/decision`) with the
   status machine already encoded in the schema:
   `candidate → awaiting_review → approved_internal → awaiting_client → approved`.
 - Client approval path honors the FAQ promise: **nothing publishes without
   sign-off unless the client opts into auto-publish.**
-- **Done when:** a clip can travel the full status machine via the API.
+- **Done when:** a clip can travel the full status machine via the API. ✅
+  Done: role-aware decision endpoint (internal roles decide from
+  `awaiting_review`, client users from `awaiting_client` — only their own),
+  plus `send` (approved_internal → awaiting_client) and `resubmit`
+  (changes_requested → awaiting_review). Every transition is ONE atomic CTE
+  statement: status move + `review_events` audit row together, so concurrent
+  reviewers can't double-decide (lost race → 409). Auto-publish is read from
+  `clients.brand_config.auto_publish` at the moment of internal approval —
+  the single place the FAQ promise is enforced. A minimal `users` route
+  exists as the B7 precursor (decisions must be attributable to real rows;
+  identity is trusted until B7 sessions). Smokes: `npm run smoke:review`
+  (29+ assertions: full machine both paths, role enforcement, the
+  changes→edit→resubmit loop, double-decision races, audit trails) and a
+  continuation in the pipeline smoke that takes a REAL rendered clip through
+  QA → send → client sign-off. Both in CI.
 
 ### B5 — Publishing
 - Platform adapters (YouTube Shorts, TikTok, Instagram Reels, LinkedIn, X)

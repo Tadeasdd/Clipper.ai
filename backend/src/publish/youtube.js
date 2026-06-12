@@ -7,14 +7,12 @@
 import { readFileSync } from 'node:fs';
 import { localPathFor } from '../storage/index.js';
 
-export async function publish({ clip, connection }) {
-  if (!clip.asset_key) throw new Error('clip has no rendered asset — only rendered clips can publish');
-  const { clientId, clientSecret, refreshToken } = connection.credentials || {};
+/** OAuth refresh → short-lived access token. Shared with the B6 metrics
+ *  poller, which reads stats for the same channel with the same grant. */
+export async function refreshAccessToken({ clientId, clientSecret, refreshToken } = {}) {
   if (!clientId || !clientSecret || !refreshToken) {
     throw new Error('youtube connection is missing clientId/clientSecret/refreshToken');
   }
-
-  // 1. refresh token → access token
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -24,7 +22,18 @@ export async function publish({ clip, connection }) {
     }),
   });
   if (!tokenRes.ok) throw new Error(`youtube token refresh failed (${tokenRes.status}): ${(await tokenRes.text()).slice(0, 200)}`);
-  const { access_token } = await tokenRes.json();
+  return (await tokenRes.json()).access_token;
+}
+
+export async function publish({ clip, connection }) {
+  if (!clip.asset_key) throw new Error('clip has no rendered asset — only rendered clips can publish');
+  const { clientId, clientSecret, refreshToken } = connection.credentials || {};
+  if (!clientId || !clientSecret || !refreshToken) {
+    throw new Error('youtube connection is missing clientId/clientSecret/refreshToken');
+  }
+
+  // 1. refresh token → access token
+  const access_token = await refreshAccessToken(connection.credentials);
 
   // 2. multipart upload: snippet + media
   const media = readFileSync(await localPathFor(clip.asset_key));

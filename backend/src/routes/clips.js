@@ -48,4 +48,28 @@ r.patch('/:id', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// GET /api/clips/:id/metrics — the B6 capture series, grouped per platform.
+// Latest-first inside each platform; the ops detail and F5 read this.
+r.get('/:id/metrics', async (req, res, next) => {
+  try {
+    const clip = await q('SELECT id FROM clips WHERE id = $1', [req.params.id]);
+    if (!clip.rowCount) return res.status(404).json({ error: 'unknown clip' });
+    const { rows } = await q(`
+      SELECT pj.platform, pj.external_url, m.captured_at, m.views, m.watch_time_s,
+             m.retention, m.likes, m.comments, m.shares, m.follows
+      FROM clip_metrics m
+      JOIN publish_jobs pj ON pj.id = m.publish_id
+      WHERE pj.clip_id = $1
+      ORDER BY pj.platform, m.captured_at DESC`, [req.params.id]);
+    const platforms = {};
+    for (const row of rows) {
+      (platforms[row.platform] ||= { externalUrl: row.external_url, series: [] })
+        .series.push({ capturedAt: row.captured_at, views: row.views, watchTimeS: row.watch_time_s,
+                       retention: row.retention, likes: row.likes, comments: row.comments,
+                       shares: row.shares, follows: row.follows });
+    }
+    res.json({ clipId: req.params.id, platforms });
+  } catch (e) { next(e); }
+});
+
 export default r;

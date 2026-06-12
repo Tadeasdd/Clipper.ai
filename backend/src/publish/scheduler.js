@@ -49,7 +49,8 @@ async function runOne(job) {
     await q(`
       WITH done AS (
         UPDATE publish_jobs SET status = 'published', published_at = now(),
-               external_id = $2, external_url = $3, error = NULL, updated_at = now()
+               external_id = $2, external_url = $3, error = NULL, updated_at = now(),
+               metrics_next_at = now()   -- B6: join the capture rotation immediately
         WHERE id = $1 RETURNING clip_id
       )
       UPDATE clips SET status = 'published'

@@ -63,3 +63,7 @@ jobs:
       # on sign-off.
       - run: npm run smoke:publish
         timeout-minutes: 4
+      # B6.1: metrics ingestion — first capture on publish, the claim clock,
+      # monotonic growth, failed publishes never sampled, the series endpoint.
+      - run: npm run smoke:metrics
+        timeout-minutes: 4

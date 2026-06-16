@@ -1,0 +1,107 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: frontend } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: frontend/package-lock.json }
+      - run: npm ci
+      - run: npm run build
+      - run: npm run smoke
+
+  backend:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-dir
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: clipper
+          POSTGRES_PASSWORD: clipp
+          POSTGRES_DB: clipper
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://clipper:clipper@localhost:5432/clipper
+      # M1/M4: the offline ASR + ibelow. The cloud
+      # paths (LLM_API_KEY, TRANSCRIPTION_API_KEY, RUN_LIVE_YT, PUBLISH_DRIVER=live)
+      # stay unset, so every live-tes itself off.
+      WHISPER_BIN: whisper-cli
+      WHISPER_MODEL: ${{ github.wol-tiny.en.bin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, path: backend/package-lock.json }
+      - run: npm ci
+      - run: node --check src/serv
+
+      # ── toolchain: ffmpeg (rendt fixture),
+      #    yt-dlp (platform-URL ingest; live path gated), whisper.cpp + tiny model.
+      - name: System media tools
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg espeak-ng cmake yt-dlp
+|| (sudo apt-get install -y -qq ffinstall yt-dlp)
+      - name: Cache whisper model
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspa
+          key: whisper-tiny-en-v1
+      - name: Build whisper.cpp +
+        run: |
+          set -e
+          mkdir -p "${{ github.workspace }}/.cache/whisper"
+          MODEL="${{ github.workspny.en.bin"
+          [ -f "$MODEL" ] || curl -sL -o "$MODEL"
+https://huggingface.co/ggerganov/wtiny.en.bin
+          git clone --depth 1 https://github.com/ggml-org/whisper.cpp /tmp/whisper.cpp
+          cmake -S /tmp/whisper.cpDGGML_METAL=OFF-DWHISPER_BUILD_EXAMPLES=ON -DCMAKE_BUILD_TYPE=Release >/dev/null
+          cmake --build /tmp/whispper-cli >/dev/null
+          sudo cp /tmp/whisper.cpp/build/bin/whisper-cli /usr/local/bin/whisper-cli
+          whisper-cli --help >/dev
+
+      # ── B2: clients → leads (de upload → queue.
+      - name: Boot API + B2 smoke
+        run: |
+          node src/server.js &
+          for i in $(seq 1 20); dohealth && break || sleep 1; done
+          npm run smoke
+
+      # ── M1: offline whisper ASR → real word timestamps in analyze windows.
+      - run: npm run smoke:transcr
+        env: { TRANSCRIPTION_PROVIDER: whisper }
+        timeout-minutes: 4
+
+      # ── B3–B6 + M2 (semantics bn-in) + M5
+      #    (reaper recovery, dead-letter, queue depth), end to end.
+      - run: npm run smoke:pipelin
+        timeout-minutes: 8
+
+      # ── M4: yt-dlp/direct ingest, size/type limits, idempotency (live YT gated).
+      - run: npm run smoke:ingest
+        timeout-minutes: 4
+
+      - run: npm run smoke:review
+      - run: npm run smoke:publish
+        timeout-minutes: 4
+      - run: npm run smoke:metrics
+        timeout-minutes: 4
+      - run: npm run smoke:auth
+        timeout-minutes: 3
+
+      # ── M7: production config — secrets fail-fast, CORS lock, headers, limits.
+      - run: npm run smoke:prod
+        timeout-minutes: 3
+
+      # ── M8: the one-command demo must keep producing real captioned clips.
+      - run: npm run seed:demo
+        timeout-minutes: 4

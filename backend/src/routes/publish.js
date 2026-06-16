@@ -12,6 +12,7 @@ import { encryptJson } from '../lib/crypto.js';
 import { objectInfo, localPathFor } from '../storage/index.js';
 import { PLATFORMS, scheduleClip } from '../publish/index.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
+import { validate } from '../lib/validate.js';
 
 const r = Router();
 const CONN_COLS = 'id, client_id, platform, handle, status, created_at'; // never credentials_enc
@@ -53,11 +54,16 @@ function verifyState(state) {
 // POST /api/publish/connections { clientId, platform, handle?, credentials }
 // Re-connecting the same client+platform replaces the stored credentials
 // (that's what an OAuth re-auth is).
-r.post('/connections', requireAuth('ops', 'account_manager'), async (req, res, next) => {
+r.post('/connections', requireAuth('ops', 'account_manager'),
+  validate({
+    clientId: { type: 'string', required: true, maxLength: 80 },
+    platform: { type: 'string', required: true, enum: PLATFORMS },
+    credentials: { type: 'object', required: true },
+    handle: { type: 'string', maxLength: 200 },
+  }),
+  async (req, res, next) => {
   try {
     const { clientId, platform, handle, credentials } = req.body || {};
-    if (!PLATFORMS.includes(platform)) return res.status(400).json({ error: `platform must be one of ${PLATFORMS.join(' | ')}` });
-    if (!credentials || typeof credentials !== 'object') return res.status(400).json({ error: 'credentials object required' });
     const client = await q('SELECT id FROM clients WHERE id = $1', [clientId]);
     if (!client.rowCount) return res.status(404).json({ error: 'unknown clientId' });
     const { rows } = await q(`

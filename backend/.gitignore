@@ -1,1 +1,3 @@
-storage/
+# Runtime object storage (local driver upload dir) — anchored to the backend
+# root so it does NOT also match the source tree at src/storage/.
+/storage/

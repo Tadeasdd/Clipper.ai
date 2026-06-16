@@ -19,21 +19,26 @@ r.post('/', async (req, res, next) => {
 
     const existing = await q(
       'SELECT id, created_at FROM leads WHERE lower(email) = $1 AND source = $2', [trimmed, src]);
-    let leadId, createdAt, duplicate = false;
+    let leadId, duplicate = false;
     if (existing.rowCount) {
       duplicate = true;
       leadId = existing.rows[0].id;
-      createdAt = existing.rows[0].created_at;
       await q('UPDATE leads SET content_kind = COALESCE($2, content_kind), notes = COALESCE($3, notes), meta = meta || $4 WHERE id = $1',
         [leadId, contentKind || null, notes || null, meta || {}]);
     } else {
       leadId = id('lead');
-      const ins = await q(
-        `INSERT INTO leads (id, email, content_kind, source, notes, meta) VALUES ($1,$2,$3,$4,$5,$6) RETURNING created_at`,
+      await q(
+        `INSERT INTO leads (id, email, content_kind, source, notes, meta) VALUES ($1,$2,$3,$4,$5,$6)`,
         [leadId, trimmed, contentKind || null, src, notes || null, meta || {}]);
-      createdAt = ins.rows[0].created_at;
     }
-    const pos = await q('SELECT count(*)::int AS n FROM leads WHERE source = $1 AND created_at <= $2', [src, createdAt]);
+    // Position is computed entirely in SQL against the row's own timestamp —
+    // round-tripping created_at through a JS Date truncates the microseconds
+    // Postgres keeps, which would drop the row from its own count (position 0
+    // for the very first lead on an empty table).
+    const pos = await q(
+      `SELECT count(*)::int AS n FROM leads
+       WHERE source = $1 AND created_at <= (SELECT created_at FROM leads WHERE id = $2)`,
+      [src, leadId]);
     res.status(duplicate ? 200 : 201).json({ id: leadId, position: pos.rows[0].n, duplicate });
   } catch (e) { next(e); }
 });

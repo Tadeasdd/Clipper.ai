@@ -35,25 +35,34 @@ export async function publish({ clip, connection }) {
   // 1. refresh token → access token
   const access_token = await refreshAccessToken(connection.credentials);
 
-  // 2. multipart upload: snippet + media
+  // 2. resumable upload (more robust than multipart for non-trivial files):
+  //    initiate a session with the metadata, then PUT the bytes to the session
+  //    URL. Short-form clips fit one request, so no chunking/retry-offset dance.
   const media = readFileSync(await localPathFor(clip.asset_key));
   const meta = JSON.stringify({
     snippet: { title: `${(clip.hook || 'New clip').slice(0, 90)} #Shorts`, categoryId: '22' },
     status: { privacyStatus: 'public', selfDeclaredMadeForKids: false },
   });
-  const boundary = `clipper-${Date.now()}`;
-  const body = Buffer.concat([
-    Buffer.from(`--${boundary}\r\ncontent-type: application/json; charset=utf-8\r\n\r\n${meta}\r\n`),
-    Buffer.from(`--${boundary}\r\ncontent-type: video/mp4\r\n\r\n`),
-    media,
-    Buffer.from(`\r\n--${boundary}--`),
-  ]);
-  const upRes = await fetch(
-    'https://www.googleapis.com/upload/youtube/v3/videos?uploadType=multipart&part=snippet,status', {
+  const initRes = await fetch(
+    'https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status', {
       method: 'POST',
-      headers: { authorization: `Bearer ${access_token}`, 'content-type': `multipart/related; boundary=${boundary}` },
-      body,
+      headers: {
+        authorization: `Bearer ${access_token}`,
+        'content-type': 'application/json; charset=utf-8',
+        'X-Upload-Content-Type': 'video/mp4',
+        'X-Upload-Content-Length': String(media.length),
+      },
+      body: meta,
     });
+  if (!initRes.ok) throw new Error(`youtube resumable init failed (${initRes.status}): ${(await initRes.text()).slice(0, 300)}`);
+  const sessionUrl = initRes.headers.get('location');
+  if (!sessionUrl) throw new Error('youtube resumable init returned no upload session URL');
+
+  const upRes = await fetch(sessionUrl, {
+    method: 'PUT',
+    headers: { authorization: `Bearer ${access_token}`, 'content-type': 'video/mp4', 'content-length': String(media.length) },
+    body: media,
+  });
   if (!upRes.ok) throw new Error(`youtube upload failed (${upRes.status}): ${(await upRes.text()).slice(0, 300)}`);
   const { id } = await upRes.json();
   return { externalId: id, url: `https://www.youtube.com/shorts/${id}` };

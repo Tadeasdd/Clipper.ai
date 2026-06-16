@@ -69,6 +69,26 @@ assert(!enc.rows[0].credentials_enc.includes(SECRET) && !Buffer.from(enc.rows[0]
 r = await j('GET', `/api/publish/connections?clientId=${cli}`);
 assert(r.data.connections.length === 1 && r.data.connections[0].handle === '@b5smoke', 'connections list for the client');
 
+// ── M6: the YouTube OAuth connect flow (plumbing, offline) ──────────────────
+// The callback trusts only an HMAC-signed state, so a forged one is rejected
+// before any network call — CSRF-safe regardless of whether app creds are set.
+const forged = await fetch(`${BASE}/api/publish/connections/youtube/oauth/callback?code=x&state=forged.sig`,
+  { headers: { authorization: `Bearer ${OPS}` } });
+assert(forged.status === 400, 'oauth callback rejects a forged/invalid state (CSRF-safe)');
+// The start endpoint builds a Google consent URL when app creds are configured,
+// or honestly reports 503 when they are not — both are valid offline.
+r = await j('GET', `/api/publish/connections/youtube/oauth/start?clientId=${cli}`);
+if (r.status === 200) {
+  const u = r.data.authUrl || '';
+  assert(/accounts\.google\.com\/o\/oauth2/.test(u) && /youtube\.upload/.test(u) && /youtube\.readonly/.test(u)
+    && /access_type=offline/.test(u) && /prompt=consent/.test(u) && r.data.state,
+    'oauth start builds a Google consent URL (upload+readonly scopes, offline, signed state)');
+  const s = await j('GET', '/api/publish/connections/youtube/oauth/start?clientId=cli_nobody');
+  assert(s.status === 404, 'oauth start rejects an unknown client');
+} else {
+  assert(r.status === 503, 'oauth start honestly reports YOUTUBE_CLIENT_ID/SECRET not configured');
+}
+
 // ── scheduling guards: the sign-off guarantee ───────────────────────────────
 const clipUnapproved = await seedClip('awaiting_review', true);
 r = await j('POST', '/api/publish', { clipId: clipUnapproved, platform: 'youtube' });

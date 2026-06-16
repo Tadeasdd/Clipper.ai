@@ -69,6 +69,30 @@ export async function nominateSpans(words, limit = 4) {
   return ranked.slice(0, limit).map(({ start, end, text }) => ({ start, end, text }));
 }
 
+/** Generate up to `count` short-form hook variants (≤ 9 words each) for a clip
+ *  from its transcript span. Real hooks need words and a model: `anthropic`
+ *  returns variants editors pick from in the F4 desk; `builtin` (or any failure)
+ *  returns [] so the caller falls back to an honest, labelled placeholder —
+ *  never an invented "hook" pulled from nothing. */
+export async function hookVariants(spanText, count = 3) {
+  const provider = (process.env.LLM_PROVIDER || 'builtin') === 'anthropic' ? 'anthropic' : 'builtin';
+  const text = String(spanText || '').trim();
+  if (provider !== 'anthropic' || !text) return [];
+  try {
+    const data = await anthropicJSON(
+      `Write ${count} short-form hook lines for this clip — each MAX 9 words, no quotes, no hashtags, ` +
+      `each making a viewer stop scrolling. Respond ONLY with a JSON array of strings. No prose, no code fences.\n\n` +
+      text.slice(0, 4000), 256);
+    return (Array.isArray(data) ? data : [])
+      .map((s) => String(s).trim().replace(/^["']|["']$/g, '').split(/\s+/).slice(0, 9).join(' '))
+      .filter(Boolean)
+      .slice(0, count);
+  } catch (e) {
+    console.warn(`[llm] hook generation failed (${e.message}) — falling back to placeholder`);
+    return [];
+  }
+}
+
 // ── builtin heuristics ──────────────────────────────────────────────────────
 // Honest, transparent lexical/structural signals. Not a model — a documented
 // prior over the words, in the same spirit as loudness being a prior over the

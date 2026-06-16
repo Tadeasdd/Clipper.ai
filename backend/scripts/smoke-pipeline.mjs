@@ -266,8 +266,55 @@ assert(scoreStage.payload.weightsSource && scoreStage.payload.weights,
   assert(Number(contentClip.signals.controversy) > 0.5 && Number(contentClip.signals.education) > 0.5,
     `the why is explainable (controversy ${contentClip.signals.controversy}, education ${contentClip.signals.education}): "${contentClip.signals.rationale}"`);
 
+  // ── M3: rendered clips ship with burned, word-timed captions + hook variants
+  const { generate } = await import('../src/pipeline/generate.js');
+  const { renderVertical, captionsEnabled, captionStyle } = await import('../src/pipeline/media.js');
+  const { localPathFor } = await import('../src/storage/index.js');
+
+  await generate(semRec);
+  const renderedSem = (await db.query(
+    `SELECT id, t_start_s, t_end_s, asset_key, hook, signals FROM clips
+     WHERE recording_id = $1 AND status = 'awaiting_review'`, [semRec])).rows;
+  assert(renderedSem.length >= 1, `generate rendered the captioned candidates (${renderedSem.length})`);
+  const capClip = renderedSem.find((c) => overlapsRange(c, CONTENT)) || renderedSem[0];
+  assert(capClip.signals.captioned === true, 'the rendered clip is flagged captioned (a transcript was present)');
+  assert(Array.isArray(capClip.signals.hookVariants),
+    'hook variants are stored for editors to pick (empty offline, real LLM variants with a key)');
+  assert(typeof capClip.hook === 'string' && capClip.hook.length > 0, `the clip carries a hook ("${capClip.hook.slice(0, 40)}…")`);
+
+  // prove the burn is real: the generated (captioned) asset is brighter in the
+  // caption band than a plain re-render of the very same span.
+  const bandLuma = (f) => {
+    const o = execFileSync('ffmpeg', ['-hide_banner', '-i', f, '-vf',
+      'crop=1080:500:0:1380,signalstats,metadata=print:file=-', '-f', 'null', '-'],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    const ys = [...o.matchAll(/YAVG=([\d.]+)/g)].map((m) => Number(m[1]));
+    return ys.reduce((a, b) => a + b, 0) / (ys.length || 1);
+  };
+  const plainRecut = path.join(tmp, 'plain-recut.mp4');
+  await renderVertical(await localPathFor(semKey), plainRecut,
+    { start: Number(capClip.t_start_s), end: Number(capClip.t_end_s), hasVideo: false });
+  const capLuma = bandLuma(await localPathFor(capClip.asset_key)), plainLuma = bandLuma(plainRecut);
+  assert(capLuma > plainLuma + 1.0,
+    `captions are burned into the frame (caption band ${capLuma.toFixed(1)} > plain ${plainLuma.toFixed(1)})`);
+
+  // the per-client switch and brand style are real
+  assert(captionsEnabled({}) === true && captionsEnabled({ captions: false }) === false,
+    'captions are a per-client switch (brand_config.captions === false turns them off)');
+  const styled = captionStyle({ captions: { color: '0xffffff', fontSize: 80 } });
+  assert(styled.color === '&H00FFFFFF' && styled.fontSize === 80,
+    'caption style comes from brand_config with sane defaults');
+
+  // gated: a real hook is a short sentence, not the placeholder, when keyed
+  if (process.env.LLM_API_KEY && (process.env.LLM_PROVIDER || '') === 'anthropic') {
+    assert(!/hook pending editor/.test(capClip.hook) && capClip.hook.split(/\s+/).length <= 9 && capClip.signals.hookVariants.length >= 1,
+      `LLM produced a real hook ≤9 words and variants ("${capClip.hook}")`);
+  } else {
+    console.log('skip: real-hook assertion (needs LLM_PROVIDER=anthropic + LLM_API_KEY)');
+  }
+
   await db.end();
 }
 
-console.log('\nB3+B4+B5+B6 + M2 smoke passed: media in → scored (semantics over volume), rendered, reviewed, signed off, published → measured and reported.');
+console.log('\nB3+B4+B5+B6 + M2 + M3 smoke passed: media in → scored (semantics over volume), captioned, reviewed, signed off, published → measured and reported.');
 process.exit(0); // imported src modules hold their own pg pool open

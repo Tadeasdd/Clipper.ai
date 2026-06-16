@@ -1,5 +1,6 @@
 /** ffprobe / ffmpeg helpers — every media operation in one place. */
 import { spawn } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
 
 function run(cmd, args, { collect = 'stdout' } = {}) {
   return new Promise((resolve, reject) => {
@@ -57,21 +58,99 @@ export async function loudnessSeries(path) {
 }
 
 /** Cut [start, end) and render a 9:16 1080x1920 vertical clip.
- *  Video sources: center-crop + scale. Audio-only: solid backdrop + waveform. */
-export async function renderVertical(srcPath, outPath, { start, end, hasVideo }) {
+ *  Video sources: center-crop + scale. Audio-only: solid backdrop + waveform.
+ *  When `captionsPath` (an .ass file) is given, word-timed captions are burned
+ *  into the frame — short-form clips live or die on on-screen captions. */
+export async function renderVertical(srcPath, outPath, { start, end, hasVideo, captionsPath }) {
   const dur = Math.max(0.5, end - start);
   const base = ['-hide_banner', '-y', '-ss', String(start), '-t', String(dur), '-i', srcPath];
+  const ass = captionsPath ? `ass=${escapeFilterPath(captionsPath)}` : null;
+  const enc = ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26', '-pix_fmt', 'yuv420p',
+    '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', outPath];
   const args = hasVideo
     ? [...base,
-       '-vf', 'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920',
-       '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26', '-pix_fmt', 'yuv420p',
-       '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', outPath]
+       '-vf', ['scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920', ass].filter(Boolean).join(','),
+       ...enc]
     : [...base,
        '-filter_complex',
        '[0:a]showwaves=s=1080x520:mode=cline:colors=0x53fc18[w];color=c=0x0a0a09:s=1080x1920:d=' + dur +
-       '[bg];[bg][w]overlay=(W-w)/2:(H-h)/2:shortest=1[v]',
-       '-map', '[v]', '-map', '0:a',
-       '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26', '-pix_fmt', 'yuv420p',
-       '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', outPath];
+       '[bg];[bg][w]overlay=(W-w)/2:(H-h)/2:shortest=1' + (ass ? '[base];[base]' + ass + '[v]' : '[v]'),
+       '-map', '[v]', '-map', '0:a', ...enc];
   await run('ffmpeg', args, { collect: 'stderr' });
 }
+
+/** Resolve the client's caption style, applying sensible short-form defaults.
+ *  `brand_config.captions` may be `false` (off), or an object overriding any
+ *  field; the neon green already used in the waveform card is the default. */
+export function captionStyle(brandConfig = {}) {
+  const c = brandConfig && typeof brandConfig.captions === 'object' ? brandConfig.captions : {};
+  return {
+    font: c.font || brandConfig.font || 'Arial',
+    fontSize: Number(c.fontSize || 64),
+    color: toAssColor(c.color || brandConfig.color || '0x53fc18'),   // text fill (default neon green)
+    outline: toAssColor(c.outline || '0x000000'),                    // black outline for legibility
+    outlineWidth: Number(c.outlineWidth ?? 3),
+    bold: c.bold === false ? 0 : 1,
+    marginV: Number(c.marginV ?? 220),                               // lift off the very bottom edge
+    wordsPerCue: Math.max(1, Number(c.wordsPerCue || 4)),
+    uppercase: c.uppercase === true,
+  };
+}
+
+/** Captions on unless the client explicitly turns them off. */
+export const captionsEnabled = (brandConfig = {}) => brandConfig?.captions !== false;
+
+/** Build an .ass subtitle file for the words spoken within [start,end], offset
+ *  to clip-local time and chunked into short cues. Returns the path, or null
+ *  when there are no words in range (audio-only podcasts, no ASR). */
+export function buildCaptions({ words, start, end, style, outPath }) {
+  const inRange = (words || [])
+    .filter((w) => Number(w.e) > start && Number(w.s) < end)
+    .map((w) => ({ w: String(w.w || ''), s: Number(w.s), e: Number(w.e) }))
+    .filter((w) => w.w && Number.isFinite(w.s) && Number.isFinite(w.e));
+  if (!inRange.length) return null;
+
+  const cues = [];
+  for (let i = 0; i < inRange.length; i += style.wordsPerCue) {
+    const chunk = inRange.slice(i, i + style.wordsPerCue);
+    const s = Math.max(0, chunk[0].s - start);
+    const e = Math.max(s + 0.3, chunk[chunk.length - 1].e - start);
+    let text = chunk.map((w) => w.w).join(' ').replace(/\s+([.,!?;:])/g, '$1').trim();
+    if (style.uppercase) text = text.toUpperCase();
+    cues.push({ s, e, text: assEscape(text) });
+  }
+
+  const header = [
+    '[Script Info]', 'ScriptType: v4.00+', 'PlayResX: 1080', 'PlayResY: 1920', 'WrapStyle: 2', '',
+    '[V4+ Styles]',
+    'Format: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BackColour, Bold, Italic, ' +
+      'BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
+    `Style: Clip,${style.font},${style.fontSize},${style.color},${style.outline},&H64000000,` +
+      `${style.bold},0,1,${style.outlineWidth},1,2,60,60,${style.marginV},1`, '',
+    '[Events]',
+    'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
+  ].join('\n');
+  const events = cues.map((c) => `Dialogue: 0,${assTime(c.s)},${assTime(c.e)},Clip,,0,0,0,,${c.text}`).join('\n');
+  writeFileSync(outPath, `${header}\n${events}\n`);
+  return outPath;
+}
+
+// ffmpeg colours are 0xRRGGBB; ASS wants &HAABBGGRR (alpha + BGR).
+function toAssColor(hex) {
+  const m = String(hex).replace(/^#/, '').replace(/^0x/i, '').padStart(6, '0').slice(-6);
+  const rr = m.slice(0, 2), gg = m.slice(2, 4), bb = m.slice(4, 6);
+  return `&H00${bb}${gg}${rr}`.toUpperCase();
+}
+
+function assTime(sec) {
+  const cs = Math.max(0, Math.round(sec * 100));
+  const h = Math.floor(cs / 360000);
+  const m = Math.floor((cs % 360000) / 6000);
+  const s = Math.floor((cs % 6000) / 100);
+  const c = cs % 100;
+  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(c).padStart(2, '0')}`;
+}
+
+const assEscape = (t) => t.replace(/[\r\n]+/g, ' ').replace(/[{}]/g, '');
+// Filtergraph paths: escape backslash and the option-separating colon.
+const escapeFilterPath = (p) => p.replace(/\\/g, '\\\\').replace(/:/g, '\\:');

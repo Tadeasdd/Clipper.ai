@@ -195,7 +195,7 @@ assert(JSON.stringify(ranks([10, 20, 20, 30])) === '[1,2.5,2.5,4]', 'ranks: ties
 assert(spearman([1, 1, 1], [5, 9, 2]) === null && spearman([1], [2]) === null,
   'spearman: constant series and n<2 are honestly undefined');
 
-const { computeCorrelation, retrain: retrainDirect } = await import('../src/metrics/loop.js');
+const { computeCorrelation, retrain: retrainDirect, DEFAULT_WEIGHTS: DEF } = await import('../src/metrics/loop.js');
 const gated = await computeCorrelation(10_000);
 assert(gated.value === null && gated.sample > 0 && gated.needed === 10_000,
   `the sample gate holds (have ${gated.sample}, demanded 10000 → null)`);
@@ -209,22 +209,22 @@ assert(corr.sample >= 10 && corr.value > 0.5,
   `the loop detects the planted score↔performance relationship (ρ=${corr.value}, n=${corr.sample})`);
 assert(corr.perSignal.durationFit > 0.7 && corr.perSignal.position < 0,
   `per-signal correlations find the planted structure (durFit ${corr.perSignal.durationFit}, position ${corr.perSignal.position})`);
-assert(r.data.scoringWeights.source === 'default' && r.data.scoringWeights.weights.energy === 0.6,
-  'weights start at the defaults before any retrain');
+assert(r.data.scoringWeights.source === 'default' && r.data.scoringWeights.weights.energy === DEF.energy,
+  `weights start at the defaults before any retrain (energy ${DEF.energy})`);
 
 // one real cycle through the API
 r = await j('POST', '/api/analytics/retrain', { note: `b6 smoke ${run}` });
 assert(r.status === 201 && r.data.id.startsWith('wts_'), 'retrain cycle ran');
 const w = r.data.weights;
-const sum = Number((w.energy + w.durationFit + w.position).toFixed(3));
-assert(Math.abs(sum - 1) < 0.002, `new weights normalized (Σ=${sum})`);
+const sum = Number(Object.values(w).reduce((a, v) => a + v, 0).toFixed(3));
+assert(Math.abs(sum - 1) < 0.002, `new weights normalized over all ${Object.keys(w).length} dimensions (Σ=${sum})`);
 assert(Object.values(w).every((v) => v >= 0.05), 'no signal dies: every weight floored');
-assert(r.data.basis.sample === corr.sample && 'scoreCorrelation' in r.data.basis && r.data.basis.before.energy === 0.6,
+assert(r.data.basis.sample === corr.sample && 'scoreCorrelation' in r.data.basis && r.data.basis.before.energy === DEF.energy,
   'the evidence basis is stored with the weights (sample, correlations, prior)');
-const moved = Math.abs(w.energy - 0.6) + Math.abs(w.durationFit - 0.25) + Math.abs(w.position - 0.15);
-assert(moved < 0.5 && moved > 0.01, `the step is bounded, not a jump (moved ${moved.toFixed(3)})`);
-assert(w.durationFit > 0.25 && w.position < 0.15,
-  `the weights moved TOWARD the rewarded signal and away from the punished one (durFit 0.25→${w.durationFit}, position 0.15→${w.position})`);
+const moved = Object.keys(w).reduce((a, k) => a + Math.abs(w[k] - DEF[k]), 0);
+assert(moved < 0.6 && moved > 0.01, `the step is bounded, not a jump (moved ${moved.toFixed(3)})`);
+assert(w.durationFit > DEF.durationFit && w.position <= DEF.position,
+  `the weights moved TOWARD the rewarded signal and away from the punished one (durFit ${DEF.durationFit}→${w.durationFit}, position ${DEF.position}→${w.position})`);
 
 // the score stage now consumes the stored weights; history is append-only
 r = await j('GET', '/api/analytics/ops');

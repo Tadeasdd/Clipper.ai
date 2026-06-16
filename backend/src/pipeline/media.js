@@ -31,6 +31,15 @@ export async function probe(path) {
   };
 }
 
+/** Extract a 16 kHz mono PCM WAV — the input shape whisper.cpp / faster-whisper
+ *  expect. Decodes any container the source ffmpeg can read; downmixes to mono
+ *  and resamples to 16 kHz so the ASR model sees exactly what it was trained on. */
+export async function extractAudioWav(srcPath, outPath) {
+  await run('ffmpeg', ['-hide_banner', '-y', '-i', srcPath,
+    '-vn', '-ac', '1', '-ar', '16000', '-c:a', 'pcm_s16le', outPath], { collect: 'stderr' });
+  return outPath;
+}
+
 /** Momentary loudness series via ebur128 — one reading every ~100ms.
  *  Returns [{ t, m }] where m is momentary loudness in LUFS. This is the
  *  real signal the analyze stage hunts moments in. */

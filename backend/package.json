@@ -9,6 +9,7 @@
     "smoke": "node scripts/smoke.mjs",
     "migrate": "node -e \"import('./src/db/index.js').then(m=>m.migrate()).then(()=>process.exit(0))\"",
     "worker": "node -e \"import('./src/pipeline/index.js').then(m=>m.startWorkers())\"",
+    "smoke:transcribe": "node scripts/smoke-transcribe.mjs",
     "smoke:pipeline": "node scripts/smoke-pipeline.mjs",
     "smoke:review": "node scripts/smoke-review.mjs",
     "smoke:publish": "node scripts/smoke-publish.mjs",

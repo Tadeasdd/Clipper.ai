@@ -3,14 +3,25 @@
 import { Router } from 'express';
 import { q } from '../db/index.js';
 import { id } from '../lib/ids.js';
+import { rateLimit } from '../lib/ratelimit.js';
+import { validate } from '../lib/validate.js';
 
 const r = Router();
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // POST /api/leads { email, contentKind?, source?, notes?, meta? }
+// The one public door, so it's rate-limited per IP and shape-validated.
 // Idempotent per (email, source): resubmits refresh the row and return the
 // original position, so the form can say "you're already on the list".
-r.post('/', async (req, res, next) => {
+r.post('/',
+  rateLimit({ name: 'leads', max: 60 }),
+  validate({
+    email: { type: 'string', required: true, maxLength: 200 },
+    contentKind: { type: 'string', maxLength: 80 },
+    notes: { type: 'string', maxLength: 4000 },
+    meta: { type: 'object' },
+  }),
+  async (req, res, next) => {
   try {
     const { email, contentKind, source, notes, meta } = req.body || {};
     const trimmed = String(email || '').trim().toLowerCase();

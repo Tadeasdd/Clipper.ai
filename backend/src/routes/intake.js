@@ -6,6 +6,8 @@ import { id } from '../lib/ids.js';
 import { createUploadTarget, saveStream, objectInfo } from '../storage/index.js';
 import { enqueue, isPlatformUrl } from '../pipeline/index.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
+import { rateLimit } from '../lib/ratelimit.js';
+import { validate } from '../lib/validate.js';
 
 const r = Router();
 
@@ -16,7 +18,15 @@ const AV_CONTENT = /^(video|audio)\//;
 //   { clientId, sourceUrl }              → queued immediately (B3 ingest pulls it)
 //   { clientId, filename, kind? }        → awaiting_upload + an upload target
 //   Idempotency-Key header (or the source URL itself) dedupes double-submits.
-r.post('/', requireAuth(), async (req, res, next) => {
+r.post('/', requireAuth(),
+  rateLimit({ name: 'intake', max: 120 }),
+  validate({
+    clientId: { type: 'string', required: true, maxLength: 80 },
+    sourceUrl: { type: 'string', maxLength: 2000 },
+    filename: { type: 'string', maxLength: 300 },
+    kind: { type: 'string', enum: KINDS },
+  }),
+  async (req, res, next) => {
   try {
     const { clientId, sourceUrl, filename, kind } = req.body || {};
     if (!clientId) return res.status(400).json({ error: 'clientId required' });

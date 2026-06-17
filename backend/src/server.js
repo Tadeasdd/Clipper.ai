@@ -25,9 +25,23 @@ import { migrate, q } from './db/index.js';
 import { startWorkers } from './pipeline/index.js';
 import { startPublisher } from './publish/scheduler.js';
 import { startMetricsPoller } from './metrics/index.js';
+import { assertProdConfig, corsOptions } from './lib/config.js';
+import { log, reportError } from './lib/log.js';
+
+// M7: refuse to boot insecurely in production (dev/test are untouched).
+assertProdConfig();
 
 const app = express();
-app.use(cors());
+app.disable('x-powered-by');
+// M7: baseline security headers (helmet-equivalent, dependency-free).
+app.use((_req, res, next) => {
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('X-Frame-Options', 'DENY');
+  res.set('Referrer-Policy', 'no-referrer');
+  res.set('X-DNS-Prefetch-Control', 'off');
+  next();
+});
+app.use(cors(corsOptions())); // M7: locked to CORS_ORIGINS when set, wide-open in dev
 app.use(express.json({ limit: '2mb' }));
 // NOTE: no body parser touches /api/intake/upload — express.json only consumes
 // application/json, so file PUTs stream through untouched and saveStream pipes
@@ -53,8 +67,9 @@ app.use('/api/users', usersRoutes);     // B4→B7: account management (ops-gate
 app.use('/api/leads', leadsRoutes);     // F3: waitlist / strategy-call form
 
 // Central error handler — routes call next(e); nothing leaks stack traces.
-app.use((err, _req, res, _next) => {
-  console.error(err);
+// M7: structured, redacted logging + a best-effort Sentry report.
+app.use((err, req, res, _next) => {
+  reportError(err, { method: req.method, path: req.path, requestId: req.headers['x-request-id'] });
   res.status(500).json({ error: 'internal error' });
 });
 
@@ -63,4 +78,4 @@ await migrate();
 // B3: pipeline workers run in-process by default; set WORKERS_ENABLED=false
 // to run them separately via `npm run worker` (SKIP LOCKED makes both safe).
 if (process.env.WORKERS_ENABLED !== 'false') { startWorkers(); startPublisher(); startMetricsPoller(); }
-app.listen(port, () => console.log(`clipper-ops listening on :${port}`));
+app.listen(port, () => log.info('clipper-ops listening', { port: Number(port), env: process.env.NODE_ENV || 'development' }));

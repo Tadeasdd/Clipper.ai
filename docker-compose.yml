@@ -123,7 +123,8 @@ services:
         npm run smoke:ssrf &&
         npm run smoke:ingest &&
         npm run smoke:transcribe &&
-        npm run smoke:prod
+        npm run smoke:prod &&
+        npm run eval
     restart: "no"
 
 volumes:

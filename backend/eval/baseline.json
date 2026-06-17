@@ -1,0 +1,9 @@
+{
+  "map": 1,
+  "ndcg": 1,
+  "precisionAtK": 1,
+  "recallAtK": 1,
+  "recordings": 5,
+  "tolerance": 0.05,
+  "generatedAt": "2026-06-17"
+}

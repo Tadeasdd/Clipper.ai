@@ -20,16 +20,32 @@ import { q } from '../db/index.js';
 import { id } from '../lib/ids.js';
 import { spearman } from '../lib/stats.js';
 
-export const DEFAULT_WEIGHTS = { energy: 0.6, durationFit: 0.25, position: 0.15 };
+// Audio prior + the six semantic dimensions M2 introduced. Semantics carry the
+// majority because the company sells *semantic* clip-finding, not volume; the
+// audio prior stays as a cheap, always-available floor. The retrain loop moves
+// these toward whatever realized performance actually rewards (under the local
+// metrics driver performance is score-independent, so they barely move — the
+// honest reading; live drivers at M6 make the move real). Must sum to 1.
+export const DEFAULT_WEIGHTS = {
+  energy: 0.18, durationFit: 0.10, position: 0.07,
+  retention: 0.13, emotion: 0.10, controversy: 0.14, education: 0.13, story: 0.05, hookStrength: 0.10,
+};
 const MIN_SAMPLE = Number(process.env.RETRAIN_MIN_SAMPLE || 8);
 const LEARNING_RATE = 0.25;
 const FLOOR = 0.05;
 
-/** Latest stored weights, or the defaults when no retrain has run. */
+/** Latest stored weights, or the defaults when no retrain has run. A retrain
+ *  row that predates the current weight set (e.g. an audio-only row from before
+ *  the semantic dimensions existed) is treated as incompatible and ignored —
+ *  scoring with a partial vector would silently zero the missing dimensions and
+ *  could push the blend past the 0–100 cap. Forward-only: the next retrain
+ *  writes a full vector and takes over. */
 export async function loadWeights() {
   const { rows } = await q('SELECT id, weights FROM scoring_weights ORDER BY created_at DESC LIMIT 1');
-  return rows.length ? { id: rows[0].id, weights: rows[0].weights, source: 'retrained' }
-                     : { id: null, weights: DEFAULT_WEIGHTS, source: 'default' };
+  const stored = rows[0]?.weights;
+  const compatible = stored && Object.keys(DEFAULT_WEIGHTS).every((k) => typeof stored[k] === 'number');
+  return compatible ? { id: rows[0].id, weights: stored, source: 'retrained' }
+                    : { id: null, weights: DEFAULT_WEIGHTS, source: 'default' };
 }
 
 /** One row per published clip: score, signals, client-normalized performance. */
@@ -55,10 +71,26 @@ async function sample() {
   return rows.map((r) => ({
     score: Number(r.score),
     perf: Number(r.perf),
-    energy: Number(r.signals.energyZ ?? 0),
-    durationFit: Number(r.signals.durationFit ?? 0),
-    position: Number(r.signals.positionBonus ?? 0),
+    ...signalVector(r.signals),
   }));
+}
+
+/** Map a clip's opaque `signals` jsonb onto the weight dimensions. The audio
+ *  fields keep their historical names (energyZ/durationFit/positionBonus); the
+ *  semantic fields are keyed exactly as the weights are. Missing → 0, so clips
+ *  scored before M2 (audio-only) correlate as a flat semantic signal. */
+function signalVector(signals = {}) {
+  return {
+    energy: Number(signals.energyZ ?? 0),
+    durationFit: Number(signals.durationFit ?? 0),
+    position: Number(signals.positionBonus ?? 0),
+    retention: Number(signals.retention ?? 0),
+    emotion: Number(signals.emotion ?? 0),
+    controversy: Number(signals.controversy ?? 0),
+    education: Number(signals.education ?? 0),
+    story: Number(signals.story ?? 0),
+    hookStrength: Number(signals.hookStrength ?? 0),
+  };
 }
 
 /** Read-only correlation pass — what /api/analytics/ops shows. */
@@ -68,15 +100,13 @@ export async function computeCorrelation(minSample = MIN_SAMPLE) {
     return { value: null, sample: s.length, needed: minSample, perSignal: null };
   }
   const perf = s.map((r) => r.perf);
+  const perSignal = {};
+  for (const k of Object.keys(DEFAULT_WEIGHTS)) perSignal[k] = round(spearman(s.map((r) => r[k]), perf));
   return {
     value: round(spearman(s.map((r) => r.score), perf)),
     sample: s.length,
     needed: minSample,
-    perSignal: {
-      energy: round(spearman(s.map((r) => r.energy), perf)),
-      durationFit: round(spearman(s.map((r) => r.durationFit), perf)),
-      position: round(spearman(s.map((r) => r.position), perf)),
-    },
+    perSignal,
   };
 }
 
@@ -90,20 +120,29 @@ export async function retrain(minSample = MIN_SAMPLE, note = null) {
   const { weights: before } = await loadWeights();
   // Evidence share: positive correlations only (a negative signal earns the
   // floor, not a negative weight), softened by +ε so all-zero still divides.
-  const pos = {
-    energy: Math.max(0, corr.perSignal.energy ?? 0) + 1e-6,
-    durationFit: Math.max(0, corr.perSignal.durationFit ?? 0) + 1e-6,
-    position: Math.max(0, corr.perSignal.position ?? 0) + 1e-6,
-  };
-  const posSum = pos.energy + pos.durationFit + pos.position;
+  const pos = {};
+  for (const k of Object.keys(DEFAULT_WEIGHTS)) pos[k] = Math.max(0, corr.perSignal[k] ?? 0) + 1e-6;
+  const posSum = Object.values(pos).reduce((a, v) => a + v, 0);
   const stepped = {};
   for (const k of Object.keys(DEFAULT_WEIGHTS)) {
-    stepped[k] = before[k] + LEARNING_RATE * (pos[k] / posSum - before[k]);
+    const b = before[k] ?? DEFAULT_WEIGHTS[k];                 // tolerate pre-M2 weight rows
+    stepped[k] = b + LEARNING_RATE * (pos[k] / posSum - b);
   }
-  // floor, then renormalize to 1
-  for (const k of Object.keys(stepped)) stepped[k] = Math.max(FLOOR, stepped[k]);
-  const total = Object.values(stepped).reduce((a, v) => a + v, 0);
-  const after = Object.fromEntries(Object.entries(stepped).map(([k, v]) => [k, round(v / total)]));
+  // Enforce the floor without letting normalization push a floored signal back
+  // under it (a real risk once there are many dimensions). Clamp up to FLOOR,
+  // then reclaim the added mass from the weights that have room above the
+  // floor, proportional to that room. Guarantees every weight >= FLOOR and
+  // Σ = 1, and preserves the ordering the bounded step produced.
+  const after = {};
+  for (const k of Object.keys(stepped)) after[k] = Math.max(FLOOR, stepped[k]);
+  let excess = Object.values(after).reduce((a, v) => a + v, 0) - 1;
+  const room = {};
+  let roomSum = 0;
+  for (const k of Object.keys(after)) { room[k] = after[k] - FLOOR; roomSum += room[k]; }
+  for (const k of Object.keys(after)) {
+    if (excess > 0 && roomSum > 0) after[k] -= excess * (room[k] / roomSum);
+    after[k] = Number(after[k].toFixed(4));
+  }
 
   const row = {
     id: id('wts'),

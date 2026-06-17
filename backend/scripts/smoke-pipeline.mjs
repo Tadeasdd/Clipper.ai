@@ -193,4 +193,81 @@ const scoreStage = r.data.stages.find((s) => s.stage === 'score');
 assert(scoreStage.payload.weightsSource && scoreStage.payload.weights,
   `score stage recorded which weights it used (${scoreStage.payload.weightsSource})`);
 
-console.log('\nB3+B4+B5+B6 smoke passed: media in → scored, rendered, reviewed, signed off, published → measured and reported.');
+// ── M2: the product claim — semantics beat volume ───────────────────────────
+// A two-burst recording: a content-rich segment at MODERATE loudness and a
+// vacuous filler segment that is LOUDER. The loudness prior finds both; the
+// transcript is what separates them. We inject a real transcript (so this is
+// deterministic and offline — no ASR/LLM key needed, the builtin heuristic
+// runs), then drive analyze + score directly and assert the quieter, content
+// segment wins. A clip company that picks by volume would get this backwards.
+{
+  const pg = (await import('pg')).default;
+  const { analyze } = await import('../src/pipeline/analyze.js');
+  const { score } = await import('../src/pipeline/score.js');
+  const { putFile } = await import('../src/storage/index.js');
+  const db = new pg.Pool({ connectionString: process.env.DATABASE_URL || 'postgres://clipper:clipper@localhost:5432/clipper' });
+
+  const CONTENT = [10, 30], VACUOUS = [58, 80];
+  const semSample = path.join(tmp, 'semantic.mp4');
+  // content burst amp 0.40 (moderate), vacuous burst amp 0.90 (loudest)
+  execFileSync('ffmpeg', ['-hide_banner', '-y',
+    '-f', 'lavfi', '-i', 'anoisesrc=color=pink:duration=90:amplitude=0.6:seed=7',
+    '-af', `volume='0.02+0.38*between(t,${CONTENT[0]},${CONTENT[1]})+0.88*between(t,${VACUOUS[0]},${VACUOUS[1]})':eval=frame`,
+    '-c:a', 'aac', '-b:a', '96k', semSample], { stdio: 'pipe' });
+
+  const semCli = (await j('POST', '/api/clients', { name: 'M2 Semantic Co' })).data.id;
+  const semRec = `rec_sem_${Date.now()}`;
+  const semKey = `${semRec}/source.mp4`;
+  await putFile(semKey, semSample);
+  await db.query(`INSERT INTO recordings (id, client_id, storage_key, duration_s, kind, status)
+                  VALUES ($1,$2,$3,90,'podcast','processing')`, [semRec, semCli, semKey]);
+
+  const contentText = 'Here is the truth nobody admits. Actually the research data proves this is wrong. '
+    + 'The reason it works is a controversial principle most people never understand, and that is why the study shocked everyone.';
+  const fillerText = 'um yeah so uh okay you know like i mean basically uh yeah it was uh kind of you know '
+    + 'whatever um so anyway uh yeah okay so um right yeah you know uh.';
+  const wordsOver = (text, [a, b]) => {
+    const ws = text.split(/\s+/).filter(Boolean);
+    const step = (b - a) / ws.length;
+    return ws.map((w, i) => ({ w, s: Number((a + i * step).toFixed(2)), e: Number((a + (i + 1) * step).toFixed(2)) }));
+  };
+  const words = [...wordsOver(contentText, CONTENT), ...wordsOver(fillerText, VACUOUS)];
+  await db.query(`INSERT INTO transcripts (recording_id, provider, words, text)
+                  VALUES ($1,'injected',$2,$3)`,
+    [semRec, JSON.stringify(words), `${contentText} ${fillerText}`]);
+
+  // The product claim is about the shipped DEFAULT weighting. Score under it,
+  // not whatever a prior retrain happened to leave in the table.
+  await db.query('DELETE FROM scoring_weights');
+
+  // run the real stages: analyze writes the analyze job payload score reads
+  const aPayload = await analyze(semRec);
+  assert(aPayload.signalsSource === 'heuristic',
+    `semantic pass ran offline on the transcript (signalsSource=${aPayload.signalsSource})`);
+  await db.query(
+    `INSERT INTO pipeline_jobs (id, recording_id, stage, status, payload)
+     VALUES ($1,$2,'analyze','done',$3)`,
+    [`job_sem_${Date.now()}`, semRec, JSON.stringify(aPayload)]);
+  await score(semRec);
+
+  const semClips = (await db.query(
+    `SELECT t_start_s, t_end_s, score, signals FROM clips WHERE recording_id = $1 AND status='candidate'`, [semRec])).rows;
+  const overlapsRange = (c, [a, b]) => Math.min(Number(c.t_end_s), b) - Math.max(Number(c.t_start_s), a) > 2;
+  const contentClip = semClips.find((c) => overlapsRange(c, CONTENT));
+  const vacuousClip = semClips.find((c) => overlapsRange(c, VACUOUS));
+  assert(contentClip && vacuousClip, 'both the content and the loud-but-vacuous segments became candidates');
+  assert(Number(vacuousClip.signals.energyZ) > Number(contentClip.signals.energyZ),
+    `the vacuous segment really is louder (energyZ ${Number(vacuousClip.signals.energyZ).toFixed(2)} > ${Number(contentClip.signals.energyZ).toFixed(2)})`);
+  assert(Number(contentClip.score) > Number(vacuousClip.score),
+    `the quieter, content-rich segment still scores higher (${contentClip.score} > ${vacuousClip.score}) — semantics beat volume`);
+  const SEM = ['retention', 'emotion', 'controversy', 'education', 'story', 'hookStrength'];
+  assert(SEM.every((k) => typeof contentClip.signals[k] === 'number') && contentClip.signals.energyZ !== undefined,
+    'clips.signals carries all six semantic fields plus the audio fields');
+  assert(Number(contentClip.signals.controversy) > 0.5 && Number(contentClip.signals.education) > 0.5,
+    `the why is explainable (controversy ${contentClip.signals.controversy}, education ${contentClip.signals.education}): "${contentClip.signals.rationale}"`);
+
+  await db.end();
+}
+
+console.log('\nB3+B4+B5+B6 + M2 smoke passed: media in → scored (semantics over volume), rendered, reviewed, signed off, published → measured and reported.');
+process.exit(0); // imported src modules hold their own pg pool open

@@ -100,6 +100,10 @@ jobs:
       - run: npm run smoke:pipeline
         timeout-minutes: 8
 
+      # ── S1: ingest fetch is SSRF-safe (scheme/private-range/redirect/rebinding).
+      - run: npm run smoke:ssrf
+        timeout-minutes: 2
+
       # ── M4: yt-dlp/direct ingest, size/type limits, idempotency (live YT gated).
       - run: npm run smoke:ingest
         timeout-minutes: 4

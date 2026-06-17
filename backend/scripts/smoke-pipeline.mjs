@@ -110,6 +110,8 @@ assert(Math.abs(Number(probed.format.duration) - clipDur) < 2,
   `served asset is a playable mp4 of the right length (${Number(probed.format.duration).toFixed(1)}s ≈ ${clipDur.toFixed(1)}s)`);
 
 // ── failure path: bad source URL → 3 attempts → parked failed → retry ───────
+// The SSRF guard (S1) refuses this loopback/non-https URL outright; the queue
+// still retries 3× and parks it with the real diagnostic on the board.
 r = await j('POST', '/api/intake', { clientId: cli, sourceUrl: 'http://127.0.0.1:9/unreachable.mp3', kind: 'podcast' });
 const badRec = r.data.recordingId;
 deadline = Date.now() + 60_000;
@@ -122,7 +124,7 @@ for (;;) {
   if (Date.now() > deadline) { console.error('FAIL: bad recording never parked as failed'); process.exit(1); }
 }
 const ingStage = bad.stages.find((x) => x.stage === 'ingest');
-assert(ingStage.attempts === 3 && /fetch/i.test(ingStage.error || ''),
+assert(ingStage.attempts === 3 && /scheme not allowed|refusing to fetch|could not resolve|fetch failed/i.test(ingStage.error || ''),
   `ingest parked after 3 attempts with the real error on the board ("${(ingStage.error || '').slice(0, 40)}…")`);
 r = await j('POST', `/api/jobs/${badRec}/retry`);
 assert(r.status === 202 && r.data.rearmed === 1, 'retry re-arms the failed stage');

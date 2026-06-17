@@ -3,7 +3,6 @@
  *  Platform URLs (YouTube etc.) are pulled with yt-dlp — a plain fetch of a
  *  watch page returns HTML, not media; direct media URLs fall back to fetch.
  *  ffprobe fills duration + stream info the rest of the pipeline relies on. */
-import { Readable } from 'node:stream';
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -11,6 +10,7 @@ import path from 'node:path';
 import { q } from '../db/index.js';
 import { saveStream, localPathFor, putFile } from '../storage/index.js';
 import { probe } from './media.js';
+import { safeFetch } from '../lib/safe-fetch.js';
 
 export async function ingest(recordingId) {
   const { rows } = await q('SELECT * FROM recordings WHERE id = $1', [recordingId]);
@@ -35,12 +35,13 @@ export async function ingest(recordingId) {
   return { durationS: info.durationS, hasVideo: info.hasVideo };
 }
 
-/** Direct media URL: stream straight into storage (saveStream caps the size). */
+/** Direct media URL: stream straight into storage (saveStream caps the size).
+ *  safeFetch enforces the SSRF guard — scheme, private-range, redirect, and
+ *  DNS-rebinding checks — and returns a Node stream (throws on any violation). */
 async function pullDirect(sourceUrl, recordingId) {
-  const res = await fetch(sourceUrl);
-  if (!res.ok) throw new Error(`source fetch failed (${res.status})`);
+  const res = await safeFetch(sourceUrl);
   const key = `${recordingId}/source${guessExt(sourceUrl)}`;
-  await saveStream(key, Readable.fromWeb(res.body));
+  await saveStream(key, res.body);
   return key;
 }
 
@@ -52,7 +53,9 @@ async function pullWithYtDlp(sourceUrl, recordingId) {
   const max = Number(process.env.MAX_UPLOAD_BYTES || 0);
   const dir = mkdtempSync(path.join(tmpdir(), 'clipper-ytdlp-'));
   try {
-    const args = ['-f', 'bestaudio/best', '--no-playlist', '--no-progress',
+    // --no-exec: never run post-download commands; the host is already gated to
+    // known platforms by isPlatformUrl, so yt-dlp can't be aimed at the network.
+    const args = ['-f', 'bestaudio/best', '--no-playlist', '--no-progress', '--no-exec',
       '-o', path.join(dir, 'source.%(ext)s')];
     if (max) args.push('--max-filesize', String(max));
     args.push(sourceUrl);

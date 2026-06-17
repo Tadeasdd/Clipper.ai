@@ -24,10 +24,34 @@ process.env.PORT = String(PORT);
 process.env.MAX_UPLOAD_BYTES = String(CAP);
 process.env.WORKERS_ENABLED = 'true';
 process.env.STORAGE_DIR = process.env.STORAGE_DIR || mkdtempSync(path.join(tmpdir(), 'clipper-ingest-store-'));
+// S1 SSRF guard: the direct-pull fixture is served from a local HTTP server, so
+// explicitly trust that host (allowlisted hosts skip the private-range check)
+// and permit http. Production leaves both unset → https-only, no private IPs.
+process.env.INGEST_ALLOW_HTTP = 'true';
+process.env.INGEST_HOST_ALLOWLIST = 'localhost,127.0.0.1';
 
 const BASE = `http://localhost:${PORT}`;
 const assert = (cond, msg) => { if (!cond) { console.error('FAIL:', msg); process.exit(1); } console.log('ok:', msg); };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// S1: run on an ISOLATED database. This smoke self-boots its own server +
+// workers and trusts the local fixture host (the INGEST_* vars above); a second
+// worker pool sharing the suite database — which does NOT trust that host —
+// could otherwise claim our ingest job off the queue and refuse it. A dedicated
+// database guarantees only our own worker processes these jobs.
+{
+  const pgMod = (await import('pg')).default;
+  const adminUrl = process.env.DATABASE_URL || 'postgres://clipper:clipper@localhost:5432/clipper';
+  const testDb = 'clipper_ingest_smoke';
+  const admin = new pgMod.Client({ connectionString: adminUrl });
+  await admin.connect();
+  await admin.query(`DROP DATABASE IF EXISTS ${testDb} WITH (FORCE)`);
+  await admin.query(`CREATE DATABASE ${testDb}`);
+  await admin.end();
+  const u = new URL(adminUrl);
+  u.pathname = `/${testDb}`;
+  process.env.DATABASE_URL = u.toString();
+}
 
 // Boot our own server (auto-migrates, starts workers) and wait for health.
 await import('../src/server.js');

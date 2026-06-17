@@ -3,8 +3,9 @@
 import { Router } from 'express';
 import { q } from '../db/index.js';
 import { id } from '../lib/ids.js';
+import { requireAuth, INTERNAL } from '../lib/auth.js';
 import { rateLimit } from '../lib/ratelimit.js';
-import { validate } from '../lib/validate.js';
+import { validate, paginate } from '../lib/validate.js';
 
 const r = Router();
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -18,6 +19,7 @@ r.post('/',
   validate({
     email: { type: 'string', required: true, maxLength: 200 },
     contentKind: { type: 'string', maxLength: 80 },
+    source: { type: 'string', maxLength: 40 },
     notes: { type: 'string', maxLength: 4000 },
     meta: { type: 'object' },
   }),
@@ -65,10 +67,12 @@ r.get('/stats', async (_req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// GET /api/leads — ops listing (B7 puts this behind auth).
-r.get('/', async (_req, res, next) => {
+// GET /api/leads — ops listing. Holds PII (emails, notes), so it's walled to
+// internal roles (S3 authz fix) and paginated with a hard cap.
+r.get('/', requireAuth(...INTERNAL), async (req, res, next) => {
   try {
-    const { rows } = await q('SELECT * FROM leads ORDER BY created_at DESC LIMIT 200');
+    const { limit, offset } = paginate(req, { def: 200, max: 200 });
+    const { rows } = await q('SELECT * FROM leads ORDER BY created_at DESC LIMIT $1 OFFSET $2', [limit, offset]);
     res.json({ leads: rows });
   } catch (e) { next(e); }
 });

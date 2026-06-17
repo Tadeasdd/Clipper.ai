@@ -7,7 +7,7 @@ import { createUploadTarget, saveStream, objectInfo } from '../storage/index.js'
 import { enqueue, isPlatformUrl } from '../pipeline/index.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
 import { rateLimit } from '../lib/ratelimit.js';
-import { validate } from '../lib/validate.js';
+import { validate, paginate } from '../lib/validate.js';
 
 const r = Router();
 
@@ -108,11 +108,12 @@ r.put('/upload/:id', requireAuth(), async (req, res, next) => {
 // client in the query (F5 portal upload surface), whatever params they send.
 r.get('/queue', requireAuth(), async (req, res, next) => {
   try {
+    const { limit, offset } = paginate(req, { def: 200, max: 200 });
     if (req.user.role === 'client') {
       const { rows } = await q(`
         SELECT id, source_url, kind, status, duration_s, created_at
         FROM recordings WHERE client_id = $1
-        ORDER BY created_at DESC LIMIT 50`, [req.user.client_id]);
+        ORDER BY created_at DESC LIMIT $2 OFFSET $3`, [req.user.client_id, Math.min(limit, 50), offset]);
       return res.json({ items: rows });
     }
     const { rows } = await q(`
@@ -120,7 +121,7 @@ r.get('/queue', requireAuth(), async (req, res, next) => {
              r.kind, r.status, r.created_at
       FROM recordings r JOIN clients c ON c.id = r.client_id
       WHERE r.status IN ('awaiting_upload','queued','ingesting')
-      ORDER BY r.created_at ASC`);
+      ORDER BY r.created_at ASC LIMIT $1 OFFSET $2`, [limit, offset]);
     res.json({ items: rows });
   } catch (e) { next(e); }
 });

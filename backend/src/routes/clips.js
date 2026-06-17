@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { q } from '../db/index.js';
 import { objectInfo, localPathFor } from '../storage/index.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
+import { validate, paginate } from '../lib/validate.js';
 
 const r = Router();
 
@@ -26,10 +27,12 @@ r.get('/', requireAuth(), async (req, res, next) => {
       params.push(req.user.client_id);
       cond.push(`rec.client_id = $${params.length}`); // own data only — the B7 criterion
     }
+    const { limit, offset } = paginate(req, { def: 200, max: 200 });
+    params.push(limit, offset);
     const { rows } = await q(
       `SELECT cl.* FROM clips cl JOIN recordings rec ON rec.id = cl.recording_id
        ${cond.length ? 'WHERE ' + cond.join(' AND ') : ''}
-       ORDER BY cl.score DESC NULLS LAST LIMIT 200`, params);
+       ORDER BY cl.score DESC NULLS LAST LIMIT $${params.length - 1} OFFSET $${params.length}`, params);
     res.json({ clips: rows });
   } catch (e) { next(e); }
 });
@@ -54,7 +57,10 @@ r.get('/:id/asset', requireAuth(), async (req, res, next) => {
 });
 
 // PATCH /api/clips/:id — editors adjust hook/captions before review (B4).
-r.patch('/:id', requireAuth(...INTERNAL), async (req, res, next) => {
+r.patch('/:id', requireAuth(...INTERNAL), validate({
+  hook: { type: 'string', maxLength: 300 },
+  captions: { type: 'string', maxLength: 20000 },
+}), async (req, res, next) => {
   try {
     const { hook, captions } = req.body || {};
     const { rows } = await q(

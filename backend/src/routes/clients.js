@@ -3,20 +3,31 @@ import { Router } from 'express';
 import { q } from '../db/index.js';
 import { id } from '../lib/ids.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
+import { validate, paginate } from '../lib/validate.js';
 
 const r = Router();
 
-r.get('/', requireAuth(...INTERNAL), async (_req, res, next) => {
+const clientSchema = {
+  name: { type: 'string', maxLength: 200 },
+  plan: { type: 'string', maxLength: 80 },
+  cadence: { type: 'string', maxLength: 80 },
+  brandConfig: { type: 'object' },
+};
+
+r.get('/', requireAuth(...INTERNAL), async (req, res, next) => {
   try {
+    const { limit, offset } = paginate(req, { def: 200, max: 200 });
     const { rows } = await q(`
       SELECT c.*, count(r.id) FILTER (WHERE r.status NOT IN ('published')) AS open_recordings
       FROM clients c LEFT JOIN recordings r ON r.client_id = c.id
-      GROUP BY c.id ORDER BY c.created_at DESC`);
+      GROUP BY c.id ORDER BY c.created_at DESC LIMIT $1 OFFSET $2`, [limit, offset]);
     res.json({ clients: rows });
   } catch (e) { next(e); }
 });
 
-r.post('/', requireAuth('ops', 'account_manager'), async (req, res, next) => {
+r.post('/', requireAuth('ops', 'account_manager'),
+  validate({ ...clientSchema, name: { type: 'string', required: true, maxLength: 200 } }),
+  async (req, res, next) => {
   try {
     const { name, plan, cadence, brandConfig } = req.body || {};
     if (!name || !String(name).trim()) return res.status(400).json({ error: 'name required' });
@@ -41,7 +52,7 @@ r.get('/:id', requireAuth(), async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-r.patch('/:id', requireAuth('ops', 'account_manager'), async (req, res, next) => {
+r.patch('/:id', requireAuth('ops', 'account_manager'), validate(clientSchema), async (req, res, next) => {
   try {
     const { name, plan, cadence, brandConfig } = req.body || {};
     const { rows } = await q(

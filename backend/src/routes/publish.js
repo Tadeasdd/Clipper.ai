@@ -12,7 +12,7 @@ import { encryptJson } from '../lib/crypto.js';
 import { objectInfo, localPathFor } from '../storage/index.js';
 import { PLATFORMS, scheduleClip } from '../publish/index.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
-import { validate } from '../lib/validate.js';
+import { validate, paginate } from '../lib/validate.js';
 
 const r = Router();
 const CONN_COLS = 'id, client_id, platform, handle, status, created_at'; // never credentials_enc
@@ -169,7 +169,11 @@ r.post('/connections/:id/revoke', requireAuth('ops', 'account_manager'), async (
 
 // POST /api/publish { clipId, platform, scheduledAt? } — schedule one clip on
 // one platform. The client must have an active connection for it.
-r.post('/', requireAuth(...INTERNAL), async (req, res, next) => {
+r.post('/', requireAuth(...INTERNAL), validate({
+  clipId: { type: 'string', required: true, maxLength: 80 },
+  platform: { type: 'string', required: true, enum: PLATFORMS },
+  scheduledAt: { type: 'string', maxLength: 40 },
+}), async (req, res, next) => {
   try {
     const { clipId, platform, scheduledAt } = req.body || {};
     if (!clipId || !PLATFORMS.includes(platform)) {
@@ -197,8 +201,9 @@ r.post('/', requireAuth(...INTERNAL), async (req, res, next) => {
 
 // GET /api/publish/queue — the ops surface: what ships next, what shipped,
 // what parked. Failed first (they need a human), then by schedule.
-r.get('/queue', requireAuth(...INTERNAL), async (_req, res, next) => {
+r.get('/queue', requireAuth(...INTERNAL), async (req, res, next) => {
   try {
+    const { limit, offset } = paginate(req, { def: 200, max: 200 });
     const { rows } = await q(`
       SELECT pj.id, pj.clip_id, pj.platform, pj.scheduled_at, pj.published_at,
              pj.status, pj.attempts, pj.error, pj.external_url,
@@ -210,7 +215,7 @@ r.get('/queue', requireAuth(...INTERNAL), async (_req, res, next) => {
       JOIN clients c ON c.id = r.client_id
       LEFT JOIN platform_connections pc ON pc.id = pj.connection_id
       ORDER BY (pj.status = 'failed') DESC, pj.scheduled_at NULLS FIRST
-      LIMIT 200`);
+      LIMIT $1 OFFSET $2`, [limit, offset]);
     res.json({ items: rows });
   } catch (e) { next(e); }
 });

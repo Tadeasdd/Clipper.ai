@@ -2,13 +2,15 @@
 import { Router } from 'express';
 import { q } from '../db/index.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
+import { paginate } from '../lib/validate.js';
 import { retryRecording, STAGES } from '../pipeline/index.js';
 
 const r = Router();
 
 // GET /api/jobs — board: every non-idle recording with its stage statuses.
-r.get('/', requireAuth(...INTERNAL), async (_req, res, next) => {
+r.get('/', requireAuth(...INTERNAL), async (req, res, next) => {
   try {
+    const { limit, offset } = paginate(req, { def: 100, max: 100 });
     const { rows } = await q(`
       SELECT r.id, r.client_id, c.name AS client_name, r.kind, r.status, r.duration_s, r.created_at,
              COALESCE(json_agg(json_build_object(
@@ -20,7 +22,7 @@ r.get('/', requireAuth(...INTERNAL), async (_req, res, next) => {
       JOIN clients c ON c.id = r.client_id
       LEFT JOIN pipeline_jobs j ON j.recording_id = r.id
       GROUP BY r.id, c.name
-      ORDER BY r.created_at DESC LIMIT 100`, [STAGES]);
+      ORDER BY r.created_at DESC LIMIT $2 OFFSET $3`, [STAGES, limit, offset]);
     res.json({ jobs: rows });
   } catch (e) { next(e); }
 });

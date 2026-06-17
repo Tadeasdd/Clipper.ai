@@ -6,6 +6,7 @@ import { Router } from 'express';
 import { q } from '../db/index.js';
 import { id } from '../lib/ids.js';
 import { requireAuth, INTERNAL, hashPassword } from '../lib/auth.js';
+import { validate, paginate } from '../lib/validate.js';
 
 const r = Router();
 const ROLES = ['ops', 'editor', 'reviewer', 'account_manager', 'client'];
@@ -14,7 +15,12 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // POST /api/users { email, role, clientId? } — idempotent per email: a
 // resubmit with the same role returns the existing row (dev/smoke ergonomics);
 // a role mismatch is a 409 (role changes are a deliberate B7 operation).
-r.post('/', requireAuth('ops', 'account_manager'), async (req, res, next) => {
+r.post('/', requireAuth('ops', 'account_manager'), validate({
+  email: { type: 'string', required: true, maxLength: 200 },
+  role: { type: 'string', required: true, enum: ROLES },
+  clientId: { type: 'string', maxLength: 80 },
+  password: { type: 'string', required: true, maxLength: 200 },
+}), async (req, res, next) => {
   try {
     const { email, role, clientId, password } = req.body || {};
     if (!password || String(password).length < 8) {
@@ -48,10 +54,11 @@ r.post('/', requireAuth('ops', 'account_manager'), async (req, res, next) => {
 r.get('/', requireAuth(...INTERNAL), async (req, res, next) => {
   try {
     const { role } = req.query;
+    const { limit, offset } = paginate(req, { def: 200, max: 200 });
     const cols = 'id, email, role, client_id, created_at, password_hash IS NOT NULL AS has_credentials';
     const { rows } = role
-      ? await q(`SELECT ${cols} FROM users WHERE role = $1 ORDER BY created_at`, [role])
-      : await q(`SELECT ${cols} FROM users ORDER BY created_at`);
+      ? await q(`SELECT ${cols} FROM users WHERE role = $1 ORDER BY created_at LIMIT $2 OFFSET $3`, [role, limit, offset])
+      : await q(`SELECT ${cols} FROM users ORDER BY created_at LIMIT $1 OFFSET $2`, [limit, offset]);
     res.json({ users: rows });
   } catch (e) { next(e); }
 });

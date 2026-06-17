@@ -24,9 +24,11 @@ import { q } from '../db/index.js';
 import { id } from '../lib/ids.js';
 import { autoScheduleApproved } from '../publish/index.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
+import { validate, paginate } from '../lib/validate.js';
 
 const r = Router();
 const DECISIONS = ['approve', 'reject', 'changes'];
+const notesOnly = { notes: { type: 'string', maxLength: 4000 } };
 
 /** Load clip + its recording's client (incl. brand_config) in one query. */
 async function clipContext(clipId) {
@@ -77,6 +79,8 @@ r.get('/queue', requireAuth(), async (req, res, next) => {
     const params = [status];
     let clientCond = '';
     if (clientId) { params.push(clientId); clientCond = `AND r.client_id = $2`; }
+    const { limit, offset } = paginate(req, { def: 200, max: 200 });
+    params.push(limit, offset);
     const { rows } = await q(`
       SELECT cl.id, cl.recording_id, cl.t_start_s, cl.t_end_s, cl.score, cl.signals,
              cl.hook, cl.captions, cl.format, cl.asset_key IS NOT NULL AS rendered,
@@ -86,7 +90,7 @@ r.get('/queue', requireAuth(), async (req, res, next) => {
       JOIN recordings r ON r.id = cl.recording_id
       JOIN clients c ON c.id = r.client_id
       WHERE cl.status = $1 ${clientCond}
-      ORDER BY cl.created_at ASC LIMIT 200`, params);
+      ORDER BY cl.created_at ASC LIMIT $${params.length - 1} OFFSET $${params.length}`, params);
     res.json({ status, items: rows });
   } catch (e) { next(e); }
 });
@@ -113,7 +117,10 @@ r.get('/:clipId/history', requireAuth(), async (req, res, next) => {
 // from awaiting_review; client users decide from awaiting_client — and only
 // for their own clips. The decider is the session user — attributable by
 // construction (the B7 done-criterion).
-r.post('/:clipId/decision', requireAuth(), async (req, res, next) => {
+r.post('/:clipId/decision', requireAuth(), validate({
+  decision: { type: 'string', required: true, enum: DECISIONS },
+  ...notesOnly,
+}), async (req, res, next) => {
   try {
     const { decision, notes } = req.body || {};
     if (!DECISIONS.includes(decision)) {
@@ -153,7 +160,7 @@ r.post('/:clipId/decision', requireAuth(), async (req, res, next) => {
 
 // POST /api/review/:clipId/send { userId } — route an internally-approved clip
 // into the client's queue (the account-manager step between QA and sign-off).
-r.post('/:clipId/send', requireAuth(...INTERNAL), async (req, res, next) => {
+r.post('/:clipId/send', requireAuth(...INTERNAL), validate(notesOnly), async (req, res, next) => {
   try {
     const u = req.user;
     const clip = await clipContext(req.params.clipId);
@@ -166,7 +173,7 @@ r.post('/:clipId/send', requireAuth(...INTERNAL), async (req, res, next) => {
 
 // POST /api/review/:clipId/resubmit { userId } — an editor fixed the hook /
 // captions (PATCH /api/clips/:id) and puts the clip back in the review queue.
-r.post('/:clipId/resubmit', requireAuth(...INTERNAL), async (req, res, next) => {
+r.post('/:clipId/resubmit', requireAuth(...INTERNAL), validate(notesOnly), async (req, res, next) => {
   try {
     const u = req.user;
     const clip = await clipContext(req.params.clipId);

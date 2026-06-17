@@ -7,6 +7,7 @@ import { Router } from 'express';
 import { q } from '../db/index.js';
 import { computeCorrelation, retrain, loadWeights } from '../metrics/loop.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
+import { validate } from '../lib/validate.js';
 import { STAGES } from '../pipeline/index.js';
 
 const r = Router();
@@ -158,7 +159,7 @@ r.get('/ops', requireAuth(...INTERNAL), async (_req, res, next) => {
 // POST /api/analytics/retrain — one cycle of the loop: correlate, step the
 // weights toward the evidence, append the new row. 409 below the sample
 // gate. An ops action for now; B7 puts it behind auth.
-r.post('/retrain', requireAuth('ops'), async (req, res, next) => {
+r.post('/retrain', requireAuth('ops'), validate({ note: { type: 'string', maxLength: 500 } }), async (req, res, next) => {
   try {
     const row = await retrain(undefined, req.body?.note || null);
     if (!row) {

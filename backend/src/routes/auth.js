@@ -10,11 +10,18 @@ import {
   hashPassword, verifyPassword, createSession, revokeSession,
   requireAuth, loginAllowed, recordLoginAttempt, clearLoginAttempts, COOKIE, SESSION_TTL_H,
 } from '../lib/auth.js';
+import { rateLimit } from '../lib/ratelimit.js';
+import { validate } from '../lib/validate.js';
 import { id } from '../lib/ids.js';
 
 const r = Router();
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PW_MIN = 8;
+
+// S3: per-IP throttle across the whole auth surface (the login endpoint keeps
+// its stricter per-email+IP limiter on top). Generous default; tighten in prod.
+r.use(rateLimit({ name: 'auth', max: 120 }));
+const credentials = { email: { type: 'string', required: true, maxLength: 200 }, password: { type: 'string', required: true, maxLength: 200 } };
 
 // httpOnly so JS can't read it (no localStorage token after S2); SameSite=Lax
 // blocks cross-site sends on its own, and Secure forces HTTPS in production.
@@ -36,7 +43,7 @@ r.get('/status', async (_req, res, next) => {
 });
 
 // POST /api/auth/bootstrap { email, password } — first ops account, once.
-r.post('/bootstrap', async (req, res, next) => {
+r.post('/bootstrap', validate(credentials), async (req, res, next) => {
   try {
     if (!(await bootstrapRequired())) {
       return res.status(409).json({ error: 'already bootstrapped — sign in, or ask an ops user for an account' });
@@ -64,7 +71,7 @@ r.post('/bootstrap', async (req, res, next) => {
 });
 
 // POST /api/auth/login { email, password }
-r.post('/login', async (req, res, next) => {
+r.post('/login', validate(credentials), async (req, res, next) => {
   try {
     const email = String(req.body?.email || '').trim().toLowerCase();
     const key = `${email}|${req.ip}`;
@@ -98,7 +105,10 @@ r.get('/me', requireAuth(), (req, res) => {
 });
 
 // POST /api/auth/password { current, next } — change your own.
-r.post('/password', requireAuth(), async (req, res, next) => {
+r.post('/password', requireAuth(), validate({
+  current: { type: 'string', required: true, maxLength: 200 },
+  next: { type: 'string', required: true, maxLength: 200 },
+}), async (req, res, next) => {
   try {
     const { rows } = await q('SELECT password_hash FROM users WHERE id = $1', [req.user.id]);
     if (!verifyPassword(String(req.body?.current || ''), rows[0].password_hash)) {

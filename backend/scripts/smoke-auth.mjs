@@ -67,6 +67,15 @@ assert(cs.status === 200, 'cookie-authed GET needs no CSRF header (safe method)'
 cs = await j('POST', '/api/clients', { name: `bearer ${run}` }, ops);
 assert(cs.status === 201, 'bearer-authed write is exempt from the CSRF header (API clients)');
 
+// ── S3: strict schema validation + pagination caps ──────────────────────────
+r = await j('POST', '/api/clients', { name: `v ${run}`, bogusField: 1 }, ops);
+assert(r.status === 400 && /unexpected field/.test(r.data.error || ''), 'unknown body fields are rejected (strict validation)');
+r = await j('POST', '/api/clients', {}, ops);
+assert(r.status === 400, 'a missing required field is a 400');
+r = await j('GET', '/api/clips?limit=100000', null, ops);
+assert(r.status === 200 && Array.isArray(r.data.clips) && r.data.clips.length <= 200,
+  `an oversized ?limit is clamped to the max page size (got ${r.data.clips.length})`);
+
 // ── login hygiene ────────────────────────────────────────────────────────────
 const bad1 = await j('POST', '/api/auth/login', { email: OPS.email, password: 'wrong-password' });
 const bad2 = await j('POST', '/api/auth/login', { email: `ghost+${run}@x.ai`, password: 'wrong-password' });
@@ -86,13 +95,16 @@ for (let i = 0; i < 12; i++) {
 assert(limited, 'login rate limit trips inside the window');
 
 // ── anonymous requests bounce off every wall ────────────────────────────────
-for (const [m, p] of [['GET', '/api/jobs'], ['GET', '/api/intake/queue'], ['GET', '/api/clients'],
-                      ['GET', '/api/users'], ['GET', '/api/review/queue'], ['GET', '/api/publish/queue'],
-                      ['GET', '/api/analytics/ops'], ['POST', '/api/analytics/retrain'], ['GET', '/api/clips']]) {
+const WALLS = [['GET', '/api/jobs'], ['GET', '/api/intake/queue'], ['GET', '/api/clients'],
+               ['POST', '/api/clients'], ['GET', '/api/users'], ['POST', '/api/users'],
+               ['GET', '/api/review/queue'], ['GET', '/api/publish/queue'], ['GET', '/api/publish/connections'],
+               ['GET', '/api/analytics/ops'], ['GET', '/api/analytics/queues'], ['POST', '/api/analytics/retrain'],
+               ['GET', '/api/clips'], ['POST', '/api/intake'], ['GET', '/api/leads']];
+for (const [m, p] of WALLS) {
   const res = await j(m, p);
   if (res.status !== 401) { console.error(`FAIL: anon ${m} ${p} → ${res.status}, wanted 401`); process.exit(1); }
 }
-console.log('ok: anonymous requests are 401 on all nine sampled walls');
+console.log(`ok: anonymous requests are 401 on all ${WALLS.length} sampled walls (incl. the lead list — S3 authz fix)`);
 r = await j('POST', '/api/leads', { email: `lead+${run}@x.ai`, source: 'waitlist' });
 assert(r.status === 201, 'the marketing lead form stays public — the one open door');
 

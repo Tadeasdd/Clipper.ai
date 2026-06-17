@@ -17,7 +17,8 @@
     "smoke:metrics": "node scripts/smoke-metrics.mjs",
     "smoke:auth": "node scripts/smoke-auth.mjs",
     "smoke:prod": "node scripts/smoke-prod.mjs",
-    "seed:demo": "node scripts/seed-demo.mjs"
+    "seed:demo": "node scripts/seed-demo.mjs",
+    "audit:ci": "npm audit --omit=dev --audit-level=high"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1066.0",

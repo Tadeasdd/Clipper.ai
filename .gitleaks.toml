@@ -1,0 +1,13 @@
+# Gitleaks configuration. Extends the full default ruleset; only adds a narrow
+# allowlist for verified non-secrets so CI fails on REAL leaks, not constants.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Verified non-secrets (constants the generic-api-key heuristic over-matches)"
+regexes = [
+  # backend/src/lib/crypto.js: scrypt SALT for key derivation — a fixed public
+  # constant by design, not a credential. The actual secret is PUBLISH_TOKEN_KEY
+  # (read from env, never committed).
+  '''clipper-publish-v1''',
+]

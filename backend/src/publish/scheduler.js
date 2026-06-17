@@ -8,6 +8,25 @@ import { runAdapter } from './index.js';
 
 const MAX_ATTEMPTS = 3;
 const POLL_MS = Number(process.env.PUBLISH_POLL_MS || 1000);
+const VISIBILITY_TIMEOUT_S = Number(process.env.JOB_VISIBILITY_TIMEOUT_S || 300);
+const REAP_INTERVAL_MS = Number(process.env.JOB_REAP_INTERVAL_MS || 5000);
+
+/** Visibility-timeout reaper for the publish queue: a job stuck in 'publishing'
+ *  (claim set updated_at, worker then died) is returned to 'scheduled', or
+ *  dead-lettered once the attempt budget is spent. Same shape as the pipeline. */
+export async function reapStuck() {
+  const { rows } = await q(
+    `UPDATE publish_jobs
+       SET status = CASE WHEN attempts >= $2 THEN 'failed' ELSE 'scheduled' END,
+           dead_letter = (attempts >= $2),
+           error = 'reaped: publisher presumed dead (publishing > ' || $1 || 's with no completion)',
+           run_after = now(), updated_at = now()
+     WHERE status = 'publishing' AND updated_at < now() - ($1 || ' seconds')::interval
+     RETURNING clip_id, platform, status`,
+    [String(VISIBILITY_TIMEOUT_S), MAX_ATTEMPTS]);
+  for (const j of rows) console.warn(`[publish] reaped stuck ${j.platform} ${j.clip_id} → ${j.status}`);
+  return rows.length;
+}
 
 async function claim() {
   const { rows } = await q(`
@@ -62,10 +81,10 @@ async function runOne(job) {
     const backoffS = Math.min(60, 2 ** job.attempts * 2);
     console.error(`[publish] ${job.platform} ${job.clip_id} attempt ${job.attempts} failed: ${e.message}`);
     await q(`
-      UPDATE publish_jobs SET status = $2, error = $3, updated_at = now(),
+      UPDATE publish_jobs SET status = $2, error = $3, dead_letter = $5, updated_at = now(),
              run_after = now() + ($4 || ' seconds')::interval
       WHERE id = $1`,
-      [job.id, parked ? 'failed' : 'scheduled', String(e.message).slice(0, 2000), String(backoffS)]);
+      [job.id, parked ? 'failed' : 'scheduled', String(e.message).slice(0, 2000), String(backoffS), parked]);
   }
 }
 
@@ -87,7 +106,14 @@ export function startPublisher(concurrency = Number(process.env.PUBLISH_CONCURRE
       }
     })();
   }
-  console.log(`[publish] ${concurrency} scheduler loop(s) started`);
+  (async function reaper() {
+    while (running) {
+      await new Promise((r) => setTimeout(r, REAP_INTERVAL_MS));
+      if (!running) break;
+      try { await reapStuck(); } catch (e) { console.error('[publish] reaper error:', e.message); }
+    }
+  })();
+  console.log(`[publish] ${concurrency} scheduler loop(s) started (+reaper, visibility ${VISIBILITY_TIMEOUT_S}s)`);
 }
 
 export function stopPublisher() { running = false; }

@@ -13,7 +13,8 @@ r.get('/', requireAuth(...INTERNAL), async (_req, res, next) => {
       SELECT r.id, r.client_id, c.name AS client_name, r.kind, r.status, r.duration_s, r.created_at,
              COALESCE(json_agg(json_build_object(
                'stage', j.stage, 'status', j.status, 'attempts', j.attempts,
-               'error', j.error, 'started_at', j.started_at, 'finished_at', j.finished_at
+               'error', j.error, 'dead_letter', j.dead_letter,
+               'started_at', j.started_at, 'finished_at', j.finished_at
              ) ORDER BY array_position($1, j.stage)) FILTER (WHERE j.id IS NOT NULL), '[]') AS stages
       FROM recordings r
       JOIN clients c ON c.id = r.client_id
@@ -32,7 +33,7 @@ r.get('/:id', requireAuth(...INTERNAL), async (req, res, next) => {
       JOIN clients c ON c.id = r.client_id WHERE r.id = $1`, [req.params.id]);
     if (!rec.rowCount) return res.status(404).json({ error: 'unknown recording' });
     const stages = await q(
-      `SELECT stage, status, attempts, error, payload, started_at, finished_at
+      `SELECT stage, status, attempts, error, dead_letter, payload, started_at, finished_at
        FROM pipeline_jobs WHERE recording_id = $1
        ORDER BY array_position($2, stage)`, [req.params.id, STAGES]);
     const clips = await q(

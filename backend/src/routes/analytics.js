@@ -7,8 +7,41 @@ import { Router } from 'express';
 import { q } from '../db/index.js';
 import { computeCorrelation, retrain, loadWeights } from '../metrics/loop.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
+import { STAGES } from '../pipeline/index.js';
 
 const r = Router();
+
+// GET /api/analytics/queues — ops queue health (M5). Per-stage pipeline depth,
+// publish queue depth, and how many published posts are due a metrics capture —
+// the signal the F4 processing board needs to see backlog and dead-letter work.
+r.get('/queues', requireAuth(...INTERNAL), async (_req, res, next) => {
+  try {
+    const pipeline = await q(`
+      SELECT stage,
+             count(*) FILTER (WHERE status = 'pending')::int  AS pending,
+             count(*) FILTER (WHERE status = 'running')::int  AS running,
+             count(*) FILTER (WHERE status = 'done')::int     AS done,
+             count(*) FILTER (WHERE status = 'failed')::int   AS failed,
+             count(*) FILTER (WHERE dead_letter)::int         AS dead_letter,
+             min(run_after) FILTER (WHERE status = 'pending') AS oldest_pending
+      FROM pipeline_jobs GROUP BY stage
+      ORDER BY array_position($1, stage)`, [STAGES]);
+    const publish = await q(`
+      SELECT count(*) FILTER (WHERE status = 'scheduled')::int  AS scheduled,
+             count(*) FILTER (WHERE status = 'publishing')::int AS publishing,
+             count(*) FILTER (WHERE status = 'published')::int  AS published,
+             count(*) FILTER (WHERE status = 'failed')::int     AS failed,
+             count(*) FILTER (WHERE dead_letter)::int           AS dead_letter,
+             min(run_after) FILTER (WHERE status = 'scheduled') AS oldest_scheduled
+      FROM publish_jobs`);
+    const metrics = await q(`
+      SELECT count(*) FILTER (WHERE status = 'published' AND metrics_next_at IS NOT NULL
+                                AND metrics_next_at <= now())::int AS due,
+             count(*) FILTER (WHERE status = 'published')::int     AS tracked
+      FROM publish_jobs`);
+    res.json({ pipeline: pipeline.rows, publish: publish.rows[0], metrics: metrics.rows[0] });
+  } catch (e) { next(e); }
+});
 
 // GET /api/analytics/clients/:id — the client-facing report (F5 renders
 // this; B6.2 made it real). Per published clip: the LATEST capture per

@@ -113,7 +113,7 @@ r.post('/:id/retry', requireAuth(...INTERNAL), async (req, res, next) => {
   try {
     const { rows } = await q(`
       UPDATE publish_jobs SET status = 'scheduled', run_after = now(), error = NULL,
-             attempts = 0, updated_at = now(), scheduled_by = $2
+             attempts = 0, dead_letter = false, updated_at = now(), scheduled_by = $2
       WHERE id = $1 AND status = 'failed' RETURNING id, status`, [req.params.id, req.user.id]);
     if (!rows.length) return res.status(409).json({ error: 'only failed publishes can be retried' });
     res.status(202).json(rows[0]);

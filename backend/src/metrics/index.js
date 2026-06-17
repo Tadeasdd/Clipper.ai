@@ -28,7 +28,11 @@ async function runDriver(ctx) {
 }
 
 /** Claim one published job due for a capture; the clock moves forward in the
- *  claim itself, so concurrent pollers can't double-sample. */
+ *  claim itself, so concurrent pollers can't double-sample. This is also why
+ *  the metrics queue needs no visibility-timeout reaper (unlike the pipeline
+ *  and publish queues, M5): a worker that dies mid-capture has already pushed
+ *  metrics_next_at forward, so the post simply skips one sample and self-heals
+ *  on the next interval — a missed capture is not an incident. */
 async function claim() {
   const { rows } = await q(`
     UPDATE publish_jobs SET metrics_next_at = now() + ($1 || ' seconds')::interval

@@ -313,8 +313,54 @@ assert(scoreStage.payload.weightsSource && scoreStage.payload.weights,
     console.log('skip: real-hook assertion (needs LLM_PROVIDER=anthropic + LLM_API_KEY)');
   }
 
+  // ── M5: a worker that dies mid-job is reaped and the work self-heals ────────
+  // Simulate a crashed worker: a stage stuck 'running' with a long-past
+  // started_at. No live worker will ever claim a 'running' row — only the
+  // visibility-timeout reaper can rescue it. Assert the recording completes.
+  const reapRec = `rec_reap_${Date.now()}`;
+  await db.query(`INSERT INTO recordings (id, client_id, storage_key, duration_s, kind, status)
+                  VALUES ($1,$2,$3,90,'podcast','processing')`, [reapRec, semCli, semKey]);
+  await db.query(`INSERT INTO pipeline_jobs (id, recording_id, stage, status, attempts, started_at, run_after)
+                  VALUES ($1,$2,'ingest','running',1, now() - interval '1 hour', now() - interval '1 hour')`,
+    [`job_reap_${Date.now()}`, reapRec]);
+  let reaped, reapDeadline = Date.now() + 90_000;
+  for (;;) {
+    await sleep(2500);
+    reaped = (await j('GET', `/api/jobs/${reapRec}`)).data;
+    if (reaped.status === 'ready' || reaped.status === 'failed') break;
+    if (Date.now() > reapDeadline) { console.error('FAIL: the reaped recording never completed'); process.exit(1); }
+  }
+  assert(reaped.status === 'ready', 'a worker that died mid-job was reaped and the recording completed');
+  const reapedIngest = reaped.stages.find((s) => s.stage === 'ingest');
+  assert(reapedIngest.status === 'done' && reapedIngest.attempts >= 2,
+    `the orphaned stage was reclaimed and finished (ingest attempts ${reapedIngest.attempts})`);
+
+  // ── M5: an exhausted job is dead-lettered (needs a human), not just 'failed'
+  let dr = await j('POST', '/api/intake', { clientId: semCli, sourceUrl: 'http://127.0.0.1:9/dead-letter.mp3', kind: 'podcast' });
+  const dlRec = dr.data.recordingId;
+  let dlState, dlDeadline = Date.now() + 60_000;
+  for (;;) {
+    await sleep(2000);
+    dlState = (await j('GET', `/api/jobs/${dlRec}`)).data;
+    if (dlState.status === 'failed') break;
+    if (Date.now() > dlDeadline) { console.error('FAIL: dead-letter recording never parked'); process.exit(1); }
+  }
+  const dlIngest = dlState.stages.find((s) => s.stage === 'ingest');
+  assert(dlIngest.status === 'failed' && dlIngest.dead_letter === true,
+    'an exhausted job is flagged dead_letter — the board separates "needs a human" from "retrying"');
+
+  // ── M5: the queue-health endpoint reports correct depth under load ──────────
+  const queues = (await j('GET', '/api/analytics/queues')).data;
+  assert(Array.isArray(queues.pipeline) && queues.pipeline.some((p) => p.stage === 'generate'),
+    'queue health reports per-stage pipeline depth');
+  const ingestDepth = queues.pipeline.find((p) => p.stage === 'ingest');
+  assert(typeof ingestDepth.done === 'number' && ingestDepth.dead_letter >= 1,
+    `per-stage counts are real (ingest done=${ingestDepth.done}, dead_letter=${ingestDepth.dead_letter})`);
+  assert(queues.publish && queues.publish.published >= 1 && typeof queues.metrics.tracked === 'number',
+    `publish + metrics depth reported (published=${queues.publish.published}, tracked=${queues.metrics.tracked})`);
+
   await db.end();
 }
 
-console.log('\nB3+B4+B5+B6 + M2 + M3 smoke passed: media in → scored (semantics over volume), captioned, reviewed, signed off, published → measured and reported.');
+console.log('\nB3+B4+B5+B6 + M2 + M3 + M5 smoke passed: media in → scored (semantics over volume), captioned, reviewed, signed off, published → measured; crashes self-heal.');
 process.exit(0); // imported src modules hold their own pg pool open

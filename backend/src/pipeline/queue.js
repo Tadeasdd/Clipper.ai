@@ -16,6 +16,8 @@ export const STAGES = ['ingest', 'transcribe', 'analyze', 'score', 'generate'];
 const NEXT = Object.fromEntries(STAGES.map((s, i) => [s, STAGES[i + 1] || null]));
 const MAX_ATTEMPTS = 3;
 const POLL_MS = Number(process.env.PIPELINE_POLL_MS || 1000);
+const VISIBILITY_TIMEOUT_S = Number(process.env.JOB_VISIBILITY_TIMEOUT_S || 300);
+const REAP_INTERVAL_MS = Number(process.env.JOB_REAP_INTERVAL_MS || 5000);
 
 const handlers = {};
 export function register(stage, fn) { handlers[stage] = fn; }
@@ -26,7 +28,7 @@ export async function enqueue(recordingId, stage = 'ingest') {
     `INSERT INTO pipeline_jobs (id, recording_id, stage, status, attempts, run_after)
      VALUES ($1, $2, $3, 'pending', 0, now())
      ON CONFLICT (recording_id, stage) DO UPDATE
-       SET status = 'pending', run_after = now(), error = NULL, updated_at = now()`,
+       SET status = 'pending', run_after = now(), error = NULL, dead_letter = false, updated_at = now()`,
     [id('job'), recordingId, stage]
   );
 }
@@ -34,10 +36,33 @@ export async function enqueue(recordingId, stage = 'ingest') {
 /** Re-arm every failed stage of a recording (the ops retry button). */
 export async function retryRecording(recordingId) {
   const { rowCount } = await q(
-    `UPDATE pipeline_jobs SET status = 'pending', run_after = now(), error = NULL, updated_at = now()
+    `UPDATE pipeline_jobs SET status = 'pending', run_after = now(), error = NULL,
+            dead_letter = false, updated_at = now()
      WHERE recording_id = $1 AND status = 'failed'`, [recordingId]);
   if (rowCount) await q(`UPDATE recordings SET status = 'processing' WHERE id = $1`, [recordingId]);
   return rowCount;
+}
+
+/** Visibility-timeout reaper: a worker that dies mid-job leaves its row stuck
+ *  in 'running' forever — nothing else will claim it. This sweep returns rows
+ *  whose started_at is older than the timeout back to 'pending' (so any worker
+ *  picks them up), or parks them as dead-letter if the attempt budget is spent.
+ *  Cheap, indexed, idempotent — safe to run from every process. */
+export async function reapStuck() {
+  const { rows } = await q(
+    `UPDATE pipeline_jobs
+       SET status = CASE WHEN attempts >= $2 THEN 'failed' ELSE 'pending' END,
+           dead_letter = (attempts >= $2),
+           error = 'reaped: worker presumed dead (running > ' || $1 || 's with no completion)',
+           run_after = now(), updated_at = now()
+     WHERE status = 'running' AND started_at < now() - ($1 || ' seconds')::interval
+     RETURNING recording_id, stage, status`,
+    [String(VISIBILITY_TIMEOUT_S), MAX_ATTEMPTS]);
+  for (const j of rows) {
+    if (j.status === 'failed') await q(`UPDATE recordings SET status = 'failed' WHERE id = $1`, [j.recording_id]);
+    console.warn(`[pipeline] reaped stuck ${j.stage} ${j.recording_id} → ${j.status}`);
+  }
+  return rows.length;
 }
 
 async function claim() {
@@ -61,7 +86,7 @@ async function runOne(job) {
     if (!handler) throw new Error(`no handler for stage ${job.stage}`);
     const out = await handler(job.recording_id, job.payload || {});
     await q(`UPDATE pipeline_jobs SET status = 'done', finished_at = now(), updated_at = now(),
-             payload = payload || $2 WHERE id = $1`, [job.id, out || {}]);
+             error = NULL, payload = payload || $2 WHERE id = $1`, [job.id, out || {}]);
     const next = NEXT[job.stage];
     if (next) {
       await enqueue(job.recording_id, next);
@@ -73,10 +98,10 @@ async function runOne(job) {
     const backoffS = Math.min(60, 2 ** job.attempts * 2);
     console.error(`[pipeline] ${job.stage} ${job.recording_id} attempt ${job.attempts} failed: ${e.message}`);
     await q(
-      `UPDATE pipeline_jobs SET status = $2, error = $3, updated_at = now(),
+      `UPDATE pipeline_jobs SET status = $2, error = $3, dead_letter = $5, updated_at = now(),
               run_after = now() + ($4 || ' seconds')::interval
        WHERE id = $1`,
-      [job.id, parked ? 'failed' : 'pending', String(e.message).slice(0, 2000), String(backoffS)]
+      [job.id, parked ? 'failed' : 'pending', String(e.message).slice(0, 2000), String(backoffS), parked]
     );
     if (parked) await q(`UPDATE recordings SET status = 'failed' WHERE id = $1`, [job.recording_id]);
   }
@@ -104,7 +129,16 @@ export function startWorkers(concurrency = Number(process.env.PIPELINE_CONCURREN
       }
     })();
   }
-  console.log(`[pipeline] ${concurrency} worker loop(s) started`);
+  // Reaper: one sweep on its own cadence (decoupled from the staleness timeout)
+  // reclaims jobs orphaned by a crashed worker, so the pipeline self-heals.
+  (async function reaper() {
+    while (running) {
+      await new Promise((r) => setTimeout(r, REAP_INTERVAL_MS));
+      if (!running) break;
+      try { await reapStuck(); } catch (e) { console.error('[pipeline] reaper error:', e.message); }
+    }
+  })();
+  console.log(`[pipeline] ${concurrency} worker loop(s) started (+reaper, visibility ${VISIBILITY_TIMEOUT_S}s)`);
 }
 
 export function stopWorkers() { running = false; }

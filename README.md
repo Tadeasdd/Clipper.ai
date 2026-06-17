@@ -18,6 +18,20 @@ docs/       BUILD_STAGES.md (the roadmap) · ARCHITECTURE.md
 
 ## Quick start
 
+### One command (Docker)
+
+```bash
+docker compose up --build        # db + backend (+ workers) + frontend
+# frontend → http://localhost:5173   backend → http://localhost:8080
+docker compose --profile seed run --rm seed    # demo: real captioned clips
+docker compose --profile test run --rm smoke   # the offline smoke suite
+```
+
+No local Postgres/ffmpeg/whisper needed — see `docs/DEV_STACK.md`. The rest of
+this section is the native (non-Docker) path.
+
+### Native
+
 ```bash
 # Frontend (marketing site — production-ready now)
 cd frontend && npm install && npm run dev      # http://localhost:5173

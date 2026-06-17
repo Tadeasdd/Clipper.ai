@@ -1,0 +1,129 @@
+# Clipper.ai — one-command local stack (Capstone D1).
+#
+#   docker compose up --build                 # db + backend (+ workers) + frontend
+#   docker compose --profile seed run --rm seed    # demo client → captioned clips
+#   docker compose --profile test run --rm smoke   # the offline smoke suite
+#
+# Or use the Makefile: `make demo` (stack + seed), `make verify` (smokes).
+#
+# Defaults are fully offline: builtin ASR + builtin LLM + local storage + local
+# publish/metrics drivers — zero external keys, zero network at runtime. Point
+# the provider seams at real services via env to go live (see backend/.env.example).
+#
+# whisper (M1 offline ASR) is opt-in: `INSTALL_WHISPER=true docker compose build`
+# bakes whisper.cpp + the tiny model, then set TRANSCRIPTION_PROVIDER=whisper.
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: clipper
+      POSTGRES_PASSWORD: clipper
+      POSTGRES_DB: clipper
+    ports:
+      - "5432:5432"
+    volumes:
+      - clipper-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clipper -d clipper"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    build:
+      context: ./backend
+      args:
+        INSTALL_WHISPER: "${INSTALL_WHISPER:-false}"
+    environment:
+      DATABASE_URL: postgres://clipper:clipper@db:5432/clipper
+      PORT: "8080"
+      NODE_ENV: development
+      STORAGE_DRIVER: local
+      TRANSCRIPTION_PROVIDER: "${TRANSCRIPTION_PROVIDER:-builtin}"
+      LLM_PROVIDER: "${LLM_PROVIDER:-builtin}"
+      # Dev signing key for publish tokens; override for anything real.
+      PUBLISH_TOKEN_KEY: "${PUBLISH_TOKEN_KEY:-dev-stack-publish-token-key}"
+    ports:
+      - "8080:8080"
+    volumes:
+      # Shared local-storage volume: the backend workers, the seed job, and the
+      # smoke job all read/write the same object store (STORAGE_DRIVER=local).
+      # In a real deploy this is S3; locally a shared volume keeps the parts
+      # that hand files between containers (uploads → workers, seed → API) honest.
+      - clipper-storage:/app/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:8080/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      BACKEND_ORIGIN: http://backend:8080
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+  # ── one-shot: seed a demo client and run a synthetic podcast through the real
+  #    pipeline to scored, captioned 9:16 clips (reuses M8's seed:demo). ──────
+  seed:
+    profiles: ["seed"]
+    build:
+      context: ./backend
+    environment:
+      DATABASE_URL: postgres://clipper:clipper@db:5432/clipper
+    volumes:
+      - clipper-storage:/app/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["npm", "run", "seed:demo"]
+    restart: "no"
+
+  # ── one-shot: the offline smoke suite, against the running backend service.
+  #    HTTP smokes target BASE=backend; smoke:ingest/prod/transcribe self-boot.
+  #    Live-key / live-network assertions gate themselves off, so this is green
+  #    with zero external keys. ────────────────────────────────────────────────
+  smoke:
+    profiles: ["test"]
+    build:
+      context: ./backend
+    # Share the backend's network namespace so localhost is the same stack: the
+    # self-booting smokes (smoke:ingest spins up a fixture HTTP server on
+    # localhost:8091, smoke:prod/transcribe boot their own servers) stay
+    # reachable by the backend's workers even when those workers win the job
+    # off the shared FOR UPDATE SKIP LOCKED queue. BASE is therefore localhost.
+    network_mode: "service:backend"
+    environment:
+      DATABASE_URL: postgres://clipper:clipper@db:5432/clipper
+      BASE: http://localhost:8080
+    volumes:
+      - clipper-storage:/app/storage
+    depends_on:
+      backend:
+        condition: service_healthy
+    command:
+      - sh
+      - -c
+      - >-
+        npm run smoke &&
+        npm run smoke:pipeline &&
+        npm run smoke:review &&
+        npm run smoke:publish &&
+        npm run smoke:metrics &&
+        npm run smoke:auth &&
+        npm run smoke:ingest &&
+        npm run smoke:transcribe &&
+        npm run smoke:prod
+    restart: "no"
+
+volumes:
+  clipper-db:
+  clipper-storage:

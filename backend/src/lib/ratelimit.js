@@ -5,6 +5,8 @@
  *  trip it; set the per-route env to a low number to tighten. A sliding window
  *  over an in-memory map: fine for a single node, and the right primitive to
  *  swap for a shared store (Redis) if the API ever scales horizontally. */
+import { log } from './log.js';
+
 const buckets = new Map(); // `${name}:${ip}` → [timestamps]
 
 const clientIp = (req) =>
@@ -14,10 +16,12 @@ export function rateLimit({ name, max, windowMs = 60_000 }) {
   return (req, res, next) => {
     const limit = Number(process.env[`RATELIMIT_${name.toUpperCase()}_PER_MIN`] ?? max);
     if (!limit || limit <= 0) return next(); // 0/unset-to-0 disables (opt-out)
-    const key = `${name}:${clientIp(req)}`;
+    const ip = clientIp(req);
+    const key = `${name}:${ip}`;
     const now = Date.now();
     const recent = (buckets.get(key) || []).filter((t) => now - t < windowMs);
     if (recent.length >= limit) {
+      log.security('ratelimit.trip', { name, ip, path: req.path, requestId: req.id });
       res.set('Retry-After', String(Math.ceil(windowMs / 1000)));
       return res.status(429).json({ error: 'too many requests — slow down' });
     }

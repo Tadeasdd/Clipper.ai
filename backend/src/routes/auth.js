@@ -12,6 +12,7 @@ import {
 } from '../lib/auth.js';
 import { rateLimit } from '../lib/ratelimit.js';
 import { validate } from '../lib/validate.js';
+import { log } from '../lib/log.js';
 import { id } from '../lib/ids.js';
 
 const r = Router();
@@ -66,6 +67,7 @@ r.post('/bootstrap', validate(credentials), async (req, res, next) => {
     }
     const { token, expiresAt } = await createSession(userId);
     setCookie(res, token);
+    log.security('auth.bootstrap', { userId, email, ip: req.ip, requestId: req.id });
     res.status(201).json({ token, expiresAt, user: { id: userId, email, role: 'ops' } });
   } catch (e) { next(e); }
 });
@@ -75,17 +77,22 @@ r.post('/login', validate(credentials), async (req, res, next) => {
   try {
     const email = String(req.body?.email || '').trim().toLowerCase();
     const key = `${email}|${req.ip}`;
-    if (!loginAllowed(key)) return res.status(429).json({ error: 'too many attempts — try again in 15 minutes' });
+    if (!loginAllowed(key)) {
+      log.security('auth.login.ratelimited', { email, ip: req.ip, requestId: req.id });
+      return res.status(429).json({ error: 'too many attempts — try again in 15 minutes' });
+    }
     recordLoginAttempt(key);
     const { rows } = await q('SELECT id, email, role, client_id, password_hash FROM users WHERE email = $1', [email]);
     // one generic error for unknown email AND wrong password — no enumeration
     if (!rows.length || !verifyPassword(String(req.body?.password || ''), rows[0].password_hash)) {
+      log.security('auth.login.fail', { email, ip: req.ip, requestId: req.id });
       return res.status(401).json({ error: 'invalid email or password' });
     }
     const u = rows[0];
     clearLoginAttempts(key);
     const { token, expiresAt } = await createSession(u.id);
     setCookie(res, token);
+    log.security('auth.login.ok', { userId: u.id, email: u.email, role: u.role, ip: req.ip, requestId: req.id });
     res.json({ token, expiresAt, user: { id: u.id, email: u.email, role: u.role, clientId: u.client_id } });
   } catch (e) { next(e); }
 });
@@ -95,6 +102,7 @@ r.post('/logout', requireAuth(), async (req, res, next) => {
   try {
     await revokeSession(req.sessionToken);
     clearCookie(res);
+    log.security('auth.logout', { userId: req.user.id, email: req.user.email, ip: req.ip, requestId: req.id });
     res.json({ ok: true });
   } catch (e) { next(e); }
 });
@@ -117,6 +125,7 @@ r.post('/password', requireAuth(), validate({
     const nextPw = String(req.body?.next || '');
     if (nextPw.length < PW_MIN) return res.status(400).json({ error: `password must be ≥ ${PW_MIN} characters` });
     await q('UPDATE users SET password_hash = $2 WHERE id = $1', [req.user.id, hashPassword(nextPw)]);
+    log.security('auth.password.changed', { userId: req.user.id, ip: req.ip, requestId: req.id });
     res.json({ ok: true });
   } catch (e) { next(e); }
 });

@@ -7,6 +7,7 @@
  *  clients, smokes) — same session either way. */
 import { randomBytes, scryptSync, timingSafeEqual, createHash } from 'node:crypto';
 import { q } from '../db/index.js';
+import { log } from './log.js';
 
 export const INTERNAL = ['ops', 'editor', 'reviewer', 'account_manager'];
 export const SESSION_TTL_H = Number(process.env.SESSION_TTL_H || 24 * 7);
@@ -69,6 +70,9 @@ export function requireAuth(...roles) {
       const user = await userForToken(token);
       if (!user) return res.status(401).json({ error: 'sign in required' });
       if (roles.length && !roles.includes(user.role)) {
+        // Audit the role-wall denial (authenticated-but-forbidden). Routine 401s
+        // — the not-signed-in case — are left unlogged to avoid noise.
+        log.security('authz.deny', { method: req.method, path: req.path, role: user.role, required: roles, requestId: req.id });
         return res.status(403).json({ error: `requires role: ${roles.join(' | ')}` });
       }
       req.user = user;

@@ -29,6 +29,10 @@ export const log = {
   info: (msg, fields) => emit('info', msg, fields),
   warn: (msg, fields) => emit('warn', msg, fields),
   error: (msg, fields) => emit('error', msg, fields),
+  /** Append-only security audit trail: one greppable channel (msg:"security")
+   *  for login/bootstrap/logout, rate-limit trips, authz denials, retrains.
+   *  Fields are redacted like everything else — log identities, never secrets. */
+  security: (event, fields) => emit('info', 'security', { event, ...fields }),
 };
 
 /** Report an error to Sentry (best-effort, redacted) when configured. Returns a

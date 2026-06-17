@@ -8,6 +8,7 @@ import { q } from '../db/index.js';
 import { computeCorrelation, retrain, loadWeights } from '../metrics/loop.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
 import { validate } from '../lib/validate.js';
+import { log } from '../lib/log.js';
 import { STAGES } from '../pipeline/index.js';
 
 const r = Router();
@@ -167,6 +168,7 @@ r.post('/retrain', requireAuth('ops'), validate({ note: { type: 'string', maxLen
       const corr = await computeCorrelation();
       return res.status(409).json({ error: `retraining needs ≥ ${corr.needed} published clips with captures (have ${corr.sample})` });
     }
+    log.security('metrics.retrain', { by: req.user.email, ip: req.ip, requestId: req.id });
     res.status(201).json(row);
   } catch (e) { next(e); }
 });

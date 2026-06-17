@@ -10,6 +10,7 @@
  */
 import express from 'express';
 import cors from 'cors';
+import { randomUUID } from 'node:crypto';
 
 import intakeRoutes from './routes/intake.js';
 import jobsRoutes from './routes/jobs.js';
@@ -46,6 +47,13 @@ app.use((_req, res, next) => {
   next();
 });
 app.use(cors(corsOptions())); // M7: locked to CORS_ORIGINS when set, wide-open in dev
+// S6: stamp every request with a correlation id (honoring an upstream
+// X-Request-Id) so a client-visible error can be tied to the server-side log.
+app.use((req, res, next) => {
+  req.id = req.headers['x-request-id'] || randomUUID();
+  res.set('X-Request-Id', req.id);
+  next();
+});
 app.use(express.json({ limit: '2mb' }));
 // NOTE: no body parser touches /api/intake/upload — express.json only consumes
 // application/json, so file PUTs stream through untouched and saveStream pipes
@@ -74,10 +82,12 @@ app.use('/api/users', usersRoutes);     // B4→B7: account management (ops-gate
 app.use('/api/leads', leadsRoutes);     // F3: waitlist / strategy-call form
 
 // Central error handler — routes call next(e); nothing leaks stack traces.
-// M7: structured, redacted logging + a best-effort Sentry report.
+// M7/S6: structured, redacted logging + a best-effort Sentry report. The client
+// gets a generic message + the correlation id; the full detail (stack) lives
+// only in the log, tied to that id.
 app.use((err, req, res, _next) => {
-  reportError(err, { method: req.method, path: req.path, requestId: req.headers['x-request-id'] });
-  res.status(500).json({ error: 'internal error' });
+  reportError(err, { method: req.method, path: req.path, requestId: req.id });
+  res.status(500).json({ error: 'internal error', requestId: req.id });
 });
 
 const port = process.env.PORT || 8080;

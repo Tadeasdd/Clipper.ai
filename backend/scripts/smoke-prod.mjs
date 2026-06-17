@@ -5,6 +5,7 @@
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { redact } from '../src/lib/log.js';
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const SERVER = path.join(dir, '..', 'src', 'server.js');
@@ -40,8 +41,13 @@ const srv = spawn('node', [SERVER], {
     CORS_ORIGINS: 'https://app.clipper.ai', PORT: String(PORT), WORKERS_ENABLED: 'false',
     STORAGE_DIR: process.env.STORAGE_DIR || '/tmp/clipper-prod-store', RATELIMIT_LEADS_PER_MIN: '3',
   },
-  stdio: ['ignore', 'ignore', 'inherit'],
+  stdio: ['ignore', 'pipe', 'pipe'],
 });
+// S6: capture the server's structured logs (stdout = info/audit, stderr = errors)
+// so we can assert the correlation id is logged and secrets are redacted.
+let srvLog = '';
+srv.stdout.on('data', (d) => { srvLog += d; });
+srv.stderr.on('data', (d) => { srvLog += d; });
 try {
   for (let i = 0; i < 40; i++) {
     if (await fetch(`${BASE}/api/health`).then((r) => r.ok).catch(() => false)) break;
@@ -79,9 +85,40 @@ try {
     if (r.status === 429) got429 = true;
   }
   assert(got429, 'the public lead door rate-limits a flood (429 past the per-IP limit)');
+
+  // ── S6: a forced error returns a generic body + a correlation id; the full
+  //    detail lives only in the server log, tied to that id. ──────────────────
+  const broke = await fetch(`${BASE}/api/auth/login`, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: '{ not valid json',
+  });
+  const brokeBody = await broke.json().catch(() => ({}));
+  assert(broke.status === 500 && brokeBody.error === 'internal error' && !brokeBody.stack && brokeBody.requestId,
+    `a forced error returns a generic body + correlation id (requestId=${brokeBody.requestId})`);
+  await sleep(200); // let the log line flush
+  assert(srvLog.includes(brokeBody.requestId),
+    'the server log carries the error under the same correlation id (detail stays server-side)');
+
+  // ── S6: the security audit trail records a failed login, and the password
+  //    never reaches the log. ───────────────────────────────────────────────
+  const PW = 'UNIQUE-secret-pw-zzz9';
+  await fetch(`${BASE}/api/auth/login`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'ghost@nowhere.example', password: PW }),
+  });
+  await sleep(200);
+  assert(/"msg":"security"/.test(srvLog) && /auth\.login\.fail/.test(srvLog),
+    'security audit trail logs the failed login');
+  assert(!srvLog.includes(PW), 'the submitted password never reaches the log (redaction holds)');
+
+  // ── S6: the redactor masks secret-looking fields and Bearer tokens. ─────────
+  const red = redact({ password: 'p', token: 't', authorization: 'Bearer abc.def', cookie: 'c', email: 'ok@x.ai' });
+  assert(red.password === '[redacted]' && red.token === '[redacted]' && red.authorization === '[redacted]'
+    && red.cookie === '[redacted]' && red.email === 'ok@x.ai',
+    'redact() masks secret-looking keys but keeps benign fields');
 } finally {
   srv.kill('SIGKILL');
 }
 
-console.log('\nM7 prod-config smoke passed: secrets fail-fast, CORS locked, headers set, public door rate-limited.');
+console.log('\nM7/S5/S6 prod-config smoke passed: secrets fail-fast, CORS+credentials locked, headers+HSTS set, '
+  + 'public door rate-limited, errors carry a correlation id, security audit trail records events, secrets redacted.');
 process.exit(0);

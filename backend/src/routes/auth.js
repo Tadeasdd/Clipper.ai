@@ -16,10 +16,13 @@ const r = Router();
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PW_MIN = 8;
 
+// httpOnly so JS can't read it (no localStorage token after S2); SameSite=Lax
+// blocks cross-site sends on its own, and Secure forces HTTPS in production.
+const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
 const setCookie = (res, token) => res.setHeader('Set-Cookie',
-  `${COOKIE}=${token}; HttpOnly; Path=/; Max-Age=${SESSION_TTL_H * 3600}; SameSite=Lax`);
+  `${COOKIE}=${token}; HttpOnly; Path=/; Max-Age=${SESSION_TTL_H * 3600}; SameSite=Lax${secure}`);
 const clearCookie = (res) => res.setHeader('Set-Cookie',
-  `${COOKIE}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax`);
+  `${COOKIE}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax${secure}`);
 
 async function bootstrapRequired() {
   const { rows } = await q('SELECT count(*)::int AS n FROM users WHERE password_hash IS NOT NULL');

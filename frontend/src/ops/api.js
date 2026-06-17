@@ -9,7 +9,10 @@ const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) || '';
 export async function json(method, path, body) {
   const res = await fetch(API_BASE + path, {
     method,
-    headers: { 'content-type': 'application/json', ...authHeader() },
+    // S2: auth rides the httpOnly session cookie (credentials: include); the
+    // X-Requested-With header satisfies the server's CSRF guard on writes.
+    credentials: 'include',
+    headers: { 'content-type': 'application/json', 'x-requested-with': 'clipper' },
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
@@ -74,24 +77,15 @@ export function usePoll(fn, { ms = 3000, deps = [] } = {}) {
   return { ...state, refresh: tick };
 }
 
-/* ── session (B7) ─────────────────────────────────────────────────────────
-   The bearer token rides every API call; the server also sets an httpOnly
-   cookie at login, which is what <video src> asset requests authenticate
-   with (you can't put a header on a media element). Logout revokes the
-   session server-side. */
-const TOKEN_KEY = 'clipper_session'; // shared by /ops and /portal — one session, the server decides access
+/* ── session (B7 + S2) ──────────────────────────────────────────────────────
+   The session token lives ONLY in an httpOnly cookie the server sets at login —
+   JS never reads or stores it, so XSS can't exfiltrate it. Every API call rides
+   that cookie (credentials: 'include'); <video src> asset requests authenticate
+   with it too (you can't put a header on a media element). On load the app calls
+   /api/auth/me to recover the user from the cookie. Logout revokes server-side. */
 let currentUser = null;
 
-export function authHeader() {
-  try {
-    const t = localStorage.getItem(TOKEN_KEY);
-    return t ? { authorization: `Bearer ${t}` } : {};
-  } catch { return {}; }
-}
-export function setSession(token, user) {
-  try { token ? localStorage.setItem(TOKEN_KEY, token) : localStorage.removeItem(TOKEN_KEY); } catch { /* no storage */ }
-  currentUser = user || null;
-}
+export function setSession(user) { currentUser = user || null; }
 export function getUser() { return currentUser; }
 
 export const auth = {

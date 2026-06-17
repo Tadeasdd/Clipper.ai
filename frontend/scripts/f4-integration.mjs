@@ -23,7 +23,6 @@ const api = (m, p, b) => rawFetch('http://localhost:8080' + p, {
 await api('POST', '/api/auth/bootstrap', OPS_CREDS); // 201 once, 409 after
 TOKEN = (await api('POST', '/api/auth/login', OPS_CREDS)).token;
 if (!TOKEN) { console.error('FAIL: could not sign in as the smoke ops account'); process.exit(1); }
-localStorage.setItem('clipper_session', TOKEN);
 
 // seed: a fresh clip in awaiting_review (decisions are by the ops session)
 const stamp = Date.now();
@@ -38,11 +37,13 @@ await db.query(`INSERT INTO recordings (id, client_id, kind, status, duration_s)
 await db.query(`INSERT INTO clips (id, recording_id, t_start_s, t_end_s, score, signals, hook, status)
                 VALUES ($1,$2,30,62,91,'{"energyZ":2.1,"durationFit":0.97,"positionBonus":0.93}',$3,$4)`, [clip, rec, hook, 'awaiting_review']);
 
-// route app fetches to the live backend
-globalThis.fetch = (input, init) => {
+// route app fetches to the live backend, attaching the httpOnly session cookie
+// the way a browser would (S2: the app no longer holds the token in JS).
+globalThis.fetch = (input, init = {}) => {
   let url = typeof input === 'string' ? input : input.url;
   if (url.startsWith('/api/') || url.startsWith('http://localhost/api/')) url = 'http://localhost:8080' + url.replace('http://localhost', '');
-  return rawFetch(url, init);
+  const headers = { ...(init.headers || {}), ...(TOKEN ? { cookie: `clipper_session=${TOKEN}` } : {}) };
+  return rawFetch(url, { ...init, headers });
 };
 window.fetch = globalThis.fetch;
 
@@ -55,6 +56,8 @@ const checks = [];
 let html = document.getElementById('root').innerHTML;
 checks.push(['desk renders the seeded clip', html.includes(`F4 Desk Co ${stamp}`) && html.includes(hook)]);
 checks.push(['account badge shows the signed-in ops user', html.includes('ops@smoke.clipper.ai')]);
+// S2: the app authenticated entirely on the httpOnly cookie — no token in JS storage.
+checks.push(['no session token in localStorage (httpOnly cookie only)', !localStorage.getItem('clipper_session')]);
 checks.push(['worklist tabs with counts', /To review.*In edit.*To send.*With client/s.test(html)]);
 
 // type a note, click approve on OUR card (find the card containing our hook)

@@ -78,6 +78,24 @@ export function requireAuth(...roles) {
   };
 }
 
+/* ── CSRF guard (S2) ───────────────────────────────────────────────────────
+ *  Cookie-borne sessions are ambient: a browser attaches the cookie to any
+ *  request to our origin, including cross-site form posts — classic CSRF. Defend
+ *  with the custom-header pattern: a state-changing request authenticated by the
+ *  session COOKIE must carry a header a cross-site page cannot set (CORS blocks
+ *  custom headers without a passing preflight). Bearer clients (smokes, API)
+ *  aren't browser-ambient, so they're exempt; safe methods never mutate. */
+export function csrfGuard(req, res, next) {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
+  if (/^Bearer /.test(req.headers.authorization || '')) return next();         // API client, not a browser cookie
+  const hasSessionCookie = new RegExp(`(?:^|;\\s*)${COOKIE}=`).test(req.headers.cookie || '');
+  if (!hasSessionCookie) return next();                                        // unauthenticated / pre-login (e.g. login, leads)
+  if (!req.headers['x-requested-with']) {
+    return res.status(403).json({ error: 'CSRF: state-changing requests need the X-Requested-With header' });
+  }
+  next();
+}
+
 /* ── login rate limit (in-memory; per email+ip) ────────────────────────── */
 const attempts = new Map(); // key → [timestamps]
 const WINDOW_MS = 15 * 60_000;

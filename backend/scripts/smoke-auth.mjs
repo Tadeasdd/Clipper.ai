@@ -46,6 +46,27 @@ const ops = r.data.token;
 r = await j('GET', '/api/auth/status');
 assert(r.data.bootstrapRequired === false, 'status reports bootstrapped');
 
+// ── S2: CSRF guard on cookie-authenticated writes ───────────────────────────
+// A browser carries the session in the httpOnly cookie; state-changing requests
+// must also present a custom header a cross-site page can't set. Bearer (API)
+// clients are exempt; safe methods never need it.
+const jc = async (method, p, body, cookieToken, headers = {}) => {
+  const res = await fetch(BASE + p, {
+    method,
+    headers: { 'content-type': 'application/json', cookie: `clipper_session=${cookieToken}`, ...headers },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  return { status: res.status, data: await res.json().catch(() => ({})) };
+};
+let cs = await jc('POST', '/api/clients', { name: `CSRF probe ${run}` }, ops);
+assert(cs.status === 403 && /CSRF/i.test(cs.data.error || ''), 'cookie-authed write WITHOUT X-Requested-With is refused (CSRF)');
+cs = await jc('POST', '/api/clients', { name: `CSRF ok ${run}` }, ops, { 'x-requested-with': 'clipper' });
+assert(cs.status === 201, 'cookie-authed write WITH X-Requested-With succeeds');
+cs = await jc('GET', '/api/clients', null, ops);
+assert(cs.status === 200, 'cookie-authed GET needs no CSRF header (safe method)');
+cs = await j('POST', '/api/clients', { name: `bearer ${run}` }, ops);
+assert(cs.status === 201, 'bearer-authed write is exempt from the CSRF header (API clients)');
+
 // ── login hygiene ────────────────────────────────────────────────────────────
 const bad1 = await j('POST', '/api/auth/login', { email: OPS.email, password: 'wrong-password' });
 const bad2 = await j('POST', '/api/auth/login', { email: `ghost+${run}@x.ai`, password: 'wrong-password' });

@@ -22,6 +22,7 @@ import usersRoutes from './routes/users.js';
 import authRoutes from './routes/auth.js';
 import leadsRoutes from './routes/leads.js';
 import { migrate, q } from './db/index.js';
+import { csrfGuard } from './lib/auth.js';
 import { startWorkers } from './pipeline/index.js';
 import { startPublisher } from './publish/scheduler.js';
 import { startMetricsPoller } from './metrics/index.js';
@@ -46,6 +47,9 @@ app.use(express.json({ limit: '2mb' }));
 // NOTE: no body parser touches /api/intake/upload — express.json only consumes
 // application/json, so file PUTs stream through untouched and saveStream pipes
 // req straight to disk (never buffered in memory).
+// S2: CSRF guard — cookie-authenticated state-changing requests must carry a
+// custom header (header-only check; safe for the unbuffered upload PUT above).
+app.use(csrfGuard);
 
 app.get('/api/health', async (_req, res) => {
   try { await q('SELECT 1'); res.json({ ok: true, service: 'clipper-ops', db: 'up' }); }

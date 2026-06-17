@@ -118,7 +118,7 @@ function Login({ onAuthed }) {
     setBusy(true); setErr(null);
     try {
       const r = await auth.login(email, password);
-      setSession(r.token, r.user);
+      setSession(r.user); // token rode home as an httpOnly cookie; keep only the user
       onAuthed(r.user);
     } catch (e) { setErr(e); }
     finally { setBusy(false); }
@@ -161,7 +161,7 @@ function AccountBadge({ user, onLogout }) {
   const logout = async () => {
     setBusy(true);
     try { await auth.logout(); } catch { /* session may already be dead */ }
-    setSession(null, null);
+    setSession(null);
     onLogout();
   };
   const change = async () => {
@@ -585,7 +585,7 @@ export default function PortalApp() {
   useEffect(() => { document.title = 'Clipper.ai · Client portal'; }, []);
   useEffect(() => {
     auth.me()
-      .then((r) => { setSession(localStorage.getItem('clipper_session'), r.user); setAuthState({ phase: 'in', user: r.user }); })
+      .then((r) => { setSession(r.user); setAuthState({ phase: 'in', user: r.user }); })
       .catch(() => setAuthState({ phase: 'out', user: null }));
   }, []);
   if (authState.phase === 'checking') return <PortalStyles><div /></PortalStyles>;

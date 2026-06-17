@@ -52,13 +52,14 @@ await mkClip(cliB, 'other', hookB);
 // now become the client: this is the session the portal runs as
 TOKEN = (await api('POST', '/api/auth/login', { email: CLIENT_EMAIL, password: 'portal-first-password' })).token;
 if (!TOKEN) { console.error('FAIL: minted client user could not sign in'); process.exit(1); }
-localStorage.setItem('clipper_session', TOKEN);
 
-// route app fetches to the live backend
-globalThis.fetch = (input, init) => {
+// route app fetches to the live backend, attaching the httpOnly session cookie
+// the way a browser would (S2: the app no longer holds the token in JS).
+globalThis.fetch = (input, init = {}) => {
   let url = typeof input === 'string' ? input : input.url;
   if (url.startsWith('/api/') || url.startsWith('http://localhost/api/')) url = 'http://localhost:8080' + url.replace('http://localhost', '');
-  return rawFetch(url, init);
+  const headers = { ...(init.headers || {}), ...(TOKEN ? { cookie: `clipper_session=${TOKEN}` } : {}) };
+  return rawFetch(url, { ...init, headers });
 };
 window.fetch = globalThis.fetch;
 
@@ -71,6 +72,8 @@ const checks = [];
 let html = document.getElementById('root').innerHTML;
 checks.push(['portal renders the client sign-off queue', html.includes(hookA)]);
 checks.push(['account badge shows the signed-in client user', html.includes(CLIENT_EMAIL)]);
+// S2: portal authenticated on the httpOnly cookie alone — nothing in JS storage.
+checks.push(['no session token in localStorage (httpOnly cookie only)', !localStorage.getItem('clipper_session')]);
 checks.push(["the FENCE in the rendered HTML: the neighbor's clip never appears", !html.includes(hookB)]);
 checks.push(['no internal machinery leaks into the portal nav', !/Board|Publish/.test(html)]);
 

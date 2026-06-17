@@ -91,7 +91,7 @@ function Login({ onAuthed }) {
     setBusy(true); setErr(null);
     try {
       const r = mode === 'bootstrap' ? await auth.bootstrap(email, password) : await auth.login(email, password);
-      setSession(r.token, r.user);
+      setSession(r.user); // the token rode home as an httpOnly cookie; we keep only the user
       onAuthed(r.user);
     } catch (e) { setErr(e); }
     finally { setBusy(false); }
@@ -139,7 +139,7 @@ function AccountBadge({ user, onLogout }) {
   const logout = async () => {
     setBusy(true);
     try { await auth.logout(); } catch { /* session may already be dead */ }
-    setSession(null, null);
+    setSession(null);
     onLogout();
   };
   return (
@@ -233,7 +233,7 @@ export default function OpsApp() {
   useEffect(() => { document.title = 'Clipper.ai · Operations'; }, []);
   useEffect(() => {
     auth.me()
-      .then((r) => { setSession(localStorage.getItem('clipper_session'), r.user); setAuthState({ phase: 'in', user: r.user }); })
+      .then((r) => { setSession(r.user); setAuthState({ phase: 'in', user: r.user }); })
       .catch(() => setAuthState({ phase: 'out', user: null }));
   }, []);
   if (authState.phase === 'checking') return <OpsStyles><div /></OpsStyles>;

@@ -25,10 +25,15 @@ export function assertProdConfig(env = process.env) {
  *  but should never be the case in production (assertProdConfig stays focused on
  *  secrets, so this is a soft default — set CORS_ORIGINS to lock it down). */
 export function corsOptions(env = process.env) {
+  // credentials: true so cross-origin browser requests can carry the session
+  // cookie (S2). The `cors` middleware then reflects the specific origin and
+  // adds Access-Control-Allow-Credentials — never the wildcard `*`, which is
+  // incompatible with credentials.
   const configured = (env.CORS_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
-  if (!configured.length) return { origin: true }; // dev: reflect any origin
+  if (!configured.length) return { origin: true, credentials: true }; // dev: reflect any origin
   const allow = new Set(configured);
   return {
+    credentials: true,
     origin(origin, cb) {
       // Non-browser callers (curl, server-to-server) send no Origin — allow them;
       // CORS only governs browser cross-origin reads.

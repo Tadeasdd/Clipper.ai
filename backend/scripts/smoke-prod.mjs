@@ -53,6 +53,9 @@ try {
   const allowed = await fetch(`${BASE}/api/health`, { headers: { origin: 'https://app.clipper.ai' } });
   assert(allowed.headers.get('access-control-allow-origin') === 'https://app.clipper.ai',
     'CORS allows the configured origin');
+  // S5: with cookie auth, the allowed origin must also be told credentials are OK.
+  assert(allowed.headers.get('access-control-allow-credentials') === 'true',
+    'CORS allows credentials for the configured origin (cookie sessions)');
   const denied = await fetch(`${BASE}/api/health`, { headers: { origin: 'https://evil.example.com' } });
   assert(!denied.headers.get('access-control-allow-origin'),
     'CORS rejects an unlisted origin (no Access-Control-Allow-Origin header)');
@@ -62,6 +65,9 @@ try {
     && allowed.headers.get('x-frame-options') === 'DENY'
     && !allowed.headers.get('x-powered-by'),
     'security headers present (nosniff, frame DENY, no X-Powered-By)');
+  // S5: HSTS is sent in production.
+  assert(/max-age=\d+/.test(allowed.headers.get('strict-transport-security') || ''),
+    'HSTS (Strict-Transport-Security) present in production');
 
   // The public lead door rate-limits a flood (limit set to 3/min for this run).
   let got429 = false;

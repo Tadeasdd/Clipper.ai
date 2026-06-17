@@ -34,12 +34,15 @@ assertProdConfig();
 
 const app = express();
 app.disable('x-powered-by');
-// M7: baseline security headers (helmet-equivalent, dependency-free).
+const PROD = process.env.NODE_ENV === 'production';
+// M7/S5: baseline security headers (helmet-equivalent, dependency-free). HSTS
+// is prod-only — sending it over plain-http dev would pin localhost to HTTPS.
 app.use((_req, res, next) => {
   res.set('X-Content-Type-Options', 'nosniff');
   res.set('X-Frame-Options', 'DENY');
   res.set('Referrer-Policy', 'no-referrer');
   res.set('X-DNS-Prefetch-Control', 'off');
+  if (PROD) res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   next();
 });
 app.use(cors(corsOptions())); // M7: locked to CORS_ORIGINS when set, wide-open in dev

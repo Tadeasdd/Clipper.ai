@@ -168,14 +168,16 @@ assert(r.data.postsMeasured >= 5 && r.data.totalViews >= 6000,
 // always fresh; local re-runs start the loop over).
 await db.query('DELETE FROM scoring_weights');
 // Craft a cohort with a PLANTED relationship (same trick as the pipeline
-// smoke's loud bursts): 10 clips for one client where durationFit perfectly
-// predicts performance, energy is flat, and position anti-predicts. The loop
-// must detect exactly that — and only clips with real signals qualify, so the
-// global sample is this cohort plus the few real pipeline clips.
+// smoke's loud bursts): a run of clips for one client where durationFit
+// perfectly predicts performance, energy is flat, and position anti-predicts.
+// The loop must detect exactly that. The global sample is this cohort PLUS the
+// few real published pipeline clips sharing the DB, so the cohort is sized to
+// dominate — one audio-only pipeline clip can't swing the per-signal ranks.
+const COHORT = 20;
 const cli3 = (await j('POST', '/api/clients', { name: `B6 Loop Co ${run}` })).data.id;
 const rec3 = `rec_loop_${run}`;
 await db.query(`INSERT INTO recordings (id, client_id, kind, status) VALUES ($1,$2,'podcast','ready')`, [rec3, cli3]);
-for (let i = 1; i <= 10; i++) {
+for (let i = 1; i <= COHORT; i++) {
   const cid = `clip_loop_${run}_${i}`, pid = `pub_loop_${run}_${i}`;
   await db.query(
     `INSERT INTO clips (id, recording_id, t_start_s, t_end_s, score, signals, hook, status)

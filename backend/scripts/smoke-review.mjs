@@ -108,7 +108,7 @@ assert(r.status === 403, 'client users cannot perform the send step');
 r = await j('POST', `/api/review/${clipHappy}/send`, {}, am);
 assert(r.status === 200 && r.data.to === 'awaiting_client', 'account manager sends → awaiting_client');
 r = await j('POST', `/api/review/${clipHappy}/decision`, { decision: 'approve' }, otherClientUser);
-assert(r.status === 403, "another client's user cannot decide on this clip");
+assert(r.status === 404, "another client's user cannot decide on this clip (404 — no cross-tenant existence leak, S4)");
 r = await j('POST', `/api/review/${clipHappy}/decision`, { decision: 'approve', notes: 'love it' }, clientUser);
 assert(r.status === 200 && r.data.to === 'approved', 'client approve → approved (FULL MACHINE TRAVELLED)');
 

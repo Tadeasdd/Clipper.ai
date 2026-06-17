@@ -100,8 +100,9 @@ r.get('/:clipId/history', requireAuth(), async (req, res, next) => {
   try {
     if (req.user.role === 'client') {
       const clip = await clipContext(req.params.clipId);
+      // S4: another client's clip id is a 404, not a 403 — don't confirm it exists.
       if (!clip || clip.client_id !== req.user.client_id) {
-        return res.status(403).json({ error: 'client users can only see their own clips' });
+        return res.status(404).json({ error: 'unknown clip' });
       }
     }
     const { rows } = await q(`
@@ -132,8 +133,9 @@ r.post('/:clipId/decision', requireAuth(), validate({
 
     let from, to, autoPublished = false;
     if (u.role === 'client') {
+      // S4: deciding on another client's clip id is a 404 — no existence leak.
       if (u.client_id !== clip.client_id) {
-        return res.status(403).json({ error: 'client users can only review their own clips' });
+        return res.status(404).json({ error: 'unknown clip' });
       }
       from = 'awaiting_client';
       to = { approve: 'approved', changes: 'changes_requested', reject: 'rejected' }[decision];

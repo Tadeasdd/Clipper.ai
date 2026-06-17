@@ -150,16 +150,17 @@ assert(r.status === 200 && r.data.clips.some((c) => c.id === clipA) && r.data.cl
   "client A's clip list includes their clip");
 r = await j('GET', '/api/clips', null, clientB.token);
 assert(r.status === 200 && !r.data.clips.some((c) => c.id === clipA), "client B's clip list does NOT include client A's clip");
+// S4: cross-tenant reads are 404 (not 403) — the wall never confirms the id exists.
 r = await j('GET', `/api/clips/${clipA}/metrics`, null, clientB.token);
-assert(r.status === 403, "client B cannot read client A's clip metrics");
+assert(r.status === 404, "client B cannot read client A's clip metrics (404, no existence leak)");
 r = await j('GET', `/api/review/${clipA}/history`, null, clientB.token);
-assert(r.status === 403, "client B cannot read client A's audit trail");
+assert(r.status === 404, "client B cannot read client A's audit trail (404)");
 r = await j('GET', `/api/analytics/clients/${cliA}`, null, clientB.token);
-assert(r.status === 403, "client B cannot read client A's report");
+assert(r.status === 404, "client B cannot read client A's report (404)");
 r = await j('GET', `/api/analytics/clients/${cliA}`, null, clientA.token);
 assert(r.status === 200, 'client A reads their own report');
 r = await j('GET', `/api/clients/${cliA}`, null, clientB.token);
-assert(r.status === 403, "client B cannot read client A's account");
+assert(r.status === 404, "client B cannot read client A's account (404)");
 r = await j('GET', '/api/review/queue?status=awaiting_review&clientId=' + cliB, null, clientA.token);
 assert(r.status === 200 && r.data.status === 'awaiting_client'
   && r.data.items.every((i) => i.client_id === cliA) && r.data.items.some((i) => i.id === clipA),

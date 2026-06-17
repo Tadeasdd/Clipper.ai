@@ -41,9 +41,10 @@ r.post('/', requireAuth('ops', 'account_manager'),
 });
 
 r.get('/:id', requireAuth(), async (req, res, next) => {
-  // internal roles see any client; client users see exactly their own (F5)
+  // internal roles see any client; client users see exactly their own (F5).
+  // S4: another client's id is a 404, not a 403 — don't confirm it exists.
   if (req.user.role === 'client' && req.user.client_id !== req.params.id) {
-    return res.status(403).json({ error: 'client users can only see their own account' });
+    return res.status(404).json({ error: 'unknown client' });
   }
   try {
     const { rows } = await q('SELECT * FROM clients WHERE id = $1', [req.params.id]);

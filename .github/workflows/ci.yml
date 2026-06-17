@@ -116,6 +116,10 @@ jobs:
       - run: npm run smoke:auth
         timeout-minutes: 3
 
+      # ── S4: cross-tenant IDOR — id-addressed resources are tenant-scoped (404).
+      - run: npm run smoke:authz
+        timeout-minutes: 3
+
       # ── M7: production config — secrets fail-fast, CORS lock, headers, limits.
       - run: npm run smoke:prod
         timeout-minutes: 3

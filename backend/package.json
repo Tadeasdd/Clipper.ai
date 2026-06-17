@@ -17,6 +17,7 @@
     "smoke:publish": "node scripts/smoke-publish.mjs",
     "smoke:metrics": "node scripts/smoke-metrics.mjs",
     "smoke:auth": "node scripts/smoke-auth.mjs",
+    "smoke:authz": "node scripts/smoke-authz.mjs",
     "smoke:prod": "node scripts/smoke-prod.mjs",
     "seed:demo": "node scripts/seed-demo.mjs",
     "audit:ci": "npm audit --omit=dev --audit-level=high"

@@ -49,9 +49,10 @@ r.get('/queues', requireAuth(...INTERNAL), async (_req, res, next) => {
 // platform post, plus exact totals over the period. Weekly report = this
 // payload + a date filter; it generates itself.
 r.get('/clients/:id', requireAuth(), async (req, res, next) => {
-  // internal roles read any client's report; client users exactly their own (F5)
+  // internal roles read any client's report; client users exactly their own (F5).
+  // S4: another client's id is a 404, not a 403 — don't confirm it exists.
   if (req.user.role === 'client' && req.user.client_id !== req.params.id) {
-    return res.status(403).json({ error: 'client users can only see their own report' });
+    return res.status(404).json({ error: 'unknown client' });
   }
   try {
     const client = await q('SELECT id, name FROM clients WHERE id = $1', [req.params.id]);

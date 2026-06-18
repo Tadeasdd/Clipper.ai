@@ -6,6 +6,7 @@
 import { Router } from 'express';
 import { q } from '../db/index.js';
 import { computeCorrelation, retrain, loadWeights, computeEditorAgreement } from '../metrics/loop.js';
+import { snapshotCalibration, calibrationHistory, windowedCalibration } from '../metrics/monitor.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
 import { validate } from '../lib/validate.js';
 import { log } from '../lib/log.js';
@@ -158,6 +159,28 @@ r.get('/ops', requireAuth(...INTERNAL), async (_req, res, next) => {
       scoringWeights: await loadWeights(),
     });
   } catch (e) { next(e); }
+});
+
+// GET /api/analytics/calibration — Q5 quality-drift dashboard: the current
+// predicted-vs-realized calibration + the snapshot history (and which snapshots
+// flagged drift). The data a calibration dashboard renders.
+r.get('/calibration', requireAuth(...INTERNAL), async (_req, res, next) => {
+  try {
+    const history = await calibrationHistory(50);
+    res.json({
+      current: await windowedCalibration(),
+      latest: history[0] || null,
+      activeDrift: history.find((s) => s.drift) || null,
+      history,
+    });
+  } catch (e) { next(e); }
+});
+
+// POST /api/analytics/calibration/snapshot — take a snapshot now (the periodic
+// monitor does this on a clock; ops can force one). Alerts + records on drift.
+r.post('/calibration/snapshot', requireAuth('ops'), async (_req, res, next) => {
+  try { res.status(201).json(await snapshotCalibration()); }
+  catch (e) { next(e); }
 });
 
 // POST /api/analytics/retrain — one cycle of the loop: correlate, step the

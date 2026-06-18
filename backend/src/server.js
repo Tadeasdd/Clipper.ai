@@ -27,6 +27,7 @@ import { csrfGuard } from './lib/auth.js';
 import { startWorkers } from './pipeline/index.js';
 import { startPublisher } from './publish/scheduler.js';
 import { startMetricsPoller } from './metrics/index.js';
+import { startQualityMonitor } from './metrics/monitor.js';
 import { assertProdConfig, corsOptions } from './lib/config.js';
 import { log, reportError } from './lib/log.js';
 
@@ -94,5 +95,5 @@ const port = process.env.PORT || 8080;
 await migrate();
 // B3: pipeline workers run in-process by default; set WORKERS_ENABLED=false
 // to run them separately via `npm run worker` (SKIP LOCKED makes both safe).
-if (process.env.WORKERS_ENABLED !== 'false') { startWorkers(); startPublisher(); startMetricsPoller(); }
+if (process.env.WORKERS_ENABLED !== 'false') { startWorkers(); startPublisher(); startMetricsPoller(); startQualityMonitor(); }
 app.listen(port, () => log.info('clipper-ops listening', { port: Number(port), env: process.env.NODE_ENV || 'development' }));

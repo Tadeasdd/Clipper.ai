@@ -21,6 +21,7 @@
     "smoke:authz": "node scripts/smoke-authz.mjs",
     "smoke:provenance": "node scripts/smoke-provenance.mjs",
     "smoke:cache": "node scripts/smoke-cache.mjs",
+    "smoke:drift": "node scripts/smoke-drift.mjs",
     "smoke:prod": "node scripts/smoke-prod.mjs",
     "seed:demo": "node scripts/seed-demo.mjs",
     "eval": "node scripts/eval.mjs",

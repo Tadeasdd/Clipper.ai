@@ -140,6 +140,10 @@ jobs:
       - run: npm run smoke:cache
         timeout-minutes: 3
 
+      # ── Q5: online calibration tracks drift and a simulated decay alerts.
+      - run: npm run smoke:drift
+        timeout-minutes: 3
+
       # ── Q1: clip-quality regression gate — the real analyze+score pipeline
       #    must keep ranking the labelled good clips at/above the baseline.
       - run: npm run eval

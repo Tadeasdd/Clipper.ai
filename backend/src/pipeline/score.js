@@ -19,7 +19,7 @@ import { SEMANTIC_KEYS } from './llm.js';
 export async function score(recordingId, payload) {
   const prev = await q(
     `SELECT payload FROM pipeline_jobs WHERE recording_id = $1 AND stage = 'analyze'`, [recordingId]);
-  const { moments, signalsSource = 'audio_only' } = prev.rows[0]?.payload || {};
+  const { moments, signalsSource = 'audio_only', provenance = null } = prev.rows[0]?.payload || {};
   if (!moments?.length) throw new Error('analyze produced no moments');
   const { rows } = await q('SELECT duration_s FROM recordings WHERE id = $1', [recordingId]);
   const durationS = rows[0]?.duration_s || 1;
@@ -53,9 +53,10 @@ export async function score(recordingId, payload) {
 
   for (const c of scored) {
     await q(
-      `INSERT INTO clips (id, recording_id, t_start_s, t_end_s, score, signals, status)
-       VALUES ($1, $2, $3, $4, $5, $6, 'candidate')`,
-      [id('clip'), recordingId, c.start.toFixed(1), c.end.toFixed(1), c.score, c.signals]
+      `INSERT INTO clips (id, recording_id, t_start_s, t_end_s, score, signals, ai_provenance, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'candidate')`,
+      [id('clip'), recordingId, c.start.toFixed(1), c.end.toFixed(1), c.score, c.signals,
+        provenance ? JSON.stringify(provenance) : null]
     );
   }
   return { candidates: scored.length, top: scored[0].score, signalsSource, weights: W, weightsSource, weightsId };

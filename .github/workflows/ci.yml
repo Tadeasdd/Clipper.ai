@@ -128,6 +128,10 @@ jobs:
       - run: npm run seed:demo
         timeout-minutes: 4
 
+      # ── Q2: AI provenance + versioned prompts are stamped + reproducible.
+      - run: npm run smoke:provenance
+        timeout-minutes: 3
+
       # ── Q1: clip-quality regression gate — the real analyze+score pipeline
       #    must keep ranking the labelled good clips at/above the baseline.
       - run: npm run eval

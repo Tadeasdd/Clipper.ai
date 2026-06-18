@@ -18,6 +18,9 @@
  *  request.
  */
 
+import { createHash } from 'node:crypto';
+import { getPrompt, promptMeta } from '../../prompts/registry.js';
+
 const SIGNAL_KEYS = ['retention', 'emotion', 'controversy', 'education', 'story', 'hookStrength'];
 const CHARS_PER_SPAN = Number(process.env.LLM_CHARS_PER_SPAN || 1200);
 const MAX_SPANS = Number(process.env.LLM_MAX_SPANS || 12);
@@ -25,10 +28,32 @@ const NOMINATE_CHARS = Number(process.env.LLM_NOMINATE_CHARS || 12000);
 
 export const SEMANTIC_KEYS = SIGNAL_KEYS;
 
+// The heuristic isn't a prompt, but it's still a versioned producer of signals —
+// stamp it so offline artifacts carry honest, stable provenance too.
+const HEURISTIC_VERSION = 'v1';
+const HEURISTIC_HASH = createHash('sha256').update(`heuristic:${HEURISTIC_VERSION}`).digest('hex').slice(0, 16);
+
 /** Provider in force, or 'audio_only' when there are no words to read. */
 export function semanticSource(hasTranscript) {
   if (!hasTranscript) return 'audio_only';
   return (process.env.LLM_PROVIDER || 'builtin') === 'anthropic' ? 'llm' : 'heuristic';
+}
+
+/** Q2 — provenance of the semantic pass: who/what/which-version produced the
+ *  signals, enough to reproduce and to A/B. Pure (no API call), so callers can
+ *  stamp it cheaply. builtin → the heuristic version; anthropic → the selected
+ *  prompt version + hash + model + (temperature 0 for reproducibility). */
+export function semanticProvenance() {
+  const provider = (process.env.LLM_PROVIDER || 'builtin') === 'anthropic' ? 'anthropic' : 'builtin';
+  if (provider === 'builtin') {
+    return { provider: 'builtin', model: 'heuristic', promptId: 'heuristic', promptVersion: HEURISTIC_VERSION, promptHash: HEURISTIC_HASH, params: {} };
+  }
+  return {
+    provider: 'anthropic',
+    model: process.env.LLM_MODEL || 'claude-haiku-4-5-20251001',
+    ...promptMeta('semantic-signals'),
+    params: { temperature: 0 },
+  };
 }
 
 /** Score each span's text into the six semantic signals + a rationale.
@@ -80,9 +105,7 @@ export async function hookVariants(spanText, count = 3) {
   if (provider !== 'anthropic' || !text) return [];
   try {
     const data = await anthropicJSON(
-      `Write ${count} short-form hook lines for this clip — each MAX 9 words, no quotes, no hashtags, ` +
-      `each making a viewer stop scrolling. Respond ONLY with a JSON array of strings. No prose, no code fences.\n\n` +
-      text.slice(0, 4000), 256);
+      getPrompt('hook-variants').build({ text: text.slice(0, 4000), count }), 256);
     return (Array.isArray(data) ? data : [])
       .map((s) => String(s).trim().replace(/^["']|["']$/g, '').split(/\s+/).slice(0, 9).join(' '))
       .filter(Boolean)
@@ -164,14 +187,7 @@ function rationaleFor(s) {
 
 // ── anthropic provider ──────────────────────────────────────────────────────
 async function anthropicSignals(spans) {
-  const data = await anthropicJSON(
-    `For each numbered transcript span, rate these properties from 0.0 to 1.0: ` +
-    `retention (how much it makes a viewer keep watching), emotion, controversy, education, ` +
-    `story (storytelling), hookStrength (how well the FIRST line stops a scroll). Also give a ` +
-    `one-line rationale (max 12 words). Respond ONLY with a JSON array, one object per span, ` +
-    `keys: retention, emotion, controversy, education, story, hookStrength, rationale. No prose, no code fences.\n\n` +
-    spans.map((s, i) => `[${i + 1}] ${s.text}`).join('\n\n'),
-    1024);
+  const data = await anthropicJSON(getPrompt('semantic-signals').build(spans), 1024);
   const arr = Array.isArray(data) ? data : [];
   return spans.map((_, i) => normalizeSignals(arr[i]));
 }
@@ -179,12 +195,7 @@ async function anthropicSignals(spans) {
 async function anthropicNominate(sentences, limit) {
   // Hand the model the full sentence list with indices; ask for the best spans.
   const joined = sentences.map((s, i) => `[${i}] (${s.start.toFixed(0)}s) ${s.text}`).join('\n').slice(0, NOMINATE_CHARS);
-  const data = await anthropicJSON(
-    `Below are transcript sentences with indices and start times. Pick up to ${limit} contiguous ` +
-    `ranges that would make the strongest short-form clips (controversy, emotion, education, story, ` +
-    `or a strong hook). Respond ONLY with a JSON array of objects {from, to} where from/to are ` +
-    `sentence indices (inclusive). No prose, no code fences.\n\n${joined}`,
-    512);
+  const data = await anthropicJSON(getPrompt('nominate-spans').build({ joined, limit }), 512);
   const out = [];
   for (const r of Array.isArray(data) ? data : []) {
     const a = Math.max(0, Math.min(sentences.length - 1, Number(r.from)));
@@ -206,6 +217,7 @@ async function anthropicJSON(prompt, maxTokens) {
     body: JSON.stringify({
       model: process.env.LLM_MODEL || 'claude-haiku-4-5-20251001',
       max_tokens: maxTokens,
+      temperature: 0, // Q2: deterministic — same prompt version + inputs → same output
       messages: [{ role: 'user', content: prompt }],
     }),
   });

@@ -13,7 +13,7 @@
 import { q } from '../db/index.js';
 import { localPathFor } from '../storage/index.js';
 import { loudnessSeries } from './media.js';
-import { semanticSignals, nominateSpans, semanticSource } from './llm.js';
+import { semanticSignals, nominateSpans, semanticSource, semanticProvenance } from './llm.js';
 
 const WIN_S = 4;          // scoring window
 const MIN_CLIP_S = 12;    // candidate bounds
@@ -83,13 +83,14 @@ export async function analyze(recordingId) {
     const ranked = moments.slice(0, MAX_CANDIDATES);
     const sigs = await semanticSignals(ranked.map((m) => ({ text: spanText(words, m.start, m.end) })));
     ranked.forEach((m, i) => { m.semantic = sigs[i]; });
-    return { moments: ranked, baseline: { meanLufs: Number(mean.toFixed(1)), sdLufs: Number(sd.toFixed(1)) }, signalsSource };
+    // Q2: stamp which producer/version made these signals — flows to clips.
+    return { moments: ranked, baseline: { meanLufs: Number(mean.toFixed(1)), sdLufs: Number(sd.toFixed(1)) }, signalsSource, provenance: semanticProvenance() };
   }
 
   // No words: loudness-only, marked honestly. Neutral semantic so score's blend
   // is well-defined and the ops desk sees zeros, not invented numbers.
   for (const m of moments) m.semantic = NEUTRAL_SEMANTIC;
-  return { moments, baseline: { meanLufs: Number(mean.toFixed(1)), sdLufs: Number(sd.toFixed(1)) }, signalsSource };
+  return { moments, baseline: { meanLufs: Number(mean.toFixed(1)), sdLufs: Number(sd.toFixed(1)) }, signalsSource, provenance: { provider: 'audio_only', model: null } };
 }
 
 const NEUTRAL_SEMANTIC = { retention: 0, emotion: 0, controversy: 0, education: 0, story: 0, hookStrength: 0, rationale: 'no transcript — audio-only' };

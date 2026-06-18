@@ -38,11 +38,18 @@ export async function transcribe(recordingId) {
     result = { words: [], text: null, note: 'no ASR provider configured (TRANSCRIPTION_PROVIDER=builtin)' };
   }
 
+  // Q2: stamp the ASR provenance — which provider/model produced these words.
+  const provenance = {
+    provider,
+    model: provider === 'whisper' ? (process.env.WHISPER_MODEL || '').split('/').pop() || 'whisper'
+      : provider === 'deepgram' ? 'nova-2'
+      : null, // builtin: no ASR model
+  };
   await q(
-    `INSERT INTO transcripts (recording_id, provider, words, text)
-     VALUES ($1, $2, $3, $4)
-     ON CONFLICT (recording_id) DO UPDATE SET provider = $2, words = $3, text = $4`,
-    [recordingId, provider, JSON.stringify(result.words || []), result.text]
+    `INSERT INTO transcripts (recording_id, provider, words, text, ai_provenance)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (recording_id) DO UPDATE SET provider = $2, words = $3, text = $4, ai_provenance = $5`,
+    [recordingId, provider, JSON.stringify(result.words || []), result.text, JSON.stringify(provenance)]
   );
   return { provider, words: (result.words || []).length };
 }

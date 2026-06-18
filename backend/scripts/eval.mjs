@@ -21,12 +21,14 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { DATASET, labelsFor } from '../eval/dataset.mjs';
-import { relevanceBitmap, aggregate, regressed, averagePrecision, round } from '../eval/metrics.mjs';
+import { relevanceBitmap, aggregate, regressed, round } from '../eval/metrics.mjs';
+import { getPrompt } from '../prompts/registry.js';
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const BASELINE_PATH = path.join(dir, '..', 'eval', 'baseline.json');
 const UPDATE = process.argv.includes('--update');
 const PROVE = process.argv.includes('--prove-gate');
+const AB = process.argv.find((a) => a === '--ab' || a.startsWith('--ab='));
 const DEFAULT_TOLERANCE = 0.05;
 
 // ── isolated database so weights are the defaults and nothing else writes here ─
@@ -75,60 +77,90 @@ function synth(rec, out) {
     '-af', vol, '-c:a', 'aac', '-b:a', '96k', out], { stdio: 'pipe' });
 }
 
-const perRec = [];
 const W = (await loadWeights()).weights;
 
-for (const rec of DATASET) {
-  const cli = id('cli');
-  await q(`INSERT INTO clients (id, name, plan, cadence) VALUES ($1,$2,'growth','weekly')`, [cli, `Eval ${rec.id}`]);
-  const recId = id('rec');
-  const key = `${recId}/source.mp4`;
-  const audio = path.join(tmp, `${rec.id}.mp4`);
-  synth(rec, audio);
-  await putFile(key, audio);
-  await q(`INSERT INTO recordings (id, client_id, storage_key, duration_s, kind, status)
-           VALUES ($1,$2,$3,$4,'podcast','processing')`, [recId, cli, key, rec.durationS]);
-  const words = rec.segments.flatMap((s) => wordsOver(s.text, s.span));
-  const text = rec.segments.map((s) => s.text).join(' ');
-  await q(`INSERT INTO transcripts (recording_id, provider, words, text) VALUES ($1,'eval-injected',$2,$3)`,
-    [recId, JSON.stringify(words), text]);
-
-  const payload = await analyze(recId);
-  await q(`INSERT INTO pipeline_jobs (id, recording_id, stage, status, payload) VALUES ($1,$2,'analyze','done',$3)`,
-    [id('job'), recId, JSON.stringify(payload)]);
-  await score(recId);
-
-  const { rows: clips } = await q(
-    `SELECT t_start_s, t_end_s, score, signals FROM clips WHERE recording_id = $1 AND status = 'candidate' ORDER BY score DESC`,
-    [recId]);
-  const labels = labelsFor(rec);
-  const rankedSpans = clips.map((c) => [Number(c.t_start_s), Number(c.t_end_s)]);
-  perRec.push({ rec, clips, labels, rankedSpans, rel: relevanceBitmap(rankedSpans, labels) });
+// Build every fixture once (audio + recording + transcript); analyze+score is
+// re-run per measurement so an A/B can score the same corpus under each version.
+async function buildFixtures() {
+  const built = [];
+  for (const rec of DATASET) {
+    const cli = id('cli');
+    await q(`INSERT INTO clients (id, name, plan, cadence) VALUES ($1,$2,'growth','weekly')`, [cli, `Eval ${rec.id}`]);
+    const recId = id('rec');
+    const key = `${recId}/source.mp4`;
+    const audio = path.join(tmp, `${rec.id}.mp4`);
+    synth(rec, audio);
+    await putFile(key, audio);
+    await q(`INSERT INTO recordings (id, client_id, storage_key, duration_s, kind, status)
+             VALUES ($1,$2,$3,$4,'podcast','processing')`, [recId, cli, key, rec.durationS]);
+    const words = rec.segments.flatMap((s) => wordsOver(s.text, s.span));
+    const text = rec.segments.map((s) => s.text).join(' ');
+    await q(`INSERT INTO transcripts (recording_id, provider, words, text) VALUES ($1,'eval-injected',$2,$3)`,
+      [recId, JSON.stringify(words), text]);
+    built.push({ rec, recId });
+  }
+  return built;
 }
 
-const metrics = aggregate(perRec);
-
-// ── per-signal contribution: mean weighted term over the RELEVANT (good) clips
-//    that the pipeline surfaced — shows which signals are carrying the ranking.
-const TERMS = {
-  energy: (s) => Math.max(0, Math.min(1, (Number(s.energyZ) + 1) / 3)),
-  durationFit: (s) => Number(s.durationFit) || 0,
-  position: (s) => Number(s.positionBonus) || 0,
-  retention: (s) => Number(s.retention) || 0, emotion: (s) => Number(s.emotion) || 0,
-  controversy: (s) => Number(s.controversy) || 0, education: (s) => Number(s.education) || 0,
-  story: (s) => Number(s.story) || 0, hookStrength: (s) => Number(s.hookStrength) || 0,
-};
-const relClips = perRec.flatMap((p) => p.clips.filter((_, i) => p.rel[i]));
-const contribution = {};
-for (const [term, get] of Object.entries(TERMS)) {
-  const w = term === 'energy' ? W.energy : term === 'durationFit' ? W.durationFit : term === 'position' ? W.position : (W[term] || 0);
-  const vals = relClips.map((c) => w * get(c.signals));
-  contribution[term] = round(vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0);
+/** Run analyze+score over the built corpus (under the current LLM_PROMPT_VERSION)
+ *  and return the ranking metrics + per-signal contribution. */
+async function measure(built) {
+  const perRec = [];
+  for (const { rec, recId } of built) {
+    const payload = await analyze(recId);
+    await q(`DELETE FROM pipeline_jobs WHERE recording_id = $1 AND stage = 'analyze'`, [recId]);
+    await q(`INSERT INTO pipeline_jobs (id, recording_id, stage, status, payload) VALUES ($1,$2,'analyze','done',$3)`,
+      [id('job'), recId, JSON.stringify(payload)]);
+    await score(recId);
+    const { rows: clips } = await q(
+      `SELECT t_start_s, t_end_s, score, signals FROM clips WHERE recording_id = $1 AND status = 'candidate' ORDER BY score DESC`,
+      [recId]);
+    const labels = labelsFor(rec);
+    const rankedSpans = clips.map((c) => [Number(c.t_start_s), Number(c.t_end_s)]);
+    perRec.push({ rec, clips, labels, rankedSpans, rel: relevanceBitmap(rankedSpans, labels) });
+  }
+  const metrics = aggregate(perRec);
+  const TERMS = {
+    energy: (s) => Math.max(0, Math.min(1, (Number(s.energyZ) + 1) / 3)),
+    durationFit: (s) => Number(s.durationFit) || 0, position: (s) => Number(s.positionBonus) || 0,
+    retention: (s) => Number(s.retention) || 0, emotion: (s) => Number(s.emotion) || 0,
+    controversy: (s) => Number(s.controversy) || 0, education: (s) => Number(s.education) || 0,
+    story: (s) => Number(s.story) || 0, hookStrength: (s) => Number(s.hookStrength) || 0,
+  };
+  const relClips = perRec.flatMap((p) => p.clips.filter((_, i) => p.rel[i]));
+  const contribution = {};
+  for (const [term, get] of Object.entries(TERMS)) {
+    const w = W[term] || 0;
+    const vals = relClips.map((c) => w * get(c.signals));
+    contribution[term] = round(vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0);
+  }
+  return { perRec, metrics, contribution };
 }
 
-// ── report ───────────────────────────────────────────────────────────────────
+const fixtures = await buildFixtures();
 const baseline = existsSync(BASELINE_PATH) ? JSON.parse(readFileSync(BASELINE_PATH, 'utf8')) : null;
 const tolerance = baseline?.tolerance ?? DEFAULT_TOLERANCE;
+
+// ── --ab: score the corpus head-to-head under two prompt versions (Q1 metrics). ─
+if (AB) {
+  const versions = (AB.split('=')[1] || 'v1,v2').split(',').map((s) => s.trim()).filter(Boolean);
+  console.log(`\nA/B head-to-head — prompt 'semantic-signals' across versions [${versions.join(', ')}]\n`);
+  for (const v of versions) {
+    process.env.LLM_PROMPT_VERSION = v;
+    const { metrics } = await measure(fixtures);
+    const p = getPrompt('semantic-signals', v);
+    console.log(`  ${v.padEnd(4)} @${p.version} (hash ${p.hash})   MAP ${metrics.map}  nDCG ${metrics.ndcg}  P@K ${metrics.precisionAtK}`);
+  }
+  console.log('\n  note: offline (LLM_PROVIDER=builtin) every version resolves to the heuristic — identical metrics,');
+  console.log('  distinct prompt hashes. Set LLM_PROVIDER=anthropic + LLM_API_KEY for a real prompt A/B.\n');
+  await pool.end();
+  rmSync(tmp, { recursive: true, force: true });
+  rmSync(store, { recursive: true, force: true });
+  process.exit(0);
+}
+
+// ── default: measure the active version, report, gate ────────────────────────
+const { perRec, metrics, contribution } = await measure(fixtures);
 console.log(`\nClip-quality eval — ${perRec.length} recordings, ${perRec.reduce((a, p) => a + p.labels.length, 0)} labelled good clips\n`);
 const KEYS = ['map', 'ndcg', 'precisionAtK', 'recallAtK'];
 for (const k of KEYS) {

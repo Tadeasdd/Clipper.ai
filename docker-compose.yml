@@ -124,6 +124,7 @@ services:
         npm run smoke:ingest &&
         npm run smoke:transcribe &&
         npm run smoke:prod &&
+        npm run smoke:provenance &&
         npm run eval
     restart: "no"
 

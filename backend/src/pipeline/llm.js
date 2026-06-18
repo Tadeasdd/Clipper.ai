@@ -39,39 +39,63 @@ export function semanticSource(hasTranscript) {
   return (process.env.LLM_PROVIDER || 'builtin') === 'anthropic' ? 'llm' : 'heuristic';
 }
 
-/** Q2 — provenance of the semantic pass: who/what/which-version produced the
- *  signals, enough to reproduce and to A/B. Pure (no API call), so callers can
- *  stamp it cheaply. builtin → the heuristic version; anthropic → the selected
- *  prompt version + hash + model + (temperature 0 for reproducibility). */
+/** Q4 — model routing. Default to a cheap model; escalate to a strong one only
+ *  when the cheap pass comes back low-confidence. Both are env-configured; the
+ *  quality floor that justifies the cheap default is calibrated by the Q1 eval. */
+export function modelRoute() {
+  const cheap = process.env.LLM_MODEL || 'claude-haiku-4-5-20251001';
+  return { cheap, strong: process.env.LLM_MODEL_STRONG || cheap };
+}
+
+const ESCALATE_FRAC = Number(process.env.LLM_ESCALATE_NEUTRAL_FRAC || 0.5);
+/** Should we escalate to the strong model? Pure + testable: escalate when too
+ *  many spans came back degraded/neutral (an error fallback, or every signal
+ *  ~0) — i.e. the cheap pass wasn't confident enough to trust below the floor. */
+export function shouldEscalate(scored, frac = ESCALATE_FRAC) {
+  if (!Array.isArray(scored) || !scored.length) return false;
+  const degraded = scored.filter((s) => !s || /error|no result/.test(s.rationale || '')
+    || SIGNAL_KEYS.every((k) => !Number(s[k]))).length;
+  return degraded / scored.length >= frac;
+}
+
+/** Q2 — provenance of the semantic pass (pure, no API call): who/what/version,
+ *  enough to reproduce and to A/B. The cheap model is the pre-call view; the
+ *  actual model used (after any escalation) is stamped by semanticSignals. */
 export function semanticProvenance() {
   const provider = (process.env.LLM_PROVIDER || 'builtin') === 'anthropic' ? 'anthropic' : 'builtin';
   if (provider === 'builtin') {
     return { provider: 'builtin', model: 'heuristic', promptId: 'heuristic', promptVersion: HEURISTIC_VERSION, promptHash: HEURISTIC_HASH, params: {} };
   }
-  return {
-    provider: 'anthropic',
-    model: process.env.LLM_MODEL || 'claude-haiku-4-5-20251001',
-    ...promptMeta('semantic-signals'),
-    params: { temperature: 0 },
-  };
+  return { provider: 'anthropic', model: modelRoute().cheap, escalated: false, ...promptMeta('semantic-signals'), params: { temperature: 0 } };
 }
 
-/** Score each span's text into the six semantic signals + a rationale.
- *  `spans` = [{ text }]; returns a same-length array of signal objects.
- *  Defensive: a provider failure or a malformed item degrades to neutral
- *  zeros for that span rather than throwing the whole stage. */
+/** Score each span's text into the six semantic signals + a rationale, routing
+ *  cheap→strong as needed. Returns { signals, provenance } — provenance records
+ *  the model ACTUALLY used (escalated or not) so each clip is stamped truthfully.
+ *  Defensive: a provider failure degrades to neutral zeros rather than throwing. */
 export async function semanticSignals(spans) {
   const trimmed = spans.slice(0, MAX_SPANS).map((s) => ({ text: String(s.text || '').slice(0, CHARS_PER_SPAN) }));
   const provider = (process.env.LLM_PROVIDER || 'builtin') === 'anthropic' ? 'anthropic' : 'builtin';
-  let scored;
+
+  if (provider !== 'anthropic') {
+    const scored = trimmed.map((s) => heuristicSignals(s.text));
+    return { signals: spans.map((_, i) => scored[i] || neutral('no result')), provenance: semanticProvenance() };
+  }
+
+  const route = modelRoute();
+  let scored, model = route.cheap, escalated = false;
   try {
-    scored = provider === 'anthropic' ? await anthropicSignals(trimmed) : trimmed.map((s) => heuristicSignals(s.text));
+    scored = await anthropicSignals(trimmed, route.cheap);
+    if (route.strong !== route.cheap && shouldEscalate(scored)) {
+      escalated = true; model = route.strong;
+      scored = await anthropicSignals(trimmed, route.strong);
+    }
   } catch (e) {
     console.warn(`[llm] semantic pass failed (${e.message}) — degrading this batch to neutral signals`);
     scored = trimmed.map(() => neutral('provider error'));
   }
-  // pad/truncate defensively so callers can zip 1:1 with their spans
-  return spans.map((_, i) => scored[i] || neutral('no result'));
+  const provenance = { provider: 'anthropic', model, escalated, ...promptMeta('semantic-signals'), params: { temperature: 0 } };
+  return { signals: spans.map((_, i) => scored[i] || neutral('no result')), provenance };
 }
 
 /** Nominate up to `limit` candidate spans from the full word list — sentence-
@@ -186,8 +210,8 @@ function rationaleFor(s) {
 }
 
 // ── anthropic provider ──────────────────────────────────────────────────────
-async function anthropicSignals(spans) {
-  const data = await anthropicJSON(getPrompt('semantic-signals').build(spans), 1024);
+async function anthropicSignals(spans, model) {
+  const data = await anthropicJSON(getPrompt('semantic-signals').build(spans), 1024, model);
   const arr = Array.isArray(data) ? data : [];
   return spans.map((_, i) => normalizeSignals(arr[i]));
 }
@@ -208,14 +232,14 @@ async function anthropicNominate(sentences, limit) {
   return out;
 }
 
-async function anthropicJSON(prompt, maxTokens) {
+async function anthropicJSON(prompt, maxTokens, model) {
   const apiKey = process.env.LLM_API_KEY;
   if (!apiKey) throw new Error('LLM_PROVIDER=anthropic but LLM_API_KEY is unset');
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
     body: JSON.stringify({
-      model: process.env.LLM_MODEL || 'claude-haiku-4-5-20251001',
+      model: model || process.env.LLM_MODEL || 'claude-haiku-4-5-20251001',
       max_tokens: maxTokens,
       temperature: 0, // Q2: deterministic — same prompt version + inputs → same output
       messages: [{ role: 'user', content: prompt }],

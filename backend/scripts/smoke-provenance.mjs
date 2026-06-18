@@ -97,12 +97,16 @@ assert(ab.provider === 'anthropic' && ab.promptVersion === 'v2' && ab.promptHash
 process.env.LLM_PROVIDER = 'builtin';
 delete process.env.LLM_PROMPT_VERSION;
 
-// ── 5. replays are deterministic: same inputs → same provenance + signals ────
+// ── 5. replays are deterministic: same inputs/version → same provenance +
+//    signals. (Q4 makes this cache-guaranteed; compare by field since the cache
+//    round-trips through jsonb, which may normalise key order.) ──────────────
 const p2 = await analyze(recId);
-assert(JSON.stringify(p2.provenance) === JSON.stringify(payload.provenance),
+const pv1 = payload.provenance, pv2 = p2.provenance;
+assert(pv2.provider === pv1.provider && pv2.model === pv1.model && pv2.promptVersion === pv1.promptVersion && pv2.promptHash === pv1.promptHash,
   'replay: identical provenance for identical inputs/version');
-assert(JSON.stringify(p2.moments[0].semantic) === JSON.stringify(payload.moments[0].semantic),
-  'replay: identical semantic signals (deterministic offline)');
+const s1 = payload.moments[0].semantic, s2 = p2.moments[0].semantic;
+assert(['controversy', 'education', 'retention', 'emotion', 'story', 'hookStrength'].every((k) => Number(s1[k]) === Number(s2[k])),
+  'replay: identical semantic signals (deterministic)');
 
 await pool.end();
 rmSync(tmp, { recursive: true, force: true });

@@ -13,6 +13,8 @@
 import { q } from '../db/index.js';
 import { localPathFor } from '../storage/index.js';
 import { extractAudioWav } from './media.js';
+import { hashFile, findCachedTranscript } from './cache.js';
+import { transcribeCost } from './cost.js';
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync, readFileSync, createReadStream } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -23,6 +25,20 @@ export async function transcribe(recordingId) {
   const { rows } = await q('SELECT storage_key FROM recordings WHERE id = $1', [recordingId]);
   const key = rows[0]?.storage_key;
   if (!key) throw new Error('recording has no media');
+
+  // Q4: content-addressed ASR cache. Byte-identical audio that's been
+  // transcribed before is reused verbatim — no second ASR run, no cost.
+  const contentHash = hashFile(await localPathFor(key));
+  const cachedRow = await findCachedTranscript(contentHash);
+  if (cachedRow) {
+    const words = cachedRow.words || [];
+    await q(
+      `INSERT INTO transcripts (recording_id, provider, words, text, ai_provenance, content_hash)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (recording_id) DO UPDATE SET provider = $2, words = $3, text = $4, ai_provenance = $5, content_hash = $6`,
+      [recordingId, provider, JSON.stringify(words), cachedRow.text, JSON.stringify(cachedRow.ai_provenance), contentHash]);
+    return { provider, words: words.length, cached: true, cost: transcribeCost(provider, true) };
+  }
 
   let result;
   if (provider === 'whisper') {
@@ -46,12 +62,12 @@ export async function transcribe(recordingId) {
       : null, // builtin: no ASR model
   };
   await q(
-    `INSERT INTO transcripts (recording_id, provider, words, text, ai_provenance)
-     VALUES ($1, $2, $3, $4, $5)
-     ON CONFLICT (recording_id) DO UPDATE SET provider = $2, words = $3, text = $4, ai_provenance = $5`,
-    [recordingId, provider, JSON.stringify(result.words || []), result.text, JSON.stringify(provenance)]
+    `INSERT INTO transcripts (recording_id, provider, words, text, ai_provenance, content_hash)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     ON CONFLICT (recording_id) DO UPDATE SET provider = $2, words = $3, text = $4, ai_provenance = $5, content_hash = $6`,
+    [recordingId, provider, JSON.stringify(result.words || []), result.text, JSON.stringify(provenance), contentHash]
   );
-  return { provider, words: (result.words || []).length };
+  return { provider, words: (result.words || []).length, cached: false, cost: transcribeCost(provider, false) };
 }
 
 /** whisper.cpp adapter. Extracts a 16 kHz mono WAV, runs the CLI with one

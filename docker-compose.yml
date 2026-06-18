@@ -126,6 +126,7 @@ services:
         npm run smoke:transcribe &&
         npm run smoke:prod &&
         npm run smoke:provenance &&
+        npm run smoke:cache &&
         npm run eval
     restart: "no"
 

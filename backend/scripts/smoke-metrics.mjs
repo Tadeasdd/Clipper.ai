@@ -213,6 +213,10 @@ assert(corr.perSignal.durationFit > 0.7 && corr.perSignal.position < 0,
   `per-signal correlations find the planted structure (durFit ${corr.perSignal.durationFit}, position ${corr.perSignal.position})`);
 assert(r.data.scoringWeights.source === 'default' && r.data.scoringWeights.weights.energy === DEF.energy,
   `weights start at the defaults before any retrain (energy ${DEF.energy})`);
+// Q3: the report surfaces model↔editor agreement (these clips are all approved,
+// so there's no rejected contrast → an honest null value, but the field is there).
+assert('editorAgreement' in r.data && 'sample' in r.data.editorAgreement,
+  'the ops report surfaces model↔editor agreement (Q3)');
 
 // one real cycle through the API
 r = await j('POST', '/api/analytics/retrain', { note: `b6 smoke ${run}` });
@@ -223,6 +227,8 @@ assert(Math.abs(sum - 1) < 0.002, `new weights normalized over all ${Object.keys
 assert(Object.values(w).every((v) => v >= 0.05), 'no signal dies: every weight floored');
 assert(r.data.basis.sample === corr.sample && 'scoreCorrelation' in r.data.basis && r.data.basis.before.energy === DEF.energy,
   'the evidence basis is stored with the weights (sample, correlations, prior)');
+assert('editorAgreement' in r.data.basis && 'sample' in r.data.basis.editorAgreement,
+  'each retrain records the editor agreement at that cycle (Q3 trend)');
 const moved = Object.keys(w).reduce((a, k) => a + Math.abs(w[k] - DEF[k]), 0);
 assert(moved < 0.6 && moved > 0.01, `the step is bounded, not a jump (moved ${moved.toFixed(3)})`);
 assert(w.durationFit > DEF.durationFit && w.position <= DEF.position,

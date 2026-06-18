@@ -19,6 +19,7 @@
 import { q } from '../db/index.js';
 import { id } from '../lib/ids.js';
 import { spearman } from '../lib/stats.js';
+import { extractLabels, editorAgreement } from './labels.js';
 
 // Audio prior + the six semantic dimensions M2 introduced. Semantics carry the
 // majority because the company sells *semantic* clip-finding, not volume; the
@@ -110,6 +111,16 @@ export async function computeCorrelation(minSample = MIN_SAMPLE) {
   };
 }
 
+/** Q3 — model↔editor agreement: does the score predict what editors keep?
+ *  Read-only, a parallel quality signal to the view correlation above. Surfaced
+ *  in /api/analytics/ops and recorded in every retrain's basis (so the history
+ *  trends it), but deliberately NOT folded into the weight step — the proven
+ *  loop stays audience-driven; this watches whether it still tracks human
+ *  judgement. */
+export async function computeEditorAgreement() {
+  return editorAgreement(await extractLabels(q));
+}
+
 /** One retrain cycle. Moves weights a bounded step toward the signals the
  *  audience actually rewarded; appends the new row with its evidence.
  *  Returns null (untouched) below the sample gate. */
@@ -147,7 +158,9 @@ export async function retrain(minSample = MIN_SAMPLE, note = null) {
   const row = {
     id: id('wts'),
     weights: after,
-    basis: { sample: corr.sample, scoreCorrelation: corr.value, perSignal: corr.perSignal, learningRate: LEARNING_RATE, before },
+    // Q3: record the editor agreement at this cycle alongside the view evidence
+    // — the append-only history then trends model↔editor agreement over time.
+    basis: { sample: corr.sample, scoreCorrelation: corr.value, perSignal: corr.perSignal, learningRate: LEARNING_RATE, before, editorAgreement: await computeEditorAgreement() },
   };
   await q('INSERT INTO scoring_weights (id, weights, basis, note) VALUES ($1, $2, $3, $4)',
     [row.id, JSON.stringify(row.weights), JSON.stringify(row.basis), note]);

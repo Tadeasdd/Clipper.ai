@@ -16,6 +16,7 @@
     "smoke:review": "node scripts/smoke-review.mjs",
     "smoke:publish": "node scripts/smoke-publish.mjs",
     "smoke:metrics": "node scripts/smoke-metrics.mjs",
+    "smoke:labels": "node scripts/smoke-labels.mjs",
     "smoke:auth": "node scripts/smoke-auth.mjs",
     "smoke:authz": "node scripts/smoke-authz.mjs",
     "smoke:provenance": "node scripts/smoke-provenance.mjs",

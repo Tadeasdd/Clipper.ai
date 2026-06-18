@@ -113,6 +113,10 @@ jobs:
         timeout-minutes: 4
       - run: npm run smoke:metrics
         timeout-minutes: 4
+
+      # ── Q3: editor decisions become quality labels + model↔editor agreement.
+      - run: npm run smoke:labels
+        timeout-minutes: 3
       - run: npm run smoke:auth
         timeout-minutes: 3
 

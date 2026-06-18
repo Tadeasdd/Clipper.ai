@@ -5,7 +5,7 @@
  *  published clips and clip_metrics, so it stays null until B6 proper. */
 import { Router } from 'express';
 import { q } from '../db/index.js';
-import { computeCorrelation, retrain, loadWeights } from '../metrics/loop.js';
+import { computeCorrelation, retrain, loadWeights, computeEditorAgreement } from '../metrics/loop.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
 import { validate } from '../lib/validate.js';
 import { log } from '../lib/log.js';
@@ -153,6 +153,8 @@ r.get('/ops', requireAuth(...INTERNAL), async (_req, res, next) => {
       // B6.3: the loop, live. Under the local metrics driver this hovers
       // near zero by design (the simulator never peeks at the score).
       scoreCorrelation: await computeCorrelation(),
+      // Q3: model↔editor agreement — does the score predict what editors keep?
+      editorAgreement: await computeEditorAgreement(),
       scoringWeights: await loadWeights(),
     });
   } catch (e) { next(e); }

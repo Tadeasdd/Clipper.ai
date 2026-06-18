@@ -118,6 +118,7 @@ services:
         npm run smoke:review &&
         npm run smoke:publish &&
         npm run smoke:metrics &&
+        npm run smoke:labels &&
         npm run smoke:auth &&
         npm run smoke:authz &&
         npm run smoke:ssrf &&

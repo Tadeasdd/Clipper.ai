@@ -22,11 +22,13 @@ import clientsRoutes from './routes/clients.js';
 import usersRoutes from './routes/users.js';
 import authRoutes from './routes/auth.js';
 import leadsRoutes from './routes/leads.js';
+import billingRoutes from './routes/billing.js';
 import { migrate, q, pool } from './db/index.js';
 import { csrfGuard } from './lib/auth.js';
 import { startWorkers, drainWorkers } from './pipeline/index.js';
 import { startPublisher, drainPublisher } from './publish/scheduler.js';
 import { startMetricsPoller, stopMetricsPoller } from './metrics/index.js';
+import { startBillingReporter, stopBillingReporter } from './billing/index.js';
 import { startQualityMonitor, stopQualityMonitor } from './metrics/monitor.js';
 import { assertProdConfig, corsOptions } from './lib/config.js';
 import { log, reportError } from './lib/log.js';
@@ -61,7 +63,9 @@ app.use((req, res, next) => {
   next();
 });
 app.use(httpMetrics()); // R1: count + time every request
-app.use(express.json({ limit: '2mb' }));
+// E4: capture the raw body so the billing webhook can verify its HMAC signature
+// over the exact bytes the provider signed (express.json otherwise discards it).
+app.use(express.json({ limit: '2mb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
 
 // R1: queue depth is read live from the DB at scrape time.
 registerGauge('clipper_queue_depth', 'jobs per queue, stage and state', async () => {
@@ -126,6 +130,7 @@ app.use('/api/clients', clientsRoutes);
 app.use('/api/auth', authRoutes);       // B7: sessions, the only door
 app.use('/api/users', usersRoutes);     // B4→B7: account management (ops-gated)
 app.use('/api/leads', leadsRoutes);     // F3: waitlist / strategy-call form
+app.use('/api/billing', billingRoutes); // E4: metered outcomes billing (webhook + reconcile)
 
 // Central error handler — routes call next(e); nothing leaks stack traces.
 // M7/S6: structured, redacted logging + a best-effort Sentry report. The client
@@ -141,12 +146,13 @@ await migrate();
 // B3: pipeline workers run in-process by default; set WORKERS_ENABLED=false
 // to run them separately via `npm run worker` (SKIP LOCKED makes both safe).
 if (process.env.WORKERS_ENABLED !== 'false') {
-  startWorkers(); startPublisher(); startMetricsPoller(); startQualityMonitor();
+  startWorkers(); startPublisher(); startMetricsPoller(); startQualityMonitor(); startBillingReporter();
   // R2: on shutdown, the job queues drain in-flight work (zero loss); the
-  // metrics poller + calibration monitor just stop (their work self-heals).
+  // metrics poller + calibration monitor + billing reporter just stop (their
+  // work self-heals — pending billable outcomes flush on the next boot's sweep).
   onShutdown(() => drainWorkers());
   onShutdown(() => drainPublisher());
-  onShutdown(() => { stopMetricsPoller(); stopQualityMonitor(); });
+  onShutdown(() => { stopMetricsPoller(); stopQualityMonitor(); stopBillingReporter(); });
 }
 const server = app.listen(port, () => log.info('clipper-ops listening', { port: Number(port), env: process.env.NODE_ENV || 'development' }));
 

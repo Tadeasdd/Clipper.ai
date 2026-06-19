@@ -6,6 +6,7 @@
 import { q } from '../db/index.js';
 import { runAdapter } from './index.js';
 import { instrumentStage } from '../lib/telemetry.js';
+import { recordOutcome } from '../billing/index.js';
 
 const MAX_ATTEMPTS = 3;
 const POLL_MS = Number(process.env.PUBLISH_POLL_MS || 1000);
@@ -79,6 +80,10 @@ async function runOne(job) {
       UPDATE clips SET status = 'published'
       WHERE id IN (SELECT clip_id FROM done) AND status = 'scheduled'`,
       [job.id, externalId, url]);
+    // E4: a clip just went live — record the billable outcome. Best-effort and
+    // idempotent on clip_id, so multi-platform delivery of one clip bills once
+    // and a billing hiccup never rolls back a successful publish.
+    await recordOutcome({ clipId: job.clip_id, publishId: job.id, clientId: row.client_id });
     console.log(`[publish] ${job.platform} ${job.clip_id} → ${url}`);
   } catch (e) {
     const parked = job.attempts >= MAX_ATTEMPTS;

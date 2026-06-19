@@ -140,6 +140,11 @@ jobs:
       - run: npm run smoke:margin
         timeout-minutes: 3
 
+      # ── E4: delivered clips → reconciled billable outcomes (dry-run), idempotent,
+      #        signed webhook verification — all offline.
+      - run: npm run smoke:billing
+        timeout-minutes: 3
+
       # ── R3: timeouts + circuit breakers + bulkheads on external calls.
       - run: npm run smoke:resilience
         timeout-minutes: 2

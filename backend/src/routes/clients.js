@@ -4,6 +4,7 @@ import { q } from '../db/index.js';
 import { id } from '../lib/ids.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
 import { validate, paginate } from '../lib/validate.js';
+import { meterStatus } from '../lib/metering.js';
 
 const r = Router();
 
@@ -49,8 +50,14 @@ r.get('/:id', requireAuth(), async (req, res, next) => {
   try {
     const { rows } = await q('SELECT * FROM clients WHERE id = $1', [req.params.id]);
     if (!rows.length) return res.status(404).json({ error: 'unknown client' });
-    res.json(rows[0]);
+    res.json({ ...rows[0], meter: await meterStatus(req.params.id) }); // E2: usage vs plan
   } catch (e) { next(e); }
+});
+
+// GET /api/clients/:id/usage — E2 metered usage vs the client's plan quota, for
+// the ops board. Ops/account roles only.
+r.get('/:id/usage', requireAuth(...INTERNAL), async (req, res, next) => {
+  try { res.json(await meterStatus(req.params.id)); } catch (e) { next(e); }
 });
 
 r.patch('/:id', requireAuth('ops', 'account_manager'), validate(clientSchema), async (req, res, next) => {

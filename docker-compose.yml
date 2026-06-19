@@ -122,6 +122,7 @@ services:
         npm run smoke:auth &&
         npm run smoke:observability &&
         npm run smoke:cost &&
+        npm run smoke:metering &&
         npm run smoke:shutdown &&
         npm run smoke:resilience &&
         npm run smoke:slo &&

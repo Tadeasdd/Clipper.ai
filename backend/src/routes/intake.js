@@ -8,6 +8,7 @@ import { enqueue, isPlatformUrl } from '../pipeline/index.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
 import { rateLimit } from '../lib/ratelimit.js';
 import { validate, paginate } from '../lib/validate.js';
+import { checkIntake } from '../lib/metering.js';
 
 const r = Router();
 
@@ -40,6 +41,11 @@ r.post('/', requireAuth(),
     const client = await q('SELECT id FROM clients WHERE id = $1', [clientId]);
     if (!client.rowCount) return res.status(404).json({ error: 'unknown clientId' });
 
+    // E2: meter against the client's plan. block → deny at the boundary;
+    // queue → accept but hold (don't process); warn/ok → proceed (flagged).
+    const meter = await checkIntake(clientId);
+    if (!meter.allow) return res.status(402).json({ error: meter.reason || 'plan limit reached', meter });
+
     // Default the kind from the source; validate it against the enum above.
     const kindVal = kind || (sourceUrl && isPlatformUrl(sourceUrl) ? 'youtube' : null);
     // Idempotency key: an explicit header wins; otherwise the URL is its own key
@@ -63,8 +69,8 @@ r.post('/', requireAuth(),
     }
     const upload = sourceUrl ? null : await createUploadTarget(recId, filename);
     if (upload) await q('UPDATE recordings SET storage_key = $1 WHERE id = $2', [upload.key, recId]);
-    if (sourceUrl) await enqueue(recId, 'ingest'); // file path enqueues on upload completion
-    res.status(201).json({ recordingId: recId, status, upload });
+    if (sourceUrl && !meter.hold) await enqueue(recId, 'ingest'); // file path enqueues on upload completion; held over-quota jobs wait
+    res.status(201).json({ recordingId: recId, status, upload, held: meter.hold, meter });
   } catch (e) { next(e); }
 });
 

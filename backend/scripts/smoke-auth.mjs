@@ -100,6 +100,7 @@ const WALLS = [['GET', '/api/jobs'], ['GET', '/api/intake/queue'], ['GET', '/api
                ['GET', '/api/review/queue'], ['GET', '/api/publish/queue'], ['GET', '/api/publish/connections'],
                ['GET', '/api/analytics/ops'], ['GET', '/api/analytics/queues'], ['POST', '/api/analytics/retrain'],
                ['GET', '/api/analytics/traces'], ['GET', '/api/analytics/calibration'], ['GET', '/api/analytics/slo'], ['GET', '/api/analytics/cost'],
+               ['GET', '/api/clients/x/usage'],
                ['GET', '/api/clips'], ['POST', '/api/intake'], ['GET', '/api/leads']];
 for (const [m, p] of WALLS) {
   const res = await j(m, p);

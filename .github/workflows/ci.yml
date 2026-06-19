@@ -132,6 +132,10 @@ jobs:
       - run: npm run smoke:resilience
         timeout-minutes: 2
 
+      # ── R4: SLIs/SLOs + error budgets; a burning budget fires an alert.
+      - run: npm run smoke:slo
+        timeout-minutes: 3
+
       # ── S4: cross-tenant IDOR — id-addressed resources are tenant-scoped (404).
       - run: npm run smoke:authz
         timeout-minutes: 3

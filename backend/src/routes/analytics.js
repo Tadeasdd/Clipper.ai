@@ -8,6 +8,7 @@ import { q } from '../db/index.js';
 import { computeCorrelation, retrain, loadWeights, computeEditorAgreement } from '../metrics/loop.js';
 import { snapshotCalibration, calibrationHistory, windowedCalibration } from '../metrics/monitor.js';
 import { recentTraces, traceFor } from '../lib/telemetry.js';
+import { evaluateSlos } from '../ops/slo.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
 import { validate } from '../lib/validate.js';
 import { log } from '../lib/log.js';
@@ -160,6 +161,13 @@ r.get('/ops', requireAuth(...INTERNAL), async (_req, res, next) => {
       scoringWeights: await loadWeights(),
     });
   } catch (e) { next(e); }
+});
+
+// GET /api/analytics/slo — R4 reliability report: each SLI vs its target + the
+// error-budget burn. Read-only (alert:false) — the periodic monitor is what
+// pages on a burning budget, not a dashboard read.
+r.get('/slo', requireAuth(...INTERNAL), async (_req, res, next) => {
+  try { res.json(await evaluateSlos({ alert: false })); } catch (e) { next(e); }
 });
 
 // GET /api/analytics/traces — R1 trace inspector: recent pipeline/publish

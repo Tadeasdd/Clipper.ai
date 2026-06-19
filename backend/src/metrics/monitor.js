@@ -17,6 +17,8 @@ import { q } from '../db/index.js';
 import { id } from '../lib/ids.js';
 import { spearman } from '../lib/stats.js';
 import { log } from '../lib/log.js';
+import { raiseAlert } from '../lib/alert.js';
+import { evaluateSlos } from '../ops/slo.js';
 
 const WINDOW_DAYS = Number(process.env.DRIFT_WINDOW_DAYS || 14);
 const THRESHOLD = Number(process.env.DRIFT_THRESHOLD || 0.4);
@@ -55,17 +57,6 @@ export function detectDrift(current, baseline, threshold = THRESHOLD) {
   return { drift: delta <= -threshold, delta, reason: delta <= -threshold ? `calibration fell ${delta} (≥ ${threshold}) vs the prior snapshot` : 'within tolerance' };
 }
 
-/** Emit an alert. Dry-run default: the structured audit log (+ a recorded
- *  snapshot). ALERT_WEBHOOK_URL (or Track R routing) makes it page for real. */
-export async function raiseAlert(kind, detail) {
-  log.security(kind, detail);
-  const url = process.env.ALERT_WEBHOOK_URL;
-  if (!url) return; // dry run — logged, not paged
-  try {
-    await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind, detail }) });
-  } catch (e) { log.warn('alert webhook failed', { error: e.message }); }
-}
-
 /** Take one calibration snapshot: compute current vs the prior snapshot, store
  *  it, and alert + flag a review when it has drifted. Returns the snapshot. */
 export async function snapshotCalibration() {
@@ -100,6 +91,8 @@ export function startQualityMonitor() {
     while (running) {
       try { await snapshotCalibration(); }
       catch (e) { log.warn('calibration snapshot failed', { error: e.message }); }
+      try { await evaluateSlos(); } // R4: same periodic tick evaluates SLOs + fires burn alerts
+      catch (e) { log.warn('slo evaluation failed', { error: e.message }); }
       await new Promise((r) => setTimeout(r, SNAPSHOT_INTERVAL_S * 1000));
     }
   })();

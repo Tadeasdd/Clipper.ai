@@ -13,20 +13,14 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, NavLink, Link } from 'react-router-dom';
 import { portal, uploadFile, auth, setSession, usePoll, fmtClock, fmtAgo } from './api.js';
+// U3: the primitives identical to /ops live in one leaf module (imports only
+// React, so composing them here never drags the ops surfaces into the portal
+// chunk — the reason they were duplicated in the first place).
+import { T as baseT, Mono, Label, Panel, PanelHead, btnStyle, field } from '../components/surface-ui.jsx';
 
-/* ── design tokens (same palette as /ops, declared here so the portal chunk
-      never drags the ops surfaces into its graph) ───────────────────────── */
-const T = {
-  line: 'rgba(255,255,255,0.08)',
-  lineSoft: 'rgba(255,255,255,0.05)',
-  dim: '#71717a',
-  text: '#e7e5e4',
-  green: 'var(--color-brand)',
-  amber: '#fbbf24',
-  red: '#f87171',
-  sky: '#7dd3fc',
-  panel: 'rgba(255,255,255,0.022)',
-};
+/* ── design tokens (same palette as /ops; `sky` is the portal's one extra
+      token, spread onto the shared base so the rest stay single-source) ──── */
+const T = { ...baseT, sky: '#7dd3fc' };
 const STATUS_COLOR = {
   awaiting_upload: T.dim, queued: T.amber, ingesting: T.green, processing: T.green, ready: T.green, failed: T.red,
   candidate: T.dim, awaiting_review: T.amber, changes_requested: T.amber,
@@ -42,12 +36,6 @@ const STATUS_LABEL = {
   scheduled: 'scheduled', published: 'published', failed: 'failed',
 };
 
-const Mono = ({ children, className = '', style }) => (
-  <span className={`mono ${className}`} style={style}>{children}</span>
-);
-const Label = ({ children, style }) => (
-  <div className="mono uppercase" style={{ fontSize: 10, letterSpacing: '0.18em', color: T.dim, ...style }}>{children}</div>
-);
 const Dot = ({ color, pulse }) => (
   <span style={{ position: 'relative', display: 'inline-block', width: 7, height: 7, marginRight: 7 }}>
     <span style={{ position: 'absolute', inset: 0, borderRadius: 99, background: color }} />
@@ -59,14 +47,6 @@ const StatusChip = ({ status }) => (
     <Dot color={STATUS_COLOR[status] || T.dim} />{STATUS_LABEL[status] || status}
   </span>
 );
-const Panel = ({ children, style }) => (
-  <section style={{ border: `1px solid ${T.line}`, background: T.panel, borderRadius: 10, ...style }}>{children}</section>
-);
-const PanelHead = ({ title, right }) => (
-  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '12px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
-    <Label>{title}</Label>{right}
-  </div>
-);
 const ErrorBand = ({ error, retry }) => (
   <div className="mono" style={{ padding: '14px 16px', fontSize: 12, color: T.red, display: 'flex', gap: 14, alignItems: 'center' }}>
     <span>can't reach the studio — {String(error?.message || error)}</span>
@@ -76,17 +56,7 @@ const ErrorBand = ({ error, retry }) => (
 const Empty = ({ children }) => (
   <div className="mono" style={{ padding: '22px 16px', fontSize: 12, color: T.dim, lineHeight: 1.7 }}>{children}</div>
 );
-const btn = (accent) => ({
-  fontSize: 11, padding: '5px 12px', borderRadius: 6, cursor: 'pointer',
-  // U1: alpha via color-mix (byte-identical to old +'55'/+'14') so the token works.
-  border: `1px solid ${accent ? `color-mix(in srgb, ${accent} 33.333%, transparent)` : T.line}`,
-  color: accent || T.text, background: accent ? `color-mix(in srgb, ${accent} 7.843%, transparent)` : 'transparent',
-});
-const field = {
-  width: '100%', boxSizing: 'border-box', fontSize: 13, padding: '10px 14px',
-  background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.line}`,
-  borderRadius: 8, color: T.text, outline: 'none',
-};
+const btn = btnStyle; // U3: shared with /ops; alias keeps the btn(...) call sites untouched
 const PageTitle = ({ kicker, title, right }) => (
   <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
     <div>

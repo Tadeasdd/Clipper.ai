@@ -8,18 +8,11 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, NavLink, Link } from 'react-router-dom';
 import { auth, setSession, getUser, ops, usePoll } from './api.js';
+// U3: the identical inline-style primitives now live in one leaf module shared
+// with /portal. Re-exported below so ops sub-pages keep importing them from here.
+import { T, Mono, Label, Panel, PanelHead, btnStyle, field } from '../components/surface-ui.jsx';
 
-/* ── design tokens (one place) ────────────────────────────────────────── */
-export const T = {
-  line: 'rgba(255,255,255,0.08)',
-  lineSoft: 'rgba(255,255,255,0.05)',
-  dim: '#71717a',
-  text: '#e7e5e4',
-  green: 'var(--color-brand)',
-  amber: '#fbbf24',
-  red: '#f87171',
-  panel: 'rgba(255,255,255,0.022)',
-};
+export { T, Mono, Label, Panel, PanelHead, btnStyle };
 export const STATUS_COLOR = {
   // pipeline stages
   pending: T.dim, running: T.green, done: '#9ca3af', failed: T.red,
@@ -31,12 +24,6 @@ export const STATUS_COLOR = {
   rejected: T.red, scheduled: '#7dd3fc', published: T.green,
 };
 
-export const Mono = ({ children, className = '', style }) => (
-  <span className={`mono ${className}`} style={style}>{children}</span>
-);
-export const Label = ({ children, style }) => (
-  <div className="mono uppercase" style={{ fontSize: 10, letterSpacing: '0.18em', color: T.dim, ...style }}>{children}</div>
-);
 export const Dot = ({ color, pulse }) => (
   <span style={{ position: 'relative', display: 'inline-block', width: 7, height: 7, marginRight: 7 }}>
     <span style={{ position: 'absolute', inset: 0, borderRadius: 99, background: color }} />
@@ -51,17 +38,6 @@ export const StatusChip = ({ status, pulse }) => (
     <Dot color={STATUS_COLOR[status] || T.dim} pulse={pulse ?? status === 'running'} />{status}
   </span>
 );
-export const Panel = ({ children, className = '', style }) => (
-  <section className={className} style={{ border: `1px solid ${T.line}`, background: T.panel, borderRadius: 10, ...style }}>
-    {children}
-  </section>
-);
-export const PanelHead = ({ title, right }) => (
-  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '12px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
-    <Label>{title}</Label>
-    {right}
-  </div>
-);
 export const ErrorBand = ({ error, retry }) => (
   <div className="mono" style={{ padding: '14px 16px', fontSize: 12, color: T.red, display: 'flex', gap: 14, alignItems: 'center' }}>
     <span>backend unreachable — {String(error?.message || error)}</span>
@@ -71,13 +47,6 @@ export const ErrorBand = ({ error, retry }) => (
 export const Empty = ({ children }) => (
   <div className="mono" style={{ padding: '22px 16px', fontSize: 12, color: T.dim }}>{children}</div>
 );
-export const btnStyle = (accent) => ({
-  fontSize: 11, padding: '5px 12px', borderRadius: 6, cursor: 'pointer',
-  // U1: alpha composed via color-mix (byte-identical to the old hex +'55'/+'14':
-  // 0x55=33.333%, 0x14=7.843%) so it works with the var(--color-brand) token too.
-  border: `1px solid ${accent ? `color-mix(in srgb, ${accent} 33.333%, transparent)` : T.line}`,
-  color: accent || T.text, background: accent ? `color-mix(in srgb, ${accent} 7.843%, transparent)` : 'transparent',
-});
 
 /* ── sign in (B7: real sessions against /api/auth) ────────────────────── */
 function Login({ onAuthed }) {
@@ -97,11 +66,6 @@ function Login({ onAuthed }) {
       onAuthed(r.user);
     } catch (e) { setErr(e); }
     finally { setBusy(false); }
-  };
-  const field = {
-    width: '100%', boxSizing: 'border-box', fontSize: 13, padding: '10px 14px',
-    background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.line}`,
-    borderRadius: 8, color: T.text, outline: 'none',
   };
   return (
     <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24 }}>

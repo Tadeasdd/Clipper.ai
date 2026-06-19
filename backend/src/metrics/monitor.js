@@ -105,3 +105,5 @@ export function startQualityMonitor() {
   })();
   console.log(`[monitor] quality calibration monitor started (window ${WINDOW_DAYS}d, drift threshold ${THRESHOLD}, every ${SNAPSHOT_INTERVAL_S}s)`);
 }
+
+export function stopQualityMonitor() { running = false; } // R2: halt the periodic snapshot on shutdown

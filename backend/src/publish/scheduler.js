@@ -93,6 +93,7 @@ async function runOne(job) {
 }
 
 let running = false;
+let inFlight = 0; // R2: publish jobs currently delivering — drained before shutdown
 export function startPublisher(concurrency = Number(process.env.PUBLISH_CONCURRENCY || 1)) {
   if (running) return;
   running = true;
@@ -102,7 +103,7 @@ export function startPublisher(concurrency = Number(process.env.PUBLISH_CONCURRE
       while (running) {
         try {
           const job = await claim();
-          if (job) { await runOne(job); continue; }
+          if (job) { inFlight++; try { await runOne(job); } finally { inFlight--; } continue; }
         } catch (e) {
           console.error('[publish] loop error:', e.message);
         }
@@ -121,3 +122,12 @@ export function startPublisher(concurrency = Number(process.env.PUBLISH_CONCURRE
 }
 
 export function stopPublisher() { running = false; }
+
+/** R2: stop claiming new publish jobs and let in-flight deliveries finish
+ *  (bounded by timeoutMs), so a deploy can't abandon a half-published clip. */
+export async function drainPublisher(timeoutMs = Number(process.env.JOB_DRAIN_TIMEOUT_MS || 20000)) {
+  running = false;
+  const deadline = Date.now() + timeoutMs;
+  while (inFlight > 0 && Date.now() < deadline) await new Promise((r) => setTimeout(r, 50));
+  return inFlight === 0;
+}

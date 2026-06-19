@@ -1,5 +1,5 @@
 /** Stage B3 — wire the five handlers into the queue runtime. */
-import { register, startWorkers, stopWorkers, enqueue, retryRecording, STAGES } from './queue.js';
+import { register, startWorkers, stopWorkers, drainWorkers, enqueue, retryRecording, STAGES } from './queue.js';
 import { ingest, isPlatformUrl } from './ingest.js';
 import { transcribe } from './transcribe.js';
 import { analyze } from './analyze.js';
@@ -12,4 +12,4 @@ register('analyze', analyze);
 register('score', score);
 register('generate', generate);
 
-export { startWorkers, stopWorkers, enqueue, retryRecording, STAGES, isPlatformUrl };
+export { startWorkers, stopWorkers, drainWorkers, enqueue, retryRecording, STAGES, isPlatformUrl };

@@ -114,6 +114,8 @@ async function runOne(job) {
 }
 
 let running = false;
+let inFlight = 0; // R2: jobs currently executing — drained before shutdown
+export const activeJobs = () => inFlight;
 /** In-process worker loop. One job at a time per loop; run several loops for
  *  concurrency, or run `npm run worker` as separate processes — SKIP LOCKED
  *  makes both safe. */
@@ -127,7 +129,7 @@ export function startWorkers(concurrency = Number(process.env.PIPELINE_CONCURREN
       while (running) {
         try {
           const job = await claim();
-          if (job) { await runOne(job); continue; } // drain without sleeping
+          if (job) { inFlight++; try { await runOne(job); } finally { inFlight--; } continue; } // drain without sleeping
         } catch (e) {
           console.error('[pipeline] loop error:', e.message);
         }
@@ -148,3 +150,15 @@ export function startWorkers(concurrency = Number(process.env.PIPELINE_CONCURREN
 }
 
 export function stopWorkers() { running = false; }
+
+/** R2: stop claiming new jobs and wait for in-flight ones to finish (bounded by
+ *  timeoutMs). A drained worker leaves no job stuck in 'running' — a rolling
+ *  restart loses zero work. Returns true if it drained, false if it timed out. */
+export async function drainWorkers(timeoutMs = Number(process.env.JOB_DRAIN_TIMEOUT_MS || 20000)) {
+  running = false;
+  const deadline = Date.now() + timeoutMs;
+  while (inFlight > 0 && Date.now() < deadline) await new Promise((r) => setTimeout(r, 50));
+  if (inFlight === 0) console.log('[pipeline] drained: no in-flight jobs');
+  else console.warn(`[pipeline] drain timed out with ${inFlight} job(s) in flight (the reaper will reclaim them)`);
+  return inFlight === 0;
+}

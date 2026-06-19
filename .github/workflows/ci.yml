@@ -124,6 +124,10 @@ jobs:
       - run: npm run smoke:observability
         timeout-minutes: 4
 
+      # ── R2: health/readiness probes + graceful job-draining shutdown (SIGTERM).
+      - run: npm run smoke:shutdown
+        timeout-minutes: 4
+
       # ── S4: cross-tenant IDOR — id-addressed resources are tenant-scoped (404).
       - run: npm run smoke:authz
         timeout-minutes: 3

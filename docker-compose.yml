@@ -121,6 +121,7 @@ services:
         npm run smoke:labels &&
         npm run smoke:auth &&
         npm run smoke:observability &&
+        npm run smoke:shutdown &&
         npm run smoke:authz &&
         npm run smoke:ssrf &&
         npm run smoke:ingest &&

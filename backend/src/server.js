@@ -22,15 +22,16 @@ import clientsRoutes from './routes/clients.js';
 import usersRoutes from './routes/users.js';
 import authRoutes from './routes/auth.js';
 import leadsRoutes from './routes/leads.js';
-import { migrate, q } from './db/index.js';
+import { migrate, q, pool } from './db/index.js';
 import { csrfGuard } from './lib/auth.js';
-import { startWorkers } from './pipeline/index.js';
-import { startPublisher } from './publish/scheduler.js';
-import { startMetricsPoller } from './metrics/index.js';
-import { startQualityMonitor } from './metrics/monitor.js';
+import { startWorkers, drainWorkers } from './pipeline/index.js';
+import { startPublisher, drainPublisher } from './publish/scheduler.js';
+import { startMetricsPoller, stopMetricsPoller } from './metrics/index.js';
+import { startQualityMonitor, stopQualityMonitor } from './metrics/monitor.js';
 import { assertProdConfig, corsOptions } from './lib/config.js';
 import { log, reportError } from './lib/log.js';
 import { httpMetrics, renderProm, registerGauge } from './lib/telemetry.js';
+import { isDraining, onShutdown, gracefulShutdown, readiness } from './lib/lifecycle.js';
 
 // M7: refuse to boot insecurely in production (dev/test are untouched).
 assertProdConfig();
@@ -91,6 +92,17 @@ app.get('/api/health', async (_req, res) => {
   catch { res.status(503).json({ ok: false, service: 'clipper-ops', db: 'down' }); }
 });
 
+// R2: k8s-style probes. Liveness (/healthz) stays 200 while the process can
+// respond — including during a graceful drain — so the orchestrator doesn't
+// SIGKILL us mid-shutdown. Readiness (/readyz) flips to 503 the moment we start
+// draining (the load balancer stops routing here) and also reflects live DB
+// connectivity, so traffic only arrives when we can actually serve it.
+app.get('/healthz', (_req, res) => res.json({ status: 'ok', draining: isDraining() }));
+app.get('/readyz', async (_req, res) => {
+  const r = await readiness(() => q('SELECT 1'));
+  res.status(r.ready ? 200 : 503).json(r);
+});
+
 // ── Operating system stages ────────────────────────────────────────────────
 app.use('/api/intake', intakeRoutes);       // 1. ingest long-form content
 app.use('/api/jobs', jobsRoutes);           // 2–6. pipeline orchestration
@@ -118,5 +130,21 @@ const port = process.env.PORT || 8080;
 await migrate();
 // B3: pipeline workers run in-process by default; set WORKERS_ENABLED=false
 // to run them separately via `npm run worker` (SKIP LOCKED makes both safe).
-if (process.env.WORKERS_ENABLED !== 'false') { startWorkers(); startPublisher(); startMetricsPoller(); startQualityMonitor(); }
-app.listen(port, () => log.info('clipper-ops listening', { port: Number(port), env: process.env.NODE_ENV || 'development' }));
+if (process.env.WORKERS_ENABLED !== 'false') {
+  startWorkers(); startPublisher(); startMetricsPoller(); startQualityMonitor();
+  // R2: on shutdown, the job queues drain in-flight work (zero loss); the
+  // metrics poller + calibration monitor just stop (their work self-heals).
+  onShutdown(() => drainWorkers());
+  onShutdown(() => drainPublisher());
+  onShutdown(() => { stopMetricsPoller(); stopQualityMonitor(); });
+}
+const server = app.listen(port, () => log.info('clipper-ops listening', { port: Number(port), env: process.env.NODE_ENV || 'development' }));
+
+// R2: a deploy/rolling-restart sends SIGTERM. Flip readiness, stop new traffic,
+// drain in-flight jobs, then close the DB pool and exit cleanly.
+for (const sig of ['SIGTERM', 'SIGINT']) {
+  process.on(sig, async () => {
+    log.info('signal received, shutting down', { signal: sig });
+    try { await gracefulShutdown({ server }); } finally { await pool.end().catch(() => {}); process.exit(0); }
+  });
+}

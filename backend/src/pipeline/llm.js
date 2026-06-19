@@ -20,6 +20,7 @@
 
 import { createHash } from 'node:crypto';
 import { getPrompt, promptMeta } from '../../prompts/registry.js';
+import { resilientFetch } from '../lib/resilience.js';
 
 const SIGNAL_KEYS = ['retention', 'emotion', 'controversy', 'education', 'story', 'hookStrength'];
 const CHARS_PER_SPAN = Number(process.env.LLM_CHARS_PER_SPAN || 1200);
@@ -235,7 +236,9 @@ async function anthropicNominate(sentences, limit) {
 async function anthropicJSON(prompt, maxTokens, model) {
   const apiKey = process.env.LLM_API_KEY;
   if (!apiKey) throw new Error('LLM_PROVIDER=anthropic but LLM_API_KEY is unset');
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  // R3: timeout + bounded retry + circuit breaker on the LLM call. A tripped
+  // breaker fails fast; semanticSignals catches and degrades to neutral.
+  const res = await resilientFetch('llm', 'https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
     body: JSON.stringify({
@@ -244,7 +247,7 @@ async function anthropicJSON(prompt, maxTokens, model) {
       temperature: 0, // Q2: deterministic — same prompt version + inputs → same output
       messages: [{ role: 'user', content: prompt }],
     }),
-  });
+  }, { timeoutMs: Number(process.env.LLM_TIMEOUT_MS || 30000) });
   if (!res.ok) throw new Error(`anthropic ${res.status}: ${(await res.text()).slice(0, 300)}`);
   const body = await res.json();
   const text = (body.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').trim();

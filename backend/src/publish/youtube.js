@@ -6,6 +6,9 @@
  *  the #Shorts tag in the title nudges classification. */
 import { readFileSync } from 'node:fs';
 import { localPathFor } from '../storage/index.js';
+import { resilientFetch } from '../lib/resilience.js';
+
+const PUBLISH_TIMEOUT_MS = Number(process.env.PUBLISH_TIMEOUT_MS || 120000);
 
 /** OAuth refresh → short-lived access token. Shared with the B6 metrics
  *  poller, which reads stats for the same channel with the same grant. */
@@ -13,14 +16,14 @@ export async function refreshAccessToken({ clientId, clientSecret, refreshToken 
   if (!clientId || !clientSecret || !refreshToken) {
     throw new Error('youtube connection is missing clientId/clientSecret/refreshToken');
   }
-  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+  const tokenRes = await resilientFetch('publish', 'https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       client_id: clientId, client_secret: clientSecret,
       refresh_token: refreshToken, grant_type: 'refresh_token',
     }),
-  });
+  }, { timeoutMs: PUBLISH_TIMEOUT_MS });
   if (!tokenRes.ok) throw new Error(`youtube token refresh failed (${tokenRes.status}): ${(await tokenRes.text()).slice(0, 200)}`);
   return (await tokenRes.json()).access_token;
 }
@@ -43,7 +46,7 @@ export async function publish({ clip, connection }) {
     snippet: { title: `${(clip.hook || 'New clip').slice(0, 90)} #Shorts`, categoryId: '22' },
     status: { privacyStatus: 'public', selfDeclaredMadeForKids: false },
   });
-  const initRes = await fetch(
+  const initRes = await resilientFetch('publish',
     'https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status', {
       method: 'POST',
       headers: {
@@ -53,16 +56,18 @@ export async function publish({ clip, connection }) {
         'X-Upload-Content-Length': String(media.length),
       },
       body: meta,
-    });
+    }, { timeoutMs: PUBLISH_TIMEOUT_MS });
   if (!initRes.ok) throw new Error(`youtube resumable init failed (${initRes.status}): ${(await initRes.text()).slice(0, 300)}`);
   const sessionUrl = initRes.headers.get('location');
   if (!sessionUrl) throw new Error('youtube resumable init returned no upload session URL');
 
-  const upRes = await fetch(sessionUrl, {
+  // retries:0 — re-PUTting a resumable session needs offset negotiation we don't
+  // do here; the publish queue's job-level retry owns recovery for the upload.
+  const upRes = await resilientFetch('publish', sessionUrl, {
     method: 'PUT',
     headers: { authorization: `Bearer ${access_token}`, 'content-type': 'video/mp4', 'content-length': String(media.length) },
     body: media,
-  });
+  }, { retries: 0, timeoutMs: PUBLISH_TIMEOUT_MS });
   if (!upRes.ok) throw new Error(`youtube upload failed (${upRes.status}): ${(await upRes.text()).slice(0, 300)}`);
   const { id } = await upRes.json();
   return { externalId: id, url: `https://www.youtube.com/shorts/${id}` };

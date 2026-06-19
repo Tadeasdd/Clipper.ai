@@ -15,6 +15,7 @@ import { localPathFor } from '../storage/index.js';
 import { extractAudioWav } from './media.js';
 import { hashFile, findCachedTranscript } from './cache.js';
 import { transcribeCost } from './cost.js';
+import { resilientFetch } from '../lib/resilience.js';
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync, readFileSync, createReadStream } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -120,12 +121,14 @@ function runBin(cmd, args) {
 async function deepgram(filePath) {
   const keyEnv = process.env.TRANSCRIPTION_API_KEY;
   if (!keyEnv) throw new Error('TRANSCRIPTION_PROVIDER=deepgram but TRANSCRIPTION_API_KEY is unset');
-  const res = await fetch('https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&utterances=true', {
+  // R3: timeout + circuit breaker. retries:0 — the body is a one-shot stream
+  // that can't be replayed, so the queue's job-level retry owns recovery here.
+  const res = await resilientFetch('asr', 'https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&utterances=true', {
     method: 'POST',
     headers: { Authorization: `Token ${keyEnv}`, 'Content-Type': 'application/octet-stream' },
     body: createReadStream(filePath),
     duplex: 'half',
-  });
+  }, { retries: 0, timeoutMs: Number(process.env.ASR_TIMEOUT_MS || 120000) });
   if (!res.ok) throw new Error(`deepgram ${res.status}: ${(await res.text()).slice(0, 300)}`);
   const data = await res.json();
   const alt = data.results?.channels?.[0]?.alternatives?.[0];

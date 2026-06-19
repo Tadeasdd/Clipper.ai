@@ -4,13 +4,15 @@
  *  The Data API has no per-video watch-time/retention (that's the Analytics
  *  API, a separate grant) — those fields stay null rather than guessed. */
 import { refreshAccessToken } from '../publish/youtube.js';
+import { resilientFetch } from '../lib/resilience.js';
 
 export async function capture({ job, connection }) {
   if (!job.external_id) throw new Error('publish job has no external_id to poll');
   const access_token = await refreshAccessToken(connection.credentials);
-  const res = await fetch(
+  const res = await resilientFetch('metrics',
     `https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${encodeURIComponent(job.external_id)}`,
-    { headers: { authorization: `Bearer ${access_token}` } });
+    { headers: { authorization: `Bearer ${access_token}` } },
+    { timeoutMs: Number(process.env.METRICS_TIMEOUT_MS || 15000) });
   if (!res.ok) throw new Error(`youtube stats failed (${res.status}): ${(await res.text()).slice(0, 200)}`);
   const { items } = await res.json();
   if (!items?.length) throw new Error(`video ${job.external_id} not found (deleted or private?)`);

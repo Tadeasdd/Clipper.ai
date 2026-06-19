@@ -79,6 +79,62 @@ function IncomingQueue() {
   );
 }
 
+const fmtHours = (h) => (h == null ? '—' : h < 1 ? `${Math.round(h * 60)}m` : `${h.toFixed(1)}h`);
+
+/* O1 — SLA & turnaround: submit→deliver per client vs the plan target, with
+   late + overdue breaches flagged. Reads /api/analytics/turnaround (which also
+   carries R4's org-level SLO turnaround objective). Same Panel idiom as the
+   incoming queue; no new colors — breaches reuse T.red, healthy T.dim. */
+function SlaPanel() {
+  const { data, error, loading, refresh } = usePoll(ops.opsTurnaround, { ms: 8000 });
+  const clients = data?.clients || [];
+  const t = data?.totals;
+  const slo = data?.slo;
+  return (
+    <Panel style={{ marginBottom: 18 }} className="ops-rise" >
+      <PanelHead
+        title="SLA & turnaround — submit → delivered"
+        right={
+          <div style={{ display: 'flex', gap: 14, alignItems: 'baseline' }}>
+            {slo && <Mono style={{ fontSize: 10.5, color: slo.breached ? T.red : T.dim }}>
+              org p95 {fmtHours(slo.sli == null ? null : slo.sli / 3600)} / {fmtHours(slo.target / 3600)}
+            </Mono>}
+            <Label>{t ? `${t.breachingClients} breaching · ${t.overdue} overdue` : '…'}</Label>
+          </div>
+        }
+      />
+      {error && !data && <ErrorBand error={error} retry={refresh} />}
+      {loading && !data && !error && <Empty>loading…</Empty>}
+      {data && !clients.length && <Empty>no deliveries yet — turnaround appears once recordings are published</Empty>}
+      {clients.length > 0 && (
+        <div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(160px,1.4fr) 90px 90px 110px 120px 110px', gap: 12, padding: '8px 16px', borderTop: `1px solid ${T.lineSoft}` }}>
+            {['Client', 'SLA', 'Delivered', 'Median', 'p95', 'Breaches'].map((h, i) => (
+              <Label key={h} style={{ textAlign: i >= 2 ? 'right' : 'left' }}>{h}</Label>
+            ))}
+          </div>
+          {clients.map((c) => (
+            <div key={c.clientId} className="ops-row" style={{ display: 'grid', gridTemplateColumns: 'minmax(160px,1.4fr) 90px 90px 110px 120px 110px', gap: 12, alignItems: 'center', padding: '10px 16px', borderTop: `1px solid ${T.lineSoft}` }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.client}</div>
+                <Mono style={{ fontSize: 10.5, color: T.dim }}>{c.plan || 'no plan'}</Mono>
+              </div>
+              <Mono style={{ fontSize: 11.5, color: T.dim, textAlign: 'right' }}>{c.slaHours}h</Mono>
+              <Mono style={{ fontSize: 11.5, color: T.dim, textAlign: 'right' }}>{c.delivered}</Mono>
+              <Mono style={{ fontSize: 11.5, color: T.dim, textAlign: 'right' }}>{fmtHours(c.medianHours)}</Mono>
+              <Mono style={{ fontSize: 11.5, color: c.p95Hours != null && c.p95Hours > c.slaHours ? T.red : T.dim, textAlign: 'right' }}>{fmtHours(c.p95Hours)}</Mono>
+              <Mono style={{ fontSize: 11.5, color: c.breached ? T.red : T.dim, textAlign: 'right' }}
+                title={c.overdue ? `${c.overdue} overdue (oldest ${fmtHours(c.oldestOverdueHours)}), ${c.late} delivered late` : `${c.late} delivered late`}>
+                {c.breached ? `${c.breaches}${c.overdue ? ` · ${c.overdue} overdue` : ''}` : 'on time'}
+              </Mono>
+            </div>
+          ))}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 export default function Board() {
   const { data, error, loading, refresh } = usePoll(ops.jobs, { ms: 3000 });
   const jobs = data?.jobs || [];
@@ -97,6 +153,7 @@ export default function Board() {
         }
       />
       <IncomingQueue />
+      <SlaPanel />
       <Panel className="ops-rise" style={{ animationDelay: '0.06s' }}>
         <PanelHead title="Pipeline — every recording, right now" right={<Label>ingest → transcribe → analyze → score → generate</Label>} />
         {error && !data && <ErrorBand error={error} retry={refresh} />}

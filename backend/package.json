@@ -32,6 +32,7 @@
     "smoke:metering": "node scripts/smoke-metering.mjs",
     "smoke:margin": "node scripts/smoke-margin.mjs",
     "smoke:billing": "node scripts/smoke-billing.mjs",
+    "smoke:sla": "node scripts/smoke-sla.mjs",
     "smoke:prod": "node scripts/smoke-prod.mjs",
     "seed:demo": "node scripts/seed-demo.mjs",
     "eval": "node scripts/eval.mjs",

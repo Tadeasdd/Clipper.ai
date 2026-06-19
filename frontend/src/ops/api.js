@@ -52,6 +52,7 @@ export const ops = {
   publishQueue: () => json('GET', '/api/publish/queue'),
   opsAnalytics: () => json('GET', '/api/analytics/ops'),
   opsMargin: () => json('GET', '/api/analytics/margin'),
+  opsTurnaround: () => json('GET', '/api/analytics/turnaround'),
 };
 
 /** Poll an endpoint on an interval. Pauses when the tab is hidden; exposes

@@ -145,6 +145,11 @@ jobs:
       - run: npm run smoke:billing
         timeout-minutes: 3
 
+      # ── O1: per-client submit→deliver turnaround vs plan SLA, late + overdue
+      #        breaches surfaced, R4 SLO turnaround folded in.
+      - run: npm run smoke:sla
+        timeout-minutes: 3
+
       # ── R3: timeouts + circuit breakers + bulkheads on external calls.
       - run: npm run smoke:resilience
         timeout-minutes: 2

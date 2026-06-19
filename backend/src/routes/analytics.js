@@ -9,6 +9,7 @@ import { computeCorrelation, retrain, loadWeights, computeEditorAgreement } from
 import { snapshotCalibration, calibrationHistory, windowedCalibration } from '../metrics/monitor.js';
 import { recentTraces, traceFor } from '../lib/telemetry.js';
 import { evaluateSlos } from '../ops/slo.js';
+import { turnaroundByClient } from '../ops/sla.js';
 import { recordingCost, costRollup } from '../ops/cost-ledger.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
 import { validate } from '../lib/validate.js';
@@ -220,6 +221,21 @@ r.get('/margin', requireAuth(...INTERNAL), async (_req, res, next) => {
       };
     }).sort((a, b) => b.margin - a.margin);
     res.json({ clients, rate: { editorHourlyUsd: hourly, editorMinPerReview: minPer } });
+  } catch (e) { next(e); }
+});
+
+// GET /api/analytics/turnaround — O1 SLA tracking: per-client submit→deliver
+// turnaround vs the plan SLA target, with late + overdue breaches flagged for
+// the ops board. Carries R4's org-level SLO turnaround objective alongside, so
+// the per-client SLA and the organisation SLO read off one surface (read-only,
+// alert:false — the R4 monitor is what pages, not a dashboard read).
+r.get('/turnaround', requireAuth(...INTERNAL), async (req, res, next) => {
+  try {
+    const days = Math.min(365, Math.max(1, Number(req.query.days || 30)));
+    const report = await turnaroundByClient(days);
+    const slo = await evaluateSlos({ alert: false });
+    report.slo = (slo.objectives || []).find((o) => o.objective === 'turnaround_p95_seconds') || null;
+    res.json(report);
   } catch (e) { next(e); }
 });
 

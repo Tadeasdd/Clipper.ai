@@ -17,23 +17,23 @@ function FeedbackWidget({ jobId }) {
       {open && (
         <div className="mb-3 w-72 rounded-xl border border-stone-800 bg-stone-950/95 backdrop-blur p-4 shadow-[0_20px_60px_rgba(0,0,0,0.6)] animate-slide-up">
           {sent ? (
-            <div className="flex items-center justify-center gap-2 text-sm text-[#53fc18] py-4">
+            <div className="flex items-center justify-center gap-2 text-sm text-[var(--color-brand)] py-4">
               <CheckCircle2 className="w-4 h-4" /> Thanks for the feedback
             </div>
           ) : (
             <>
               <div className="text-[10px] mono text-stone-500 tracking-wider uppercase mb-3">Rate these clips</div>
               <div className="flex gap-2 mb-3">
-                <button onClick={() => setRating('up')} className={`flex-1 py-2 rounded-lg border text-sm transition ${rating === 'up' ? 'border-[#53fc18] bg-[#53fc18]/10 text-[#53fc18]' : 'border-stone-800 text-stone-400 hover:border-stone-700'}`}>Good</button>
+                <button onClick={() => setRating('up')} className={`flex-1 py-2 rounded-lg border text-sm transition ${rating === 'up' ? 'border-[var(--color-brand)] bg-[var(--color-brand)]/10 text-[var(--color-brand)]' : 'border-stone-800 text-stone-400 hover:border-stone-700'}`}>Good</button>
                 <button onClick={() => setRating('down')} className={`flex-1 py-2 rounded-lg border text-sm transition ${rating === 'down' ? 'border-amber-400 bg-amber-400/10 text-amber-400' : 'border-stone-800 text-stone-400 hover:border-stone-700'}`}>Off</button>
               </div>
               <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional note\u2026" rows={2} className="w-full rounded-lg bg-stone-900/60 border border-stone-800 px-3 py-2 text-sm text-stone-200 placeholder:text-stone-600 focus:border-stone-600 resize-none mb-3" />
-              <button onClick={submit} disabled={!rating} className="w-full py-2 rounded-lg bg-[#53fc18] text-black text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed transition">Send</button>
+              <button onClick={submit} disabled={!rating} className="w-full py-2 rounded-lg bg-[var(--color-brand)] text-black text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed transition">Send</button>
             </>
           )}
         </div>
       )}
-      <button onClick={() => setOpen((o) => !o)} aria-label="Send feedback" className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-stone-800 bg-stone-950/90 backdrop-blur text-sm text-stone-300 hover:border-[#53fc18]/40 hover:text-[#53fc18] transition shadow-lg">
+      <button onClick={() => setOpen((o) => !o)} aria-label="Send feedback" className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-stone-800 bg-stone-950/90 backdrop-blur text-sm text-stone-300 hover:border-[var(--color-brand)]/40 hover:text-[var(--color-brand)] transition shadow-lg">
         <MessageCircle className="w-4 h-4" /> Feedback
       </button>
     </div>
@@ -82,21 +82,21 @@ function CountUp({ value, prefix = '', suffix = '', className = '' }) {
 function LogoMark({ size = 28 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="Clipper.ai">
-      <rect width="100" height="100" rx="22" fill="#53fc18" />
+      <rect width="100" height="100" rx="22" fill="var(--color-brand)" />
       {/* Top-left hole crosses to lower-right tip */}
       <line x1="32" y1="32" x2="85" y2="78" stroke="#000" strokeWidth="9" strokeLinecap="round" />
       {/* Bottom-left hole crosses to upper-right tip */}
       <line x1="32" y1="68" x2="85" y2="22" stroke="#000" strokeWidth="9" strokeLinecap="round" />
       {/* Finger holes layered on top */}
-      <circle cx="28" cy="32" r="11" fill="#53fc18" stroke="#000" strokeWidth="8" />
-      <circle cx="28" cy="68" r="11" fill="#53fc18" stroke="#000" strokeWidth="8" />
+      <circle cx="28" cy="32" r="11" fill="var(--color-brand)" stroke="#000" strokeWidth="8" />
+      <circle cx="28" cy="68" r="11" fill="var(--color-brand)" stroke="#000" strokeWidth="8" />
     </svg>
   );
 }
 
 /* ──────────────────────────────────────────────────────────── GLOW ORB
    Standalone radial green spotlight for backgrounds */
-function GlowOrb({ size = 600, color = '#53fc18', opacity = 0.12, className = '' }) {
+function GlowOrb({ size = 600, color = 'var(--color-brand)', opacity = 0.12, className = '' }) {
   return (
     <div
       className={`absolute pointer-events-none rounded-full ${className}`}
@@ -210,7 +210,7 @@ function CrosshairCursor() {
       >
         <path
           d="M2 2 L2 17 L6.5 13 L9.5 20 L12 19 L9 12 L15 12 Z"
-          fill="#53fc18"
+          fill="var(--color-brand)"
           stroke="#000"
           strokeWidth="0.8"
           strokeLinejoin="round"
@@ -232,7 +232,7 @@ class ErrorBoundary extends React.Component {
             <div style={{ fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#78716c', marginBottom: 12 }}>Something went wrong</div>
             <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', marginBottom: 12, lineHeight: 1.1 }}>This page hit an unexpected error.</h1>
             <p style={{ color: '#a8a29e', lineHeight: 1.6, marginBottom: 24 }}>Reloading usually clears it. If it keeps happening, let us know and we will take a look.</p>
-            <button onClick={() => { if (typeof window !== 'undefined') window.location.reload(); }} style={{ background: '#53fc18', color: '#000', border: 'none', padding: '10px 22px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>Reload</button>
+            <button onClick={() => { if (typeof window !== 'undefined') window.location.reload(); }} style={{ background: 'var(--color-brand)', color: '#000', border: 'none', padding: '10px 22px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>Reload</button>
           </div>
         </div>
       );

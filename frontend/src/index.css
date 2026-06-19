@@ -1,5 +1,17 @@
 @import "tailwindcss";
 @import "./styles/global.css";
 
+/* U1 — single source of truth for the brand color system. These are the EXACT
+   values that were hardcoded ~386× across the app; every text-[var(--color-brand)],
+   SVG fill, and inline style now resolves through here. Tailwind v4 @theme also
+   exposes *-brand utilities (text-brand, bg-brand, …). Change a value here and it
+   changes everywhere — that was the whole point. */
+@theme {
+  --color-brand: #53fc18;
+  --color-brand-bright: #a6ff63;
+  --color-brand-deep: #2fcf0c;
+  --color-ink: #000;
+}
+
 html, body, #root { min-height: 100%; }
 body { background: #000; }

@@ -11,8 +11,8 @@ import { ClipFrame } from '../studio/views.jsx';
 function StudioMockup() {
   return (
     <div className="relative w-full max-w-2xl mx-auto">
-      <div className="absolute -inset-8 bg-[#53fc18]/[0.12] blur-3xl rounded-full pointer-events-none" />
-      <div className="relative rounded-2xl border border-[#53fc18]/[0.12] bg-black/80 backdrop-blur overflow-hidden">
+      <div className="absolute -inset-8 bg-[var(--color-brand)]/[0.12] blur-3xl rounded-full pointer-events-none" />
+      <div className="relative rounded-2xl border border-[var(--color-brand)]/[0.12] bg-black/80 backdrop-blur overflow-hidden">
         {/* Window chrome */}
         <div className="border-b border-white/[0.06] px-4 py-2.5 flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-stone-700" />
@@ -24,7 +24,7 @@ function StudioMockup() {
         </div>
 
         {/* App content */}
-        <div className="grid grid-cols-[180px_1fr] divide-x divide-[#53fc18]/[0.08]">
+        <div className="grid grid-cols-[180px_1fr] divide-x divide-[var(--color-brand)]/[0.08]">
           {/* Sidebar */}
           <div className="p-4 space-y-3">
             <div className="text-[9px] mono text-stone-500 tracking-wider uppercase mb-2">Library</div>
@@ -34,7 +34,7 @@ function StudioMockup() {
               { l: 'Drafts', n: 8 },
               { l: 'Published', n: 21 },
             ].map((item) => (
-              <div key={item.l} className={`flex items-center justify-between px-2 py-1.5 rounded text-xs ${item.active ? 'bg-[#53fc18]/10 text-[#53fc18]' : 'text-stone-400'}`}>
+              <div key={item.l} className={`flex items-center justify-between px-2 py-1.5 rounded text-xs ${item.active ? 'bg-[var(--color-brand)]/10 text-[var(--color-brand)]' : 'text-stone-400'}`}>
                 <span>{item.l}</span>
                 <span className="mono text-[10px] text-stone-500">{item.n}</span>
               </div>
@@ -42,7 +42,7 @@ function StudioMockup() {
             <div className="border-t border-white/[0.12] pt-3 mt-4">
               <div className="text-[9px] mono text-stone-500 tracking-wider uppercase mb-2">Library</div>
               <div className="flex items-center gap-2 px-2 py-1.5 rounded text-xs text-stone-400">
-                <span className="w-1 h-1 rounded-full bg-[#53fc18] animate-pulse-soft" />
+                <span className="w-1 h-1 rounded-full bg-[var(--color-brand)] animate-pulse-soft" />
                 <span>23 clips</span>
               </div>
             </div>
@@ -55,7 +55,7 @@ function StudioMockup() {
                 <div className="serif text-xl">Q4 launch keynote.mp4</div>
                 <div className="text-[10px] mono text-stone-500 mt-0.5">12 clips · ranked by virality</div>
               </div>
-              <div className="px-2.5 py-1 rounded bg-[#53fc18]/10 text-[10px] mono text-[#53fc18] tracking-wider uppercase">Ready</div>
+              <div className="px-2.5 py-1 rounded bg-[var(--color-brand)]/10 text-[10px] mono text-[var(--color-brand)] tracking-wider uppercase">Ready</div>
             </div>
 
             <div className="space-y-1.5">
@@ -65,16 +65,16 @@ function StudioMockup() {
                 { r: '03', t: 'Three frameworks in 60 seconds', score: 82, time: '31:45', dur: '0:58' },
                 { r: '04', t: 'The mistake nobody talks about', score: 78, time: '08:15', dur: '0:42' },
               ].map((clip, i) => (
-                <div key={i} className="flex items-center gap-3 p-2 rounded hover:bg-[#53fc18]/[0.015]">
+                <div key={i} className="flex items-center gap-3 p-2 rounded hover:bg-[var(--color-brand)]/[0.015]">
                   <div className="mono text-[10px] text-stone-600 w-5">{clip.r}</div>
-                  <div className="w-10 h-7 rounded bg-gradient-to-br from-[#53fc18]/40 to-[#3fd80f]/30 flex items-center justify-center">
+                  <div className="w-10 h-7 rounded bg-gradient-to-br from-[var(--color-brand)]/40 to-[#3fd80f]/30 flex items-center justify-center">
                     <Play className="w-2.5 h-2.5 text-black fill-black" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-xs truncate">{clip.t}</div>
                     <div className="text-[10px] mono text-stone-500 mt-0.5">{clip.time} · {clip.dur}</div>
                   </div>
-                  <div className="serif text-xl text-[#53fc18]">{clip.score}</div>
+                  <div className="serif text-xl text-[var(--color-brand)]">{clip.score}</div>
                 </div>
               ))}
             </div>
@@ -118,7 +118,7 @@ function GlobalMap() {
   ];
 
   return (
-    <div className="relative w-full aspect-[2/1] rounded-2xl border border-[#53fc18]/[0.12] bg-gradient-to-b from-white/[0.02] to-transparent overflow-hidden">
+    <div className="relative w-full aspect-[2/1] rounded-2xl border border-[var(--color-brand)]/[0.12] bg-gradient-to-b from-white/[0.02] to-transparent overflow-hidden">
       <svg viewBox="0 0 800 400" className="absolute inset-0 w-full h-full">
         {/* Dot mask of the world */}
         {dots.map((d, i) => (
@@ -129,16 +129,16 @@ function GlobalMap() {
         {nodes.map((n, i) => (
           <g key={n.label}>
             {n.live && (
-              <circle cx={n.x} cy={n.y} r="14" fill="none" stroke="#53fc18" strokeWidth="1" opacity="0.3">
+              <circle cx={n.x} cy={n.y} r="14" fill="none" stroke="var(--color-brand)" strokeWidth="1" opacity="0.3">
                 <animate attributeName="r" values="6;20;6" dur="3s" begin={`${i * 0.4}s`} repeatCount="indefinite" />
                 <animate attributeName="opacity" values="0.6;0;0.6" dur="3s" begin={`${i * 0.4}s`} repeatCount="indefinite" />
               </circle>
             )}
-            <circle cx={n.x} cy={n.y} r="3.5" fill={n.live ? '#53fc18' : '#78716c'} />
+            <circle cx={n.x} cy={n.y} r="3.5" fill={n.live ? 'var(--color-brand)' : '#78716c'} />
             <text
               x={n.x}
               y={n.y - 12}
-              fill={n.live ? '#53fc18' : '#78716c'}
+              fill={n.live ? 'var(--color-brand)' : '#78716c'}
               fontSize="9"
               fontFamily="JetBrains Mono"
               textAnchor="middle"
@@ -167,7 +167,7 @@ function GlobalMap() {
       {/* Overlay legend */}
       <div className="absolute top-5 left-5 flex flex-col gap-2 text-[10px] mono text-stone-400 tracking-wider uppercase">
         <div className="flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" />
           <span>Primary region · SFO</span>
         </div>
         <div className="flex items-center gap-2">
@@ -195,11 +195,11 @@ const SLICE_DURATION_MS = 6500;
 
 const SLICE_CLIPS = [
   { pos: 11, score: 94, hue: '#aaff66', enterPct: 9,  label: 'HOOK' },
-  { pos: 24, score: 88, hue: '#53fc18', enterPct: 16, label: 'TURN' },
-  { pos: 40, score: 71, hue: '#53fc18', enterPct: 25, label: 'QUOTE' },
+  { pos: 24, score: 88, hue: 'var(--color-brand)', enterPct: 16, label: 'TURN' },
+  { pos: 40, score: 71, hue: 'var(--color-brand)', enterPct: 25, label: 'QUOTE' },
   { pos: 56, score: 81, hue: '#aaff66', enterPct: 34, label: 'LIST' },
-  { pos: 71, score: 76, hue: '#53fc18', enterPct: 42, label: 'PUNCH' },
-  { pos: 87, score: 65, hue: '#53fc18', enterPct: 51, label: 'CTA' },
+  { pos: 71, score: 76, hue: 'var(--color-brand)', enterPct: 42, label: 'PUNCH' },
+  { pos: 87, score: 65, hue: 'var(--color-brand)', enterPct: 51, label: 'CTA' },
 ];
 
 // Inject the slice animation keyframes once at module load.
@@ -275,9 +275,9 @@ if (typeof document !== 'undefined' && !document.getElementById('slice-anim-styl
 
 function SliceClipCard({ clip, i }) {
   return (
-    <div className="relative w-full h-full rounded-md border border-[#53fc18]/[0.25] overflow-hidden" style={{
+    <div className="relative w-full h-full rounded-md border border-[var(--color-brand)]/[0.25] overflow-hidden" style={{
       background: 'linear-gradient(180deg, rgba(83,252,24,0.10), rgba(83,252,24,0.03))',
-      boxShadow: `0 4px 20px ${clip.hue}25, 0 0 0 1px ${clip.hue}15 inset`,
+      boxShadow: `0 4px 20px color-mix(in srgb, ${clip.hue} 14.510%, transparent), 0 0 0 1px color-mix(in srgb, ${clip.hue} 8.235%, transparent) inset`,
     }}>
       {/* Top accent */}
       <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background: clip.hue, boxShadow: `0 0 8px ${clip.hue}` }} />
@@ -289,8 +289,8 @@ function SliceClipCard({ clip, i }) {
         })}
       </div>
       {/* Score chip */}
-      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-sm bg-black/60 border border-[#53fc18]/30">
-        <span className="text-[9px] mono text-[#53fc18] tracking-wider">{clip.score}</span>
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-sm bg-black/60 border border-[var(--color-brand)]/30">
+        <span className="text-[9px] mono text-[var(--color-brand)] tracking-wider">{clip.score}</span>
       </div>
       {/* Label */}
       <div className="absolute bottom-7 left-1/2 -translate-x-1/2">
@@ -310,13 +310,13 @@ function ProductDemoReel({ openApp }) {
       <Reveal>
         <div className="relative flex items-end justify-between mb-12">
           <div>
-            <div className="text-[10px] mono text-[#53fc18] tracking-[0.3em] uppercase mb-3">[ HOW IT WORKS ]</div>
+            <div className="text-[10px] mono text-[var(--color-brand)] tracking-[0.3em] uppercase mb-3">[ HOW IT WORKS ]</div>
             <h2 className="text-5xl md:text-6xl serif tracking-tight text-stone-100">
               One video in.<br /><span className="gradient-green italic">Six viral clips out.</span>
             </h2>
           </div>
           <div className="hidden md:flex items-center gap-3 text-[10px] mono text-stone-500 tracking-[0.25em] uppercase">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#53fc18] slice-pulse" style={{ animation: 'sliceSourcePulse 2.4s ease-in-out infinite' }} />
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)] slice-pulse" style={{ animation: 'sliceSourcePulse 2.4s ease-in-out infinite' }} />
             <span>LIVE PIPELINE</span>
           </div>
         </div>
@@ -324,12 +324,12 @@ function ProductDemoReel({ openApp }) {
 
       {/* The slice stage */}
       <Reveal delay={120}>
-        <div className="relative rounded-2xl border border-[#53fc18]/[0.12] bg-gradient-to-b from-stone-950/80 to-black/90 backdrop-blur-sm overflow-hidden">
+        <div className="relative rounded-2xl border border-[var(--color-brand)]/[0.12] bg-gradient-to-b from-stone-950/80 to-black/90 backdrop-blur-sm overflow-hidden">
           {/* Corner brackets */}
-          <div className="absolute top-3 left-3 w-3 h-3 border-l border-t border-[#53fc18]/40 pointer-events-none" />
-          <div className="absolute top-3 right-3 w-3 h-3 border-r border-t border-[#53fc18]/40 pointer-events-none" />
-          <div className="absolute bottom-3 left-3 w-3 h-3 border-l border-b border-[#53fc18]/40 pointer-events-none" />
-          <div className="absolute bottom-3 right-3 w-3 h-3 border-r border-b border-[#53fc18]/40 pointer-events-none" />
+          <div className="absolute top-3 left-3 w-3 h-3 border-l border-t border-[var(--color-brand)]/40 pointer-events-none" />
+          <div className="absolute top-3 right-3 w-3 h-3 border-r border-t border-[var(--color-brand)]/40 pointer-events-none" />
+          <div className="absolute bottom-3 left-3 w-3 h-3 border-l border-b border-[var(--color-brand)]/40 pointer-events-none" />
+          <div className="absolute bottom-3 right-3 w-3 h-3 border-r border-b border-[var(--color-brand)]/40 pointer-events-none" />
 
           {/* Subtle grid background */}
           <div className="absolute inset-0 opacity-[0.08] pointer-events-none" style={{
@@ -348,22 +348,22 @@ function ProductDemoReel({ openApp }) {
                 <span className="text-stone-700">·</span>
                 <span className="text-stone-600">47:22</span>
               </div>
-              <div className="text-[10px] mono text-[#53fc18] tracking-[0.2em]">ANALYZING · 6 MOMENTS FOUND</div>
+              <div className="text-[10px] mono text-[var(--color-brand)] tracking-[0.2em]">ANALYZING · 6 MOMENTS FOUND</div>
             </div>
 
             {/* SOURCE VIDEO BAR */}
-            <div className="relative h-16 md:h-20 rounded-md overflow-hidden border border-[#53fc18]/[0.15]" style={{
+            <div className="relative h-16 md:h-20 rounded-md overflow-hidden border border-[var(--color-brand)]/[0.15]" style={{
               background: 'linear-gradient(90deg, rgba(83,252,24,0.06), rgba(83,252,24,0.12), rgba(83,252,24,0.06))',
             }}>
               {/* Frame ticks — 24 tiny vertical marks suggesting timeline frames */}
               <div className="absolute inset-0 flex">
                 {Array.from({ length: 24 }).map((_, i) => (
-                  <div key={i} className="flex-1 border-r border-[#53fc18]/[0.08] last:border-r-0" />
+                  <div key={i} className="flex-1 border-r border-[var(--color-brand)]/[0.08] last:border-r-0" />
                 ))}
               </div>
               {/* Faint waveform shimmer baked in as a static SVG (no animation) */}
               <svg className="absolute inset-0 w-full h-full opacity-30" viewBox="0 0 1000 80" preserveAspectRatio="none">
-                <path d="M0 40 L20 30 L40 50 L60 25 L80 55 L100 35 L120 45 L140 20 L160 60 L180 40 L200 30 L220 50 L240 25 L260 55 L280 35 L300 45 L320 30 L340 50 L360 25 L380 55 L400 40 L420 30 L440 50 L460 25 L480 55 L500 35 L520 45 L540 30 L560 50 L580 25 L600 55 L620 40 L640 30 L660 50 L680 25 L700 55 L720 35 L740 45 L760 30 L780 50 L800 25 L820 55 L840 40 L860 30 L880 50 L900 25 L920 55 L940 35 L960 45 L980 30 L1000 40" stroke="#53fc18" strokeWidth="1.5" fill="none" />
+                <path d="M0 40 L20 30 L40 50 L60 25 L80 55 L100 35 L120 45 L140 20 L160 60 L180 40 L200 30 L220 50 L240 25 L260 55 L280 35 L300 45 L320 30 L340 50 L360 25 L380 55 L400 40 L420 30 L440 50 L460 25 L480 55 L500 35 L520 45 L540 30 L560 50 L580 25 L600 55 L620 40 L640 30 L660 50 L680 25 L700 55 L720 35 L740 45 L760 30 L780 50 L800 25 L820 55 L840 40 L860 30 L880 50 L900 25 L920 55 L940 35 L960 45 L980 30 L1000 40" stroke="var(--color-brand)" strokeWidth="1.5" fill="none" />
               </svg>
 
               {/* Moment markers — vertical accent lines that flash in at clip positions as the scan crosses.
@@ -376,7 +376,7 @@ function ProductDemoReel({ openApp }) {
                     left: `${clip.pos}%`,
                     width: '2px',
                     background: clip.hue,
-                    boxShadow: `0 0 8px ${clip.hue}, 0 0 16px ${clip.hue}55`,
+                    boxShadow: `0 0 8px ${clip.hue}, 0 0 16px color-mix(in srgb, ${clip.hue} 33.333%, transparent)`,
                     transformOrigin: 'center bottom',
                     animation: `sliceMark${i} ${SLICE_DURATION_MS}ms ease-out infinite`,
                     willChange: 'transform, opacity',
@@ -401,9 +401,9 @@ function ProductDemoReel({ openApp }) {
             {/* Caption between source and clips */}
             <div className="flex items-center justify-center my-7">
               <div className="flex items-center gap-3 text-[10px] mono text-stone-500 tracking-[0.25em] uppercase">
-                <div className="w-12 h-px bg-gradient-to-r from-transparent to-[#53fc18]/40" />
+                <div className="w-12 h-px bg-gradient-to-r from-transparent to-[var(--color-brand)]/40" />
                 <span>SLICED INTO</span>
-                <div className="w-12 h-px bg-gradient-to-l from-transparent to-[#53fc18]/40" />
+                <div className="w-12 h-px bg-gradient-to-l from-transparent to-[var(--color-brand)]/40" />
               </div>
             </div>
 
@@ -450,7 +450,7 @@ function ProductDemoReel({ openApp }) {
             </div>
 
             {/* Footer row — pipeline metrics */}
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between pt-8 mt-2 border-t border-[#53fc18]/[0.08]">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between pt-8 mt-2 border-t border-[var(--color-brand)]/[0.08]">
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[10px] mono text-stone-500 tracking-[0.2em] uppercase">
                 <span><span className="text-stone-600">PROCESS TIME</span> <span className="text-stone-200">2m 14s</span></span>
                 <span className="text-stone-700">·</span>
@@ -461,7 +461,7 @@ function ProductDemoReel({ openApp }) {
               {/* Hand off to the interactive run below rather than duplicating its CTA. */}
               <div className="flex items-center gap-2 text-[10px] mono text-stone-500 tracking-[0.25em] uppercase">
                 <span>RUN IT ON A SAMPLE BELOW</span>
-                <span aria-hidden="true" className="text-[#53fc18]">↓</span>
+                <span aria-hidden="true" className="text-[var(--color-brand)]">↓</span>
               </div>
             </div>
           </div>
@@ -553,7 +553,7 @@ function ClipPreviewPlayer() {
         <div className="grid md:grid-cols-[1.4fr_1fr] gap-12 items-center">
           {/* Left: copy */}
           <div>
-            <div className="text-[10px] mono text-[#53fc18] mb-4 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" /> 
+            <div className="text-[10px] mono text-[var(--color-brand)] mb-4 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" /> 
               The output
             </div>
             <h2 className="serif text-5xl md:text-6xl leading-[1.02] mb-5">
@@ -564,13 +564,13 @@ function ClipPreviewPlayer() {
             </p>
 
             {/* Platform tabs */}
-            <div className="inline-flex items-center gap-1 p-1 rounded-full border border-[#53fc18]/20 bg-black/40 mb-6">
+            <div className="inline-flex items-center gap-1 p-1 rounded-full border border-[var(--color-brand)]/20 bg-black/40 mb-6">
               {platforms.map((p) => (
                 <button
                   key={p.id}
                   onClick={() => setPlatform(p.id)}
                   className={`px-4 py-1.5 rounded-full text-[10px] mono tracking-wider uppercase ${platform === p.id ? 'text-black' : 'text-stone-400 hover:text-stone-200'}`}
-                  style={platform === p.id ? { backgroundColor: '#53fc18', boxShadow: '0 0 16px rgba(83,252,24,0.4)' } : {}}
+                  style={platform === p.id ? { backgroundColor: 'var(--color-brand)', boxShadow: '0 0 16px rgba(83,252,24,0.4)' } : {}}
                 >
                   {p.label}
                 </button>
@@ -585,15 +585,15 @@ function ClipPreviewPlayer() {
                   onClick={() => setActiveClipIdx(i)}
                   className={`w-full text-left p-3 rounded-md border transition-all ${
                     i === activeClipIdx
-                      ? 'border-[#53fc18]/40 bg-[#53fc18]/[0.05]'
-                      : 'border-[#53fc18]/[0.08] bg-[#53fc18]/[0.01] hover:border-[#53fc18]/20'
+                      ? 'border-[var(--color-brand)]/40 bg-[var(--color-brand)]/[0.05]'
+                      : 'border-[var(--color-brand)]/[0.08] bg-[var(--color-brand)]/[0.01] hover:border-[var(--color-brand)]/20'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
                       <div
                         className="serif text-base"
-                        style={i === activeClipIdx ? { color: '#53fc18', textShadow: '0 0 8px rgba(83,252,24,0.4)' } : { color: '#a8a29e' }}
+                        style={i === activeClipIdx ? { color: 'var(--color-brand)', textShadow: '0 0 8px rgba(83,252,24,0.4)' } : { color: '#a8a29e' }}
                       >
                         {c.score}
                       </div>
@@ -640,13 +640,13 @@ function ClipPreviewPlayer() {
                 {/* Platform UI overlay (top) */}
                 <div className="absolute top-10 inset-x-0 flex items-center justify-between px-4 z-10">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#53fc18] to-emerald-500" />
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--color-brand)] to-emerald-500" />
                     <div>
                       <div className="text-xs text-white font-medium">{clip.author}</div>
                       <div className="text-[9px] text-white/60">{clip.handle}</div>
                     </div>
                   </div>
-                  <button className="px-2.5 py-1 rounded-md bg-[#53fc18] text-black text-[10px] font-medium">Follow</button>
+                  <button className="px-2.5 py-1 rounded-md bg-[var(--color-brand)] text-black text-[10px] font-medium">Follow</button>
                 </div>
 
                 {/* Animated waveform "video" */}
@@ -662,8 +662,8 @@ function ClipPreviewPlayer() {
                         style={{
                           transform: `scaleY(${baseHeight / 100})`,
                           transformOrigin: 'bottom',
-                          background: isActive ? '#53fc18' : 'rgba(255,255,255,0.3)',
-                          boxShadow: isActive && distance < 4 ? '0 0 6px #53fc18' : 'none',
+                          background: isActive ? 'var(--color-brand)' : 'rgba(255,255,255,0.3)',
+                          boxShadow: isActive && distance < 4 ? '0 0 6px var(--color-brand)' : 'none',
                         }}
                       />
                     );
@@ -681,7 +681,7 @@ function ClipPreviewPlayer() {
                           key={i}
                           className="text-base font-bold transition-all"
                           style={{
-                            color: isActive ? '#53fc18' : isPast ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.4)',
+                            color: isActive ? 'var(--color-brand)' : isPast ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.4)',
                             textShadow: isActive
                               ? '0 0 12px rgba(83,252,24,0.8), 0 2px 4px rgba(0,0,0,0.8)'
                               : '0 2px 4px rgba(0,0,0,0.8)',
@@ -697,7 +697,7 @@ function ClipPreviewPlayer() {
 
                 {/* Right rail — engagement */}
                 <div className="absolute right-3 bottom-24 z-10 flex flex-col items-center gap-4">
-                  <button aria-label="Like" className="flex flex-col items-center text-white/80 hover:text-[#53fc18]">
+                  <button aria-label="Like" className="flex flex-col items-center text-white/80 hover:text-[var(--color-brand)]">
                     <Heart className="w-6 h-6" />
                   </button>
                   <button aria-label="Comment" className="flex flex-col items-center text-white/80">
@@ -716,8 +716,8 @@ function ClipPreviewPlayer() {
                       style={{
                         transform: `scaleX(${progress / 100})`,
                         transformOrigin: 'left',
-                        background: 'linear-gradient(90deg, #53fc18, #aaff66)',
-                        boxShadow: '0 0 6px #53fc18',
+                        background: 'linear-gradient(90deg, var(--color-brand), #aaff66)',
+                        boxShadow: '0 0 6px var(--color-brand)',
                       }}
                     />
                   </div>
@@ -728,7 +728,7 @@ function ClipPreviewPlayer() {
                 </div>
 
                 {/* Pulsing "clipper.ai" watermark badge */}
-                <div className="absolute top-20 right-3 z-10 px-1.5 py-0.5 rounded bg-black/40 backdrop-blur text-[8px] mono text-[#53fc18] tracking-wider">
+                <div className="absolute top-20 right-3 z-10 px-1.5 py-0.5 rounded bg-black/40 backdrop-blur text-[8px] mono text-[var(--color-brand)] tracking-wider">
                   CLIPPER.AI · {clip.score}
                 </div>
               </div>
@@ -757,8 +757,8 @@ function InteractiveDemo({ openApp }) {
     <section className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-8 py-16 md:py-24 border-t border-white/[0.12]">
       <Reveal>
         <div className="text-center mb-10">
-          <div className="text-[10px] mono text-[#53fc18] mb-4 tracking-[0.2em] uppercase flex items-center justify-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" style={{ boxShadow: '0 0 8px #53fc18' }} />
+          <div className="text-[10px] mono text-[var(--color-brand)] mb-4 tracking-[0.2em] uppercase flex items-center justify-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" style={{ boxShadow: '0 0 8px var(--color-brand)' }} />
             Watch it work
           </div>
           <h2 className="serif text-4xl md:text-5xl leading-[1.05] mb-3">
@@ -769,14 +769,14 @@ function InteractiveDemo({ openApp }) {
           </p>
         </div>
 
-        <div className="tilt-card max-w-4xl mx-auto rounded-2xl border border-[#53fc18]/20 bg-gradient-to-b from-[#53fc18]/[0.03] to-transparent overflow-hidden shadow-[0_0_60px_-20px_rgba(83,252,24,0.3)]">
+        <div className="tilt-card max-w-4xl mx-auto rounded-2xl border border-[var(--color-brand)]/20 bg-gradient-to-b from-[var(--color-brand)]/[0.03] to-transparent overflow-hidden shadow-[0_0_60px_-20px_rgba(83,252,24,0.3)]">
           {/* Console header */}
-          <div className="flex items-center justify-between px-5 py-3 border-b border-[#53fc18]/[0.10] bg-black/40">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--color-brand)]/[0.10] bg-black/40">
             <div className="flex items-center gap-2 text-[10px] mono text-stone-400 tracking-wider uppercase">
               <span className="flex gap-1">
                 <span className="w-2 h-2 rounded-full bg-stone-700" />
                 <span className="w-2 h-2 rounded-full bg-stone-700" />
-                <span className="w-2 h-2 rounded-full bg-[#53fc18]" style={{ boxShadow: '0 0 6px #53fc18' }} />
+                <span className="w-2 h-2 rounded-full bg-[var(--color-brand)]" style={{ boxShadow: '0 0 6px var(--color-brand)' }} />
               </span>
               <span className="ml-2">clipper.ai / sample run</span>
             </div>
@@ -800,25 +800,25 @@ function InteractiveDemo({ openApp }) {
                       onClick={() => setPicked(i)}
                       className={`group/opt text-left w-full px-4 py-3 rounded-md border flex items-center gap-3 transition ${
                         active
-                          ? 'border-[#53fc18] bg-[#53fc18]/10 ring-1 ring-[#53fc18]/40 shadow-[0_0_24px_-10px_rgba(83,252,24,0.6)]'
-                          : 'border-white/15 bg-white/[0.02] hover:border-[#53fc18]/40 hover:bg-[#53fc18]/[0.04]'
+                          ? 'border-[var(--color-brand)] bg-[var(--color-brand)]/10 ring-1 ring-[var(--color-brand)]/40 shadow-[0_0_24px_-10px_rgba(83,252,24,0.6)]'
+                          : 'border-white/15 bg-white/[0.02] hover:border-[var(--color-brand)]/40 hover:bg-[var(--color-brand)]/[0.04]'
                       }`}
                     >
                       {/* Radio indicator — unmistakable single-select affordance */}
                       <span
                         aria-hidden="true"
                         className={`shrink-0 w-[18px] h-[18px] rounded-full border flex items-center justify-center transition ${
-                          active ? 'border-[#53fc18]' : 'border-white/30 group-hover/opt:border-[#53fc18]/60'
+                          active ? 'border-[var(--color-brand)]' : 'border-white/30 group-hover/opt:border-[var(--color-brand)]/60'
                         }`}
                       >
-                        <span className={`w-2.5 h-2.5 rounded-full bg-[#53fc18] transition ${active ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`} />
+                        <span className={`w-2.5 h-2.5 rounded-full bg-[var(--color-brand)] transition ${active ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`} />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className={`block text-sm ${active ? 'text-stone-100' : 'text-stone-300'}`}>{s.label}</span>
                         <span className="block text-[10px] mono text-stone-500 truncate mt-0.5">{s.source}</span>
                       </span>
                       {active && (
-                        <span className="shrink-0 inline-flex items-center gap-1 text-[10px] mono uppercase tracking-wider text-[#53fc18]">
+                        <span className="shrink-0 inline-flex items-center gap-1 text-[10px] mono uppercase tracking-wider text-[var(--color-brand)]">
                           <Check className="w-3.5 h-3.5" />
                           Selected
                         </span>
@@ -867,7 +867,7 @@ function IntegrationsStrip() {
       <Reveal>
         <div className="grid md:grid-cols-[1fr_2fr] gap-12 items-start">
           <div>
-            <div className="text-[10px] mono text-[#53fc18] mb-4 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" /> 
+            <div className="text-[10px] mono text-[var(--color-brand)] mb-4 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" /> 
               Plays well with everything
             </div>
             <h2 className="serif text-4xl md:text-5xl leading-[1.05] mb-4">
@@ -877,10 +877,10 @@ function IntegrationsStrip() {
               Clipper fits where your content already lives. We pull from wherever you record, work in whatever tools you use, and publish to every platform your audience is on, so you don't change a thing about how you work.
             </p>
             <div className="flex flex-wrap gap-2 text-[10px] mono text-stone-500 tracking-wider uppercase">
-              <span className="px-2 py-1 rounded border border-[#53fc18]/15">Any source</span>
-              <span className="px-2 py-1 rounded border border-[#53fc18]/15">Any editor</span>
-              <span className="px-2 py-1 rounded border border-[#53fc18]/15">Every platform</span>
-              <span className="px-2 py-1 rounded border border-[#53fc18]/15">We handle it</span>
+              <span className="px-2 py-1 rounded border border-[var(--color-brand)]/15">Any source</span>
+              <span className="px-2 py-1 rounded border border-[var(--color-brand)]/15">Any editor</span>
+              <span className="px-2 py-1 rounded border border-[var(--color-brand)]/15">Every platform</span>
+              <span className="px-2 py-1 rounded border border-[var(--color-brand)]/15">We handle it</span>
             </div>
           </div>
 
@@ -888,14 +888,14 @@ function IntegrationsStrip() {
             {integrations.map((it, i) => (
               <div
                 key={it.name}
-                className="tilt-card group relative p-5 rounded-xl border border-[#53fc18]/[0.10] bg-gradient-to-br from-[#53fc18]/[0.02] to-transparent hover:border-[#53fc18]/40 flex flex-col items-center justify-center aspect-square overflow-hidden cursor-pointer transition-all duration-300"
+                className="tilt-card group relative p-5 rounded-xl border border-[var(--color-brand)]/[0.10] bg-gradient-to-br from-[var(--color-brand)]/[0.02] to-transparent hover:border-[var(--color-brand)]/40 flex flex-col items-center justify-center aspect-square overflow-hidden cursor-pointer transition-all duration-300"
                 style={{ animationDelay: `${i * 30}ms` }}
               >
                 {/* Inner glow on hover */}
-                <div className="absolute inset-0 bg-gradient-to-br from-[#53fc18]/0 via-[#53fc18]/0 to-[#53fc18]/0 group-hover:from-[#53fc18]/[0.06] group-hover:to-[#53fc18]/0 transition-all duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-brand)]/0 via-[var(--color-brand)]/0 to-[var(--color-brand)]/0 group-hover:from-[var(--color-brand)]/[0.06] group-hover:to-[var(--color-brand)]/0 transition-all duration-500" />
                 {/* Corner accent */}
                 <div className="absolute top-0 right-0 w-8 h-8 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className="absolute top-2 right-2 w-1 h-1 rounded-full bg-[#53fc18]" style={{ boxShadow: '0 0 6px #53fc18' }} />
+                  <div className="absolute top-2 right-2 w-1 h-1 rounded-full bg-[var(--color-brand)]" style={{ boxShadow: '0 0 6px var(--color-brand)' }} />
                 </div>
                 <div className="relative">
                   <IntegrationGlyph name={it.name} />
@@ -903,7 +903,7 @@ function IntegrationsStrip() {
                 <div className="relative text-[10px] mono text-stone-400 group-hover:text-stone-200 tracking-wider mt-3 text-center transition-colors">
                   {it.name}
                 </div>
-                <div className="absolute bottom-2 left-0 right-0 text-[8px] mono text-[#53fc18]/60 tracking-[0.15em] uppercase text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="absolute bottom-2 left-0 right-0 text-[8px] mono text-[var(--color-brand)]/60 tracking-[0.15em] uppercase text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   {it.cat}
                 </div>
               </div>
@@ -917,7 +917,7 @@ function IntegrationsStrip() {
 
 /* SVG glyphs for each integration — minimal mark-style, neon-friendly */
 function IntegrationGlyph({ name }) {
-  const common = "w-8 h-8 text-stone-300 group-hover:text-[#53fc18] transition-all duration-300 group-hover:scale-110";
+  const common = "w-8 h-8 text-stone-300 group-hover:text-[var(--color-brand)] transition-all duration-300 group-hover:scale-110";
   switch (name) {
     case 'Zoom':
       // Rounded camera body + lens — video-meeting tool
@@ -1134,15 +1134,15 @@ function PipelineExplorer() {
 
   return (
     <div className="pl-stage">
-      <div className="pl-panel rounded-2xl border border-[#53fc18]/[0.14] bg-gradient-to-b from-white/[0.03] to-transparent backdrop-blur overflow-hidden">
+      <div className="pl-panel rounded-2xl border border-[var(--color-brand)]/[0.14] bg-gradient-to-b from-white/[0.03] to-transparent backdrop-blur overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06] text-[10px] mono tracking-wider uppercase text-stone-400">
           <div className="flex items-center gap-2">
-            <span className={"inline-block w-1.5 h-1.5 rounded-full bg-[#53fc18] " + (reduced ? "" : "pl-live")} />
+            <span className={"inline-block w-1.5 h-1.5 rounded-full bg-[var(--color-brand)] " + (reduced ? "" : "pl-live")} />
             Six-model pipeline
           </div>
           <div className="flex items-center gap-3">
             <span className="text-stone-500">{String(done).padStart(2, '0')}/06 complete</span>
-            <button type="button" onClick={replay} className="pl-replay text-stone-400 hover:text-[#53fc18] transition-colors">{'\u21bb'} replay</button>
+            <button type="button" onClick={replay} className="pl-replay text-stone-400 hover:text-[var(--color-brand)] transition-colors">{'\u21bb'} replay</button>
           </div>
         </div>
 
@@ -1167,7 +1167,7 @@ function PipelineExplorer() {
             {NODES.map((nd, i) => {
               const tickOn = i < stage;
               return (
-                <span key={i} className={"pl-tick absolute w-px h-3 " + (tickOn ? "pl-tick-on bg-[#53fc18]" : "bg-white/15")} style={{ left: ((i + 1) / N * 100) + '%' }} />
+                <span key={i} className={"pl-tick absolute w-px h-3 " + (tickOn ? "pl-tick-on bg-[var(--color-brand)]" : "bg-white/15")} style={{ left: ((i + 1) / N * 100) + '%' }} />
               );
             })}
             <span className="pl-head absolute top-0 bottom-0 left-0 w-full">
@@ -1182,7 +1182,7 @@ function PipelineExplorer() {
               const st = i < stage ? 'done' : (i === stage ? 'active' : 'idle');
               const lit = i <= stage;
               const cls = "pl-node relative overflow-hidden text-left rounded-xl border px-3 pt-3 pb-4 " +
-                (st === 'idle' ? "border-white/[0.08] bg-white/[0.01] " : "border-[#53fc18]/40 bg-[#53fc18]/[0.05] ") +
+                (st === 'idle' ? "border-white/[0.08] bg-white/[0.01] " : "border-[var(--color-brand)]/40 bg-[var(--color-brand)]/[0.05] ") +
                 (st === 'done' ? "is-done " : "") +
                 (st === 'active' ? "is-active " : "") +
                 (focus === i ? "is-focus " : "");
@@ -1191,14 +1191,14 @@ function PipelineExplorer() {
                   <span className="pl-cnr pl-cnr-tl" aria-hidden="true" />
                   <span className="pl-cnr pl-cnr-br" aria-hidden="true" />
                   <div className="flex items-center justify-between mb-2">
-                    <span className={"pl-glyph " + (st === 'idle' ? "text-stone-500" : "text-[#53fc18]")}>{PL_GLYPHS[nd.g]}</span>
-                    <span className={"w-1.5 h-1.5 rounded-full " + (st === 'done' ? "bg-[#53fc18]" : st === 'active' ? "bg-[#53fc18] pl-dot" : "bg-stone-600")} />
+                    <span className={"pl-glyph " + (st === 'idle' ? "text-stone-500" : "text-[var(--color-brand)]")}>{PL_GLYPHS[nd.g]}</span>
+                    <span className={"w-1.5 h-1.5 rounded-full " + (st === 'done' ? "bg-[var(--color-brand)]" : st === 'active' ? "bg-[var(--color-brand)] pl-dot" : "bg-stone-600")} />
                   </div>
                   <div className="flex items-baseline gap-1.5">
-                    <span className={"mono text-[10px] " + (st === 'idle' ? "text-stone-500" : "text-[#53fc18]")}>{nd.n}</span>
+                    <span className={"mono text-[10px] " + (st === 'idle' ? "text-stone-500" : "text-[var(--color-brand)]")}>{nd.n}</span>
                     <span className={"text-xs font-medium tracking-wide " + (st === 'idle' ? "text-stone-400" : "text-stone-100")}>{nd.label}</span>
                   </div>
-                  <div className={"pl-val mono mt-2 leading-none " + (lit ? "text-[#53fc18]" : "text-stone-600")}><span ref={(el) => { numRefs.current[i] = el; }} className="text-[14px] font-semibold tracking-tight">0</span><span className="pl-caret" aria-hidden="true" /><span className="text-[9px] text-stone-500"> {nd.unit}</span></div>
+                  <div className={"pl-val mono mt-2 leading-none " + (lit ? "text-[var(--color-brand)]" : "text-stone-600")}><span ref={(el) => { numRefs.current[i] = el; }} className="text-[14px] font-semibold tracking-tight">0</span><span className="pl-caret" aria-hidden="true" /><span className="text-[9px] text-stone-500"> {nd.unit}</span></div>
                   <span className="pl-bar absolute left-0 right-0 bottom-0 h-[3px] bg-white/[0.06]">
                     <span className="pl-bar-fill block h-full" style={{ '--i': i }} />
                   </span>
@@ -1209,11 +1209,11 @@ function PipelineExplorer() {
 
           {/* detail */}
           <div className="pl-detail mt-5 rounded-xl border border-white/[0.07] bg-black/30 px-4 py-4 grid grid-cols-[auto_1fr] gap-4 items-start">
-            <div className="mono text-3xl leading-none text-[#53fc18]">{f.n}</div>
+            <div className="mono text-3xl leading-none text-[var(--color-brand)]">{f.n}</div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-semibold text-stone-100">{f.label}</span>
-                <span className={"text-[9px] mono uppercase tracking-widest px-1.5 py-[2px] rounded " + (fState === 'idle' ? "text-stone-500 border border-white/10" : "text-[#53fc18] border border-[#53fc18]/30 bg-[#53fc18]/[0.06]")}>{fState === 'done' ? 'complete' : fState === 'active' ? 'running' : 'queued'}</span>
+                <span className={"text-[9px] mono uppercase tracking-widest px-1.5 py-[2px] rounded " + (fState === 'idle' ? "text-stone-500 border border-white/10" : "text-[var(--color-brand)] border border-[var(--color-brand)]/30 bg-[var(--color-brand)]/[0.06]")}>{fState === 'done' ? 'complete' : fState === 'active' ? 'running' : 'queued'}</span>
               </div>
               <p className="text-xs text-stone-400 mt-1.5 leading-relaxed">{f.blurb}</p>
               <div className="mt-2 text-[11px] mono text-stone-300">{'>'} {f.out}</div>
@@ -1300,8 +1300,8 @@ function ContentMath({ bookCall }) {
     <section className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-8 py-16 border-t border-white/[0.12]">
       <Reveal>
         <div className="max-w-2xl mb-12">
-          <div className="text-[10px] mono text-[#53fc18] mb-4 tracking-[0.2em] uppercase flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" style={{ boxShadow: '0 0 8px #53fc18' }} /> Run the numbers
+          <div className="text-[10px] mono text-[var(--color-brand)] mb-4 tracking-[0.2em] uppercase flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" style={{ boxShadow: '0 0 8px var(--color-brand)' }} /> Run the numbers
           </div>
           <h2 className="serif text-4xl md:text-6xl leading-[1.02] tracking-tight mb-5">
             One month of recording,<br /><span className="italic gradient-green">multiplied.</span>
@@ -1313,7 +1313,7 @@ function ContentMath({ bookCall }) {
       </Reveal>
 
       <Reveal delay={120}>
-        <div className="relative rounded-2xl border border-[#53fc18]/[0.14] bg-gradient-to-b from-[#53fc18]/[0.02] to-transparent p-6 md:p-10 overflow-hidden">
+        <div className="relative rounded-2xl border border-[var(--color-brand)]/[0.14] bg-gradient-to-b from-[var(--color-brand)]/[0.02] to-transparent p-6 md:p-10 overflow-hidden">
           <span aria-hidden className="absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(83,252,24,0.6), transparent)' }} />
 
           <div className="grid lg:grid-cols-[0.85fr_1.15fr] gap-8 lg:gap-12 items-center">
@@ -1336,10 +1336,10 @@ function ContentMath({ bookCall }) {
                 <span>{min}</span><span>weekly</span><span>{max}+</span>
               </div>
 
-              <div className="cm-hero-glow mt-8 p-5 rounded-xl border border-[#53fc18]/30 bg-[#53fc18]/[0.04]">
-                <div className="text-[10px] mono text-[#53fc18] tracking-wider uppercase mb-1.5">Platform-native posts / month</div>
+              <div className="cm-hero-glow mt-8 p-5 rounded-xl border border-[var(--color-brand)]/30 bg-[var(--color-brand)]/[0.04]">
+                <div className="text-[10px] mono text-[var(--color-brand)] tracking-wider uppercase mb-1.5">Platform-native posts / month</div>
                 <div className="flex items-baseline gap-3">
-                  <span className="cm-val serif text-6xl md:text-7xl text-[#53fc18] tabular-nums leading-none">{dPosts.toLocaleString()}</span>
+                  <span className="cm-val serif text-6xl md:text-7xl text-[var(--color-brand)] tabular-nums leading-none">{dPosts.toLocaleString()}</span>
                 </div>
                 <div className="text-xs text-stone-400 mt-3">
                   {clips} clips, each cut for ~{avgPlatforms.toFixed(0)} platforms. That's <span className="text-stone-200">{perDay} posts a day</span>, every day.
@@ -1360,12 +1360,12 @@ function ContentMath({ bookCall }) {
 
               <div className="rounded-xl border border-stone-800 bg-stone-900/30 p-5">
                 <div className="flex items-start gap-3">
-                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-[#53fc18]/25 bg-[#53fc18]/[0.06] shrink-0">
-                    <Clock className="w-4 h-4 text-[#53fc18]" />
+                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-[var(--color-brand)]/25 bg-[var(--color-brand)]/[0.06] shrink-0">
+                    <Clock className="w-4 h-4 text-[var(--color-brand)]" />
                   </span>
                   <div>
                     <div className="text-sm text-stone-200 leading-snug">
-                      That&apos;s roughly <span className="text-[#53fc18] font-medium">{dHours} hours</span> of editing a month you never have to do, scope, or hire for.
+                      That&apos;s roughly <span className="text-[var(--color-brand)] font-medium">{dHours} hours</span> of editing a month you never have to do, scope, or hire for.
                     </div>
                     <div className="text-[11px] text-stone-500 mt-1.5">A human still signs off on every cut before it ships.</div>
                   </div>
@@ -1423,14 +1423,14 @@ function ViralityChart() {
   const mono = { fontFamily: "'JetBrains Mono', Menlo, monospace", textTransform: 'uppercase' };
 
   return (
-    <div ref={ref} className="vchart relative rounded-xl border border-[#53fc18]/20 bg-gradient-to-b from-[#53fc18]/[0.04] to-transparent p-5 overflow-hidden">
+    <div ref={ref} className="vchart relative rounded-xl border border-[var(--color-brand)]/20 bg-gradient-to-b from-[var(--color-brand)]/[0.04] to-transparent p-5 overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between text-[10px] mono text-stone-500 tracking-wider uppercase mb-2">
         <span className="flex items-center gap-1.5">
-          <span className="w-1 h-1 rounded-full bg-[#53fc18] animate-pulse-soft" />
+          <span className="w-1 h-1 rounded-full bg-[var(--color-brand)] animate-pulse-soft" />
           Virality distribution · 24h
         </span>
-        <span className="text-[#53fc18]">peak 96</span>
+        <span className="text-[var(--color-brand)]">peak 96</span>
       </div>
       <style>{`
         .vchart .vc-bar {
@@ -1467,16 +1467,16 @@ function ViralityChart() {
       <svg viewBox="0 0 1200 286" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto" aria-hidden>
         <defs>
           <linearGradient id="vcBar" x1="0" y1="1" x2="0" y2="0">
-            <stop offset="0" stopColor="#53fc18" stopOpacity="0.16" />
-            <stop offset="1" stopColor="#53fc18" stopOpacity="0.55" />
+            <stop offset="0" stopColor="var(--color-brand)" stopOpacity="0.16" />
+            <stop offset="1" stopColor="var(--color-brand)" stopOpacity="0.55" />
           </linearGradient>
           <linearGradient id="vcBarPeak" x1="0" y1="1" x2="0" y2="0">
-            <stop offset="0" stopColor="#53fc18" stopOpacity="0.55" />
+            <stop offset="0" stopColor="var(--color-brand)" stopOpacity="0.55" />
             <stop offset="1" stopColor="#b8ff7d" stopOpacity="1" />
           </linearGradient>
           <linearGradient id="vcScan" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor="#53fc18" stopOpacity="0" />
-            <stop offset="1" stopColor="#53fc18" stopOpacity="0.10" />
+            <stop offset="0" stopColor="var(--color-brand)" stopOpacity="0" />
+            <stop offset="1" stopColor="var(--color-brand)" stopOpacity="0.10" />
           </linearGradient>
         </defs>
 
@@ -1484,7 +1484,7 @@ function ViralityChart() {
         <g className="vc-meta">
           {[25, 50, 75].map((g) => (
             <g key={g}>
-              <path d={`M${L} ${yFor(g)} H${R}`} stroke="#53fc18" strokeOpacity="0.10" strokeWidth="1" strokeDasharray="3 5" />
+              <path d={`M${L} ${yFor(g)} H${R}`} stroke="var(--color-brand)" strokeOpacity="0.10" strokeWidth="1" strokeDasharray="3 5" />
               <text x={L - 8} y={yFor(g) + 3} textAnchor="end" fill="#57534e" fontSize="9" letterSpacing="1" style={mono}>{g}</text>
             </g>
           ))}
@@ -1529,9 +1529,9 @@ function ViralityChart() {
 
         {/* the 90-point threshold draws itself across */}
         <path className="vc-draw" pathLength="1" d={`M${L} ${thresholdY} H${R}`}
-          stroke="#53fc18" strokeOpacity="0.5" strokeWidth="1" />
+          stroke="var(--color-brand)" strokeOpacity="0.5" strokeWidth="1" />
         <g className="vc-meta">
-          <text x={R} y={thresholdY - 7} textAnchor="end" fill="#53fc18" fillOpacity="0.8" fontSize="10" letterSpacing="1.6" style={mono}>
+          <text x={R} y={thresholdY - 7} textAnchor="end" fill="var(--color-brand)" fillOpacity="0.8" fontSize="10" letterSpacing="1.6" style={mono}>
             90 · ready to post
           </text>
         </g>
@@ -1634,8 +1634,8 @@ function SignaturePath() {
       >
         <defs>
           <linearGradient id="sigStroke" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor="#53fc18" stopOpacity="0.45" />
-            <stop offset="0.8" stopColor="#53fc18" />
+            <stop offset="0" stopColor="var(--color-brand)" stopOpacity="0.45" />
+            <stop offset="0.8" stopColor="var(--color-brand)" />
             <stop offset="1" stopColor="#b8ff7d" />
           </linearGradient>
           <filter id="sigGlow" x="-300%" y="-300%" width="700%" height="700%">
@@ -1669,9 +1669,9 @@ function SignaturePath() {
           <g key={i} className="sig-band" opacity={hov === i ? 1 : 0} pointerEvents="none">
             <rect x={b.src[0]} y={46} width={b.src[1] - b.src[0]} height={98} fill="rgba(83,252,24,0.07)" />
             <path d={`M${b.src[0]} 48 V144 M${b.src[1]} 48 V144`}
-              stroke="#53fc18" strokeOpacity="0.55" strokeWidth="1" strokeDasharray="3 3" />
+              stroke="var(--color-brand)" strokeOpacity="0.55" strokeWidth="1" strokeDasharray="3 3" />
             <text x={(b.src[0] + b.src[1]) / 2} y={40} textAnchor="middle"
-              fill="#53fc18" fillOpacity="0.8" fontSize="10" letterSpacing="1" style={mono}>
+              fill="var(--color-brand)" fillOpacity="0.8" fontSize="10" letterSpacing="1" style={mono}>
               {b.t[0]}
             </text>
           </g>
@@ -1692,14 +1692,14 @@ function SignaturePath() {
         {/* console readout — prints the hovered clip's provenance */}
         <g className="sig-readout sig-meta" opacity={inView ? 1 : 0}>
           <text x="520" y="206" fontSize="10" letterSpacing="1.4" style={mono}
-            fill={hov == null ? '#57534e' : '#53fc18'} fillOpacity={hov == null ? 1 : 0.9}>
+            fill={hov == null ? '#57534e' : 'var(--color-brand)'} fillOpacity={hov == null ? 1 : 0.9}>
             {hov == null ? '→ Hover a clip to trace it back to the recording' : `→ ${readout}`}
           </text>
         </g>
 
         {/* the node where moments are found */}
-        <circle className="sig-frame" cx="470" cy="104" r="5" fill="none" stroke="#53fc18" strokeWidth="1.5" />
-        <circle className="sig-frame" cx="470" cy="104" r="1.8" fill="#53fc18" />
+        <circle className="sig-frame" cx="470" cy="104" r="5" fill="none" stroke="var(--color-brand)" strokeWidth="1.5" />
+        <circle className="sig-frame" cx="470" cy="104" r="1.8" fill="var(--color-brand)" />
 
         {/* branches: one curve per clip */}
         {branches.map((b, i) => (
@@ -1709,7 +1709,7 @@ function SignaturePath() {
             pathLength="1"
             id={`sigBr${i}`}
             d={branchD(b)}
-            stroke="#53fc18"
+            stroke="var(--color-brand)"
             strokeOpacity={hov === i ? 0.95 : (hov == null ? 0.45 - i * 0.04 : 0.14)}
             strokeWidth={hov === i ? 1.75 : 1.25}
             strokeLinecap="round"
@@ -1736,22 +1736,22 @@ function SignaturePath() {
               <rect x={b.x - 20} y={b.y - 8} width="40" height="74" fill="transparent" pointerEvents="all" />
               <g className="sig-frame">
                 <rect className="sig-rect" x={b.x - 13} y={b.y + 8} width="26" height="46" rx="5"
-                  stroke="#53fc18"
+                  stroke="var(--color-brand)"
                   strokeOpacity={lit ? 1 : (dim ? 0.3 : 0.85 - i * 0.1)}
                   strokeWidth={lit ? 1.75 : 1.25}
-                  fill="#53fc18"
+                  fill="var(--color-brand)"
                   fillOpacity={lit ? 0.14 : 0.04} />
                 <path d={`M${b.x - 6} ${b.y + 42} h12 M${b.x - 5} ${b.y + 47} h10`}
-                  stroke="#53fc18" strokeOpacity={lit ? 0.9 : (dim ? 0.2 : 0.5 - i * 0.05)} strokeWidth="1" strokeLinecap="round" />
+                  stroke="var(--color-brand)" strokeOpacity={lit ? 0.9 : (dim ? 0.2 : 0.5 - i * 0.05)} strokeWidth="1" strokeLinecap="round" />
               </g>
               <text className="sig-chip" x={b.x} y={b.y} textAnchor="middle"
-                fill="#53fc18" fillOpacity={lit ? 1 : (dim ? 0.3 : 1 - i * 0.11)} fontSize="11" letterSpacing="1"
+                fill="var(--color-brand)" fillOpacity={lit ? 1 : (dim ? 0.3 : 1 - i * 0.11)} fontSize="11" letterSpacing="1"
                 style={{ ...mono, transitionDelay: inView ? `${1.7 + i * 0.1}s, ${1.7 + i * 0.1}s, 0s` : '0s' }}>
                 {b.score}
               </text>
               {/* hook label appears under the lit frame */}
               <text x={b.x} y={b.y + 68} textAnchor="middle" pointerEvents="none"
-                fill="#53fc18" fontSize="10" letterSpacing="1.6" style={mono}
+                fill="var(--color-brand)" fontSize="10" letterSpacing="1.6" style={mono}
                 opacity={lit ? 0.8 : 0} className="sig-band">
                 {b.hook}
               </text>
@@ -1769,14 +1769,14 @@ function SignaturePath() {
               const t1 = 0.48 + i * 0.022;
               return (
                 <rect key={i} x={b.x - 12} y={b.y + 9} width="24" height="44" rx="4"
-                  fill="#53fc18" opacity="0">
+                  fill="var(--color-brand)" opacity="0">
                   <animate attributeName="opacity" dur={CYC} repeatCount="indefinite"
                     values="0;0;0.22;0;0"
                     keyTimes={`0;${f3(t1)};${f3(t1 + 0.015)};${f3(t1 + 0.1)};1`} />
                 </rect>
               );
             })}
-            <circle cx="470" cy="104" fill="none" stroke="#53fc18" strokeWidth="1" r="5" opacity="0">
+            <circle cx="470" cy="104" fill="none" stroke="var(--color-brand)" strokeWidth="1" r="5" opacity="0">
               <animate attributeName="r" dur={CYC} repeatCount="indefinite"
                 values="5;5;5;16;16" keyTimes="0;0.26;0.261;0.4;1" />
               <animate attributeName="opacity" dur={CYC} repeatCount="indefinite"
@@ -1858,8 +1858,8 @@ function Manifesto() {
 
   return (
     <section className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-8 py-20 md:py-28 border-t border-white/[0.12]">
-      <div className="text-[10px] mono text-[#53fc18] mb-8 tracking-[0.2em] uppercase flex items-center justify-center gap-2">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" /> The thesis
+      <div className="text-[10px] mono text-[var(--color-brand)] mb-8 tracking-[0.2em] uppercase flex items-center justify-center gap-2">
+        <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" /> The thesis
       </div>
       <p ref={ref} className="serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[1.12] tracking-tight max-w-5xl mx-auto text-center">
         {WORDS.map(([w, accent], i) => (
@@ -1882,13 +1882,13 @@ function BentoDeliverables({ bookCall }) {
   const hooks = Array.isArray(clip.hooks) && clip.hooks.length >= 3
     ? clip.hooks.slice(0, 3)
     : ['The moment everything changed', 'Nobody expected this answer', 'Watch the room go quiet'];
-  const tile = 'tilt-card card-lift relative rounded-2xl border border-[#53fc18]/[0.10] bg-gradient-to-b from-[#53fc18]/[0.02] to-transparent overflow-hidden p-6';
+  const tile = 'tilt-card card-lift relative rounded-2xl border border-[var(--color-brand)]/[0.10] bg-gradient-to-b from-[var(--color-brand)]/[0.02] to-transparent overflow-hidden p-6';
   return (
     <section className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-8 py-12 border-t border-white/[0.12]">
       <Reveal>
         <div className="mb-10">
-          <div className="text-[10px] mono text-[#53fc18] mb-4 tracking-[0.2em] uppercase flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" /> The deliverable
+          <div className="text-[10px] mono text-[var(--color-brand)] mb-4 tracking-[0.2em] uppercase flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" /> The deliverable
           </div>
           <h2 className="serif text-4xl md:text-5xl leading-[1.05] mb-4">
             What lands in <span className="italic gradient-green">your queue.</span>
@@ -1923,7 +1923,7 @@ function BentoDeliverables({ bookCall }) {
           <div className={tile}>
             <div className="flex items-center justify-between mb-4">
               <div className="text-sm font-medium">Hooks written for the scroll</div>
-              <Zap className="w-4 h-4 text-[#53fc18]" />
+              <Zap className="w-4 h-4 text-[var(--color-brand)]" />
             </div>
             <div className="relative h-16">
               {hooks.map((h, i) => (
@@ -1945,14 +1945,14 @@ function BentoDeliverables({ bookCall }) {
           <div className={tile}>
             <div className="flex items-center justify-between mb-4">
               <div className="text-sm font-medium">A human signs off on every cut</div>
-              <span className="stamp-pulse inline-flex items-center justify-center w-7 h-7 rounded-full border border-[#53fc18]/40 bg-[#53fc18]/[0.08]">
-                <Check className="w-3.5 h-3.5 text-[#53fc18]" />
+              <span className="stamp-pulse inline-flex items-center justify-center w-7 h-7 rounded-full border border-[var(--color-brand)]/40 bg-[var(--color-brand)]/[0.08]">
+                <Check className="w-3.5 h-3.5 text-[var(--color-brand)]" />
               </span>
             </div>
             <p className="text-xs text-stone-500 leading-relaxed">
               AI proposes, an editor approves. Nothing ships on model confidence alone, and every clip you receive carries an editor's name.
             </p>
-            <div className="mt-4 inline-flex items-center gap-2 px-2.5 py-1 rounded-md border border-[#53fc18]/25 bg-[#53fc18]/[0.06] text-[10px] mono text-[#aaff66] tracking-wider uppercase">
+            <div className="mt-4 inline-flex items-center gap-2 px-2.5 py-1 rounded-md border border-[var(--color-brand)]/25 bg-[var(--color-brand)]/[0.06] text-[10px] mono text-[#aaff66] tracking-wider uppercase">
               <CheckCircle2 className="w-3 h-3" /> Editor reviewed
             </div>
           </div>
@@ -1963,11 +1963,11 @@ function BentoDeliverables({ bookCall }) {
           <div className={tile}>
             <div className="text-sm font-medium mb-3">Scored 0–100</div>
             <div className="flex items-end gap-3">
-              <div className="serif text-5xl text-[#53fc18] leading-none" style={{ textShadow: '0 0 24px rgba(83,252,24,0.4)' }}>{clip.virality}</div>
+              <div className="serif text-5xl text-[var(--color-brand)] leading-none" style={{ textShadow: '0 0 24px rgba(83,252,24,0.4)' }}>{clip.virality}</div>
               <div className="text-[10px] mono text-stone-500 tracking-wider uppercase pb-1">This clip's<br />virality score</div>
             </div>
             <div className="mt-4 h-1 rounded-full bg-white/[0.06] overflow-hidden">
-              <div className="h-full rounded-full" style={{ width: `${clip.virality}%`, background: '#53fc18', boxShadow: '0 0 10px rgba(83,252,24,0.7)' }} />
+              <div className="h-full rounded-full" style={{ width: `${clip.virality}%`, background: 'var(--color-brand)', boxShadow: '0 0 10px rgba(83,252,24,0.7)' }} />
             </div>
           </div>
         </Reveal>
@@ -2002,10 +2002,10 @@ function BentoDeliverables({ bookCall }) {
             <div className="text-sm font-medium mb-4">Five platforms, one recording</div>
             <div className="flex flex-wrap gap-1.5 mb-3">
               {['TikTok', 'Reels', 'Shorts', 'X', 'LinkedIn'].map((p) => (
-                <span key={p} className="px-2 py-1 rounded-md border border-[#53fc18]/25 bg-[#53fc18]/[0.06] text-[10px] mono text-[#aaff66]">{p}</span>
+                <span key={p} className="px-2 py-1 rounded-md border border-[var(--color-brand)]/25 bg-[var(--color-brand)]/[0.06] text-[10px] mono text-[#aaff66]">{p}</span>
               ))}
             </div>
-            <button onClick={bookCall} className="text-xs text-[#53fc18] inline-flex items-center gap-1.5 hover:gap-2.5 transition-all">
+            <button onClick={bookCall} className="text-xs text-[var(--color-brand)] inline-flex items-center gap-1.5 hover:gap-2.5 transition-all">
               Set up your feed <ArrowUpRight className="w-3 h-3" />
             </button>
           </div>
@@ -2016,7 +2016,7 @@ function BentoDeliverables({ bookCall }) {
 }
 
 /* ──────────────────────────────────────────────────────────── PRE-LAUNCH COMPONENTS */
-function Waitlist({ accent = '#53fc18' }) {
+function Waitlist({ accent = 'var(--color-brand)' }) {
   const [email, setEmail] = useState('');
   const [kind, setKind] = useState(''); // optional lead qualifier — what they make
   const [submitted, setSubmitted] = useState(false);
@@ -2057,12 +2057,12 @@ function Waitlist({ accent = '#53fc18' }) {
     <section className="relative z-10 max-w-[1400px] mx-auto px-8 py-16 border-t border-white/[0.12]">
       <Reveal>
         <div className="relative max-w-3xl mx-auto text-center">
-          <div className="absolute -inset-20 bg-[#53fc18]/[0.10] blur-3xl rounded-full pointer-events-none" />
+          <div className="absolute -inset-20 bg-[var(--color-brand)]/[0.10] blur-3xl rounded-full pointer-events-none" />
           <div className="relative">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#53fc18]/[0.12] bg-[#53fc18]/[0.015] backdrop-blur text-[11px] mono text-stone-300 mb-8 tracking-wider uppercase">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[var(--color-brand)]/[0.12] bg-[var(--color-brand)]/[0.015] backdrop-blur text-[11px] mono text-stone-300 mb-8 tracking-wider uppercase">
               <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inset-0 rounded-full bg-[#53fc18] animate-ping opacity-60" />
-                <span className="relative rounded-full h-1.5 w-1.5 bg-[#53fc18]" />
+                <span className="absolute inset-0 rounded-full bg-[var(--color-brand)] animate-ping opacity-60" />
+                <span className="relative rounded-full h-1.5 w-1.5 bg-[var(--color-brand)]" />
               </span>
               Now onboarding founding partners · in small batches
             </div>
@@ -2076,7 +2076,7 @@ function Waitlist({ accent = '#53fc18' }) {
 
             <div className="max-w-2xl mx-auto mb-10">
               <div className="text-[10px] mono text-stone-500 tracking-[0.2em] uppercase mb-4 text-center">What founding partners get</div>
-              <div className="grid sm:grid-cols-3 gap-px bg-white/[0.06] rounded-2xl overflow-hidden border border-[#53fc18]/[0.08] text-left">
+              <div className="grid sm:grid-cols-3 gap-px bg-white/[0.06] rounded-2xl overflow-hidden border border-[var(--color-brand)]/[0.08] text-left">
                 {[
                   { t: 'A direct line to the founders', d: 'You work with the people building Clipper, not a ticket queue.' },
                   { t: 'Your input shapes the service', d: 'Early partners set what we prioritize and how the workflow runs.' },
@@ -2104,8 +2104,8 @@ function Waitlist({ accent = '#53fc18' }) {
                       aria-pressed={kind === k}
                       className={`px-3 py-1.5 rounded-full border text-xs transition-colors ${
                         kind === k
-                          ? 'border-[#53fc18]/60 bg-[#53fc18]/[0.1] text-[#aaff66]'
-                          : 'border-white/[0.12] text-stone-400 hover:border-[#53fc18]/30 hover:text-stone-200'
+                          ? 'border-[var(--color-brand)]/60 bg-[var(--color-brand)]/[0.1] text-[#aaff66]'
+                          : 'border-white/[0.12] text-stone-400 hover:border-[var(--color-brand)]/30 hover:text-stone-200'
                       }`}
                     >
                       {k}
@@ -2123,7 +2123,7 @@ function Waitlist({ accent = '#53fc18' }) {
                     aria-invalid={!!error}
                     autoComplete="email"
                     disabled={loading}
-                    className="flex-1 min-w-0 px-5 py-4 rounded-md border border-[#53fc18]/30 focus:border-[#53fc18]/60 focus:outline-none text-base placeholder:text-stone-500 disabled:opacity-50"
+                    className="flex-1 min-w-0 px-5 py-4 rounded-md border border-[var(--color-brand)]/30 focus:border-[var(--color-brand)]/60 focus:outline-none text-base placeholder:text-stone-500 disabled:opacity-50"
                     style={{ backgroundColor: 'rgba(20, 20, 18, 0.8)', color: '#e7e5e4' }}
                   />
                   <button
@@ -2141,8 +2141,8 @@ function Waitlist({ accent = '#53fc18' }) {
                 {!error && <div className="mb-3" />}
               </>
             ) : (
-              <div role="status" className="max-w-lg mx-auto mb-6 p-5 rounded-md border border-[#53fc18]/30 bg-[#53fc18]/[0.08] flex items-center gap-3" style={{ animation: 'blur-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}>
-                <CheckCircle2 className="w-5 h-5 text-[#53fc18] flex-shrink-0" />
+              <div role="status" className="max-w-lg mx-auto mb-6 p-5 rounded-md border border-[var(--color-brand)]/30 bg-[var(--color-brand)]/[0.08] flex items-center gap-3" style={{ animation: 'blur-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}>
+                <CheckCircle2 className="w-5 h-5 text-[var(--color-brand)] flex-shrink-0" />
                 <div className="text-left flex-1">
                   <div className="font-medium text-sm">Request received.</div>
                   <div className="text-xs text-stone-400 mt-0.5">We'll be in touch within 48 hours to book your demo.</div>
@@ -2217,7 +2217,7 @@ function WhyClipper({ bookCall }) {
     <section className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-8 py-12 border-t border-white/[0.12]">
       <Reveal>
         <div className="max-w-2xl mb-10">
-          <div className="text-[10px] mono text-[#53fc18] tracking-[0.2em] uppercase mb-4 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" /> The honest comparison</div>
+          <div className="text-[10px] mono text-[var(--color-brand)] tracking-[0.2em] uppercase mb-4 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" /> The honest comparison</div>
           <h2 className="serif text-3xl md:text-4xl tracking-tight leading-[1.1] mb-4">
             Three ways to turn long-form into clips.<br />
             Only one <span className="italic gradient-green">doesn&rsquo;t land on you.</span>
@@ -2240,15 +2240,15 @@ function WhyClipper({ bookCall }) {
             {cols.map((c) => {
               const Icon = c.Icon;
               return (
-                <div key={c.k} className={`flex items-center gap-3 px-6 py-5 border-l border-white/[0.06] ${c.neon ? 'bg-[#53fc18]/[0.05]' : ''}`}>
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${c.neon ? 'bg-[#53fc18]/15 text-[#53fc18]' : 'bg-white/[0.04] text-stone-400'}`}>
+                <div key={c.k} className={`flex items-center gap-3 px-6 py-5 border-l border-white/[0.06] ${c.neon ? 'bg-[var(--color-brand)]/[0.05]' : ''}`}>
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${c.neon ? 'bg-[var(--color-brand)]/15 text-[var(--color-brand)]' : 'bg-white/[0.04] text-stone-400'}`}>
                     <Icon className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
-                    <div className={`text-base font-medium leading-tight ${c.neon ? 'text-[#53fc18]' : 'text-stone-200'}`}>{c.label}</div>
+                    <div className={`text-base font-medium leading-tight ${c.neon ? 'text-[var(--color-brand)]' : 'text-stone-200'}`}>{c.label}</div>
                     <div className="text-[10px] mono text-stone-500 tracking-[0.18em] uppercase mt-0.5">{c.sub}</div>
                   </div>
-                  {c.neon && <span className="ml-auto text-[#53fc18] text-xl leading-none flex-shrink-0">&#10003;</span>}
+                  {c.neon && <span className="ml-auto text-[var(--color-brand)] text-xl leading-none flex-shrink-0">&#10003;</span>}
                 </div>
               );
             })}
@@ -2258,7 +2258,7 @@ function WhyClipper({ bookCall }) {
             <div key={r.l} className="cmp-row border-t border-white/[0.06] transition-colors hover:bg-white/[0.015]">
               <div className="px-6 py-4 text-[10px] mono text-stone-600 tracking-[0.16em] uppercase leading-snug flex items-center">{r.l}</div>
               {r.vals.map((v, i) => (
-                <div key={i} className={`px-6 py-4 text-sm leading-relaxed border-l border-white/[0.06] ${cols[i].neon ? 'bg-[#53fc18]/[0.05] text-stone-200' : 'text-stone-400'}`}>{v}</div>
+                <div key={i} className={`px-6 py-4 text-sm leading-relaxed border-l border-white/[0.06] ${cols[i].neon ? 'bg-[var(--color-brand)]/[0.05] text-stone-200' : 'text-stone-400'}`}>{v}</div>
               ))}
             </div>
           ))}
@@ -2266,8 +2266,8 @@ function WhyClipper({ bookCall }) {
           <div className="cmp-row border-t border-white/[0.1]">
             <div className="px-6 py-4 text-[10px] mono text-stone-500 tracking-[0.16em] uppercase flex items-center">Where it lands</div>
             {verdicts.map((v, i) => (
-              <div key={i} className={`px-6 py-4 border-l border-white/[0.06] ${cols[i].neon ? 'bg-[#53fc18]/[0.08]' : ''}`}>
-                <span className={`serif text-lg ${cols[i].neon ? 'text-[#53fc18]' : 'text-stone-500'}`} style={cols[i].neon ? { textShadow: '0 0 18px rgba(83,252,24,0.45)' } : undefined}>{v}</span>
+              <div key={i} className={`px-6 py-4 border-l border-white/[0.06] ${cols[i].neon ? 'bg-[var(--color-brand)]/[0.08]' : ''}`}>
+                <span className={`serif text-lg ${cols[i].neon ? 'text-[var(--color-brand)]' : 'text-stone-500'}`} style={cols[i].neon ? { textShadow: '0 0 18px rgba(83,252,24,0.45)' } : undefined}>{v}</span>
               </div>
             ))}
           </div>
@@ -2283,20 +2283,20 @@ function WhyClipper({ bookCall }) {
           return (
           <Reveal key={c.k} delay={i * 80} className="h-full">
             <div
-              className={`group relative h-full rounded-2xl border flex flex-col overflow-hidden card-lift tilt-card ${c.neon ? 'border-[#53fc18]/45 bg-[#53fc18]/[0.04]' : 'border-white/[0.08] bg-white/[0.01] hover:border-white/[0.18]'}`}
+              className={`group relative h-full rounded-2xl border flex flex-col overflow-hidden card-lift tilt-card ${c.neon ? 'border-[var(--color-brand)]/45 bg-[var(--color-brand)]/[0.04]' : 'border-white/[0.08] bg-white/[0.01] hover:border-white/[0.18]'}`}
               style={c.neon ? { boxShadow: '0 0 44px -14px rgba(83,252,24,0.4)' } : undefined}
             >
-              {c.neon && <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#53fc18] to-transparent" />}
+              {c.neon && <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--color-brand)] to-transparent" />}
               <div className="flex items-center gap-3 px-6 pt-6 pb-5 border-b border-white/[0.07]">
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${c.neon ? 'bg-[#53fc18]/15 text-[#53fc18]' : 'bg-white/[0.04] text-stone-400'}`}>
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${c.neon ? 'bg-[var(--color-brand)]/15 text-[var(--color-brand)]' : 'bg-white/[0.04] text-stone-400'}`}>
                   <Icon className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
-                  <div className={`text-base font-medium leading-tight ${c.neon ? 'text-[#53fc18]' : 'text-stone-200'}`}>{c.label}</div>
+                  <div className={`text-base font-medium leading-tight ${c.neon ? 'text-[var(--color-brand)]' : 'text-stone-200'}`}>{c.label}</div>
                   <div className="text-[10px] mono text-stone-500 tracking-[0.18em] uppercase mt-0.5">{c.sub}</div>
                 </div>
                 {c.neon && (
-                  <span className="ml-auto text-[#53fc18] text-xl leading-none flex-shrink-0">&#10003;</span>
+                  <span className="ml-auto text-[var(--color-brand)] text-xl leading-none flex-shrink-0">&#10003;</span>
                 )}
               </div>
               <div className="flex-1 px-6 divide-y divide-white/[0.06]">
@@ -2308,7 +2308,7 @@ function WhyClipper({ bookCall }) {
                 ))}
                 <div className="py-4">
                   <div className="text-[10px] mono text-stone-600 tracking-[0.16em] uppercase mb-1.5 leading-snug">Where it lands</div>
-                  <div className={`serif text-lg ${c.neon ? 'text-[#53fc18]' : 'text-stone-500'}`}>{verdicts[i]}</div>
+                  <div className={`serif text-lg ${c.neon ? 'text-[var(--color-brand)]' : 'text-stone-500'}`}>{verdicts[i]}</div>
                 </div>
               </div>
             </div>
@@ -2328,11 +2328,11 @@ function WhyClipper({ bookCall }) {
       </Reveal>
 
       <Reveal delay={340}>
-        <div className="mt-9 rounded-2xl border border-[#53fc18]/25 bg-gradient-to-r from-[#53fc18]/[0.05] to-transparent p-6 md:p-7 grid sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
+        <div className="mt-9 rounded-2xl border border-[var(--color-brand)]/25 bg-gradient-to-r from-[var(--color-brand)]/[0.05] to-transparent p-6 md:p-7 grid sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
           {reassure.map((r) => (
             <div key={r.t} className="flex gap-3">
-              <span className="w-5 h-5 rounded-full bg-[#53fc18]/15 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Check className="w-3 h-3 text-[#53fc18]" />
+              <span className="w-5 h-5 rounded-full bg-[var(--color-brand)]/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Check className="w-3 h-3 text-[var(--color-brand)]" />
               </span>
               <div>
                 <div className="text-sm text-stone-200 font-medium mb-1">{r.t}</div>
@@ -2359,12 +2359,12 @@ function TrustStrip() {
         <div className="text-center mb-10">
           <div className="text-[10px] mono text-stone-500 tracking-[0.2em] uppercase">Built for teams that care about how their content is handled</div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/[0.06] rounded-2xl overflow-hidden border border-[#53fc18]/[0.08]">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/[0.06] rounded-2xl overflow-hidden border border-[var(--color-brand)]/[0.08]">
           {badges.map((b, i) => (
             <Reveal key={b.label} delay={i * 60}>
               <div className="bg-black p-7 flex items-start gap-4 h-full">
-                <div className="w-9 h-9 rounded-md border border-[#53fc18]/[0.12] flex items-center justify-center flex-shrink-0">
-                  <b.icon className="w-4 h-4 text-[#53fc18]" />
+                <div className="w-9 h-9 rounded-md border border-[var(--color-brand)]/[0.12] flex items-center justify-center flex-shrink-0">
+                  <b.icon className="w-4 h-4 text-[var(--color-brand)]" />
                 </div>
                 <div>
                   <div className="text-sm font-medium mb-1">{b.label}</div>

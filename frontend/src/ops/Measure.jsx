@@ -71,7 +71,7 @@ function Analytics() {
           </div>
           <Panel className="ops-rise" style={{ animationDelay: '0.06s' }}>
             <PanelHead title="Scoring weights — what the model currently believes"
-              right={<button onClick={retrain} disabled={busy} className="mono" style={{ fontSize: 10, padding: '4px 12px', borderRadius: 6, cursor: 'pointer', border: `1px solid ${T.green}55`, color: T.green, background: T.green + '14', opacity: busy ? 0.5 : 1 }}>{busy ? 'running…' : 'run retrain cycle'}</button>} />
+              right={<button onClick={retrain} disabled={busy} className="mono" style={{ fontSize: 10, padding: '4px 12px', borderRadius: 6, cursor: 'pointer', border: `1px solid color-mix(in srgb, ${T.green} 33.333%, transparent)`, color: T.green, background: `color-mix(in srgb, ${T.green} 7.843%, transparent)`, opacity: busy ? 0.5 : 1 }}>{busy ? 'running…' : 'run retrain cycle'}</button>} />
             <div style={{ display: 'flex', gap: 26, alignItems: 'baseline', padding: '13px 16px', flexWrap: 'wrap' }}>
               {w && Object.entries(w.weights).map(([k, v]) => (
                 <Mono key={k} style={{ fontSize: 13 }}>

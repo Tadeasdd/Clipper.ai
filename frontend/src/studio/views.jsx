@@ -37,24 +37,24 @@ function StudioBackdrop() {
       >
         <defs>
           <radialGradient id="sbGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#53fc18" stopOpacity="0.14" />
-            <stop offset="100%" stopColor="#53fc18" stopOpacity="0" />
+            <stop offset="0%" stopColor="var(--color-brand)" stopOpacity="0.14" />
+            <stop offset="100%" stopColor="var(--color-brand)" stopOpacity="0" />
           </radialGradient>
           <linearGradient id="sbSweep" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#53fc18" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="#53fc18" stopOpacity="0" />
+            <stop offset="0%" stopColor="var(--color-brand)" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="var(--color-brand)" stopOpacity="0" />
           </linearGradient>
         </defs>
 
         <circle cx="280" cy="280" r="252" fill="url(#sbGlow)" />
 
         {/* Static rings */}
-        <circle cx="280" cy="280" r="96" stroke="#53fc18" strokeOpacity="0.28" strokeWidth="1" />
-        <circle cx="280" cy="280" r="156" stroke="#53fc18" strokeOpacity="0.18" strokeWidth="1" strokeDasharray="3 9" />
-        <circle cx="280" cy="280" r="216" stroke="#53fc18" strokeOpacity="0.12" strokeWidth="1" />
+        <circle cx="280" cy="280" r="96" stroke="var(--color-brand)" strokeOpacity="0.28" strokeWidth="1" />
+        <circle cx="280" cy="280" r="156" stroke="var(--color-brand)" strokeOpacity="0.18" strokeWidth="1" strokeDasharray="3 9" />
+        <circle cx="280" cy="280" r="216" stroke="var(--color-brand)" strokeOpacity="0.12" strokeWidth="1" />
         {/* Crosshair */}
-        <line x1="280" y1="20" x2="280" y2="540" stroke="#53fc18" strokeOpacity="0.08" strokeWidth="1" />
-        <line x1="20" y1="280" x2="540" y2="280" stroke="#53fc18" strokeOpacity="0.08" strokeWidth="1" />
+        <line x1="280" y1="20" x2="280" y2="540" stroke="var(--color-brand)" strokeOpacity="0.08" strokeWidth="1" />
+        <line x1="20" y1="280" x2="540" y2="280" stroke="var(--color-brand)" strokeOpacity="0.08" strokeWidth="1" />
 
         {/* Rotating layer: degree ticks + sweep wedge + blips */}
         <g className="sonar-spin" style={{ transformBox: 'fill-box', transformOrigin: 'center' }}>
@@ -71,19 +71,19 @@ function StudioBackdrop() {
                 key={i}
                 x1={x1.toFixed(1)} y1={y1.toFixed(1)}
                 x2={x2.toFixed(1)} y2={y2.toFixed(1)}
-                stroke="#53fc18" strokeOpacity={long ? 0.3 : 0.15} strokeWidth="1"
+                stroke="var(--color-brand)" strokeOpacity={long ? 0.3 : 0.15} strokeWidth="1"
               />
             );
           })}
           {/* Sweep arm */}
           <path d="M 280 280 L 528 280 A 248 248 0 0 0 494.7 156 Z" fill="url(#sbSweep)" opacity="0.35" />
-          <line x1="280" y1="280" x2="528" y2="280" stroke="#53fc18" strokeOpacity="0.4" strokeWidth="1" />
+          <line x1="280" y1="280" x2="528" y2="280" stroke="var(--color-brand)" strokeOpacity="0.4" strokeWidth="1" />
           {/* Signal blips */}
-          <circle className="sonar-blip" cx="356" cy="196" r="2.5" fill="#53fc18" />
-          <circle className="sonar-blip" cx="184" cy="332" r="2" fill="#53fc18" style={{ animationDelay: '1.1s' }} />
+          <circle className="sonar-blip" cx="356" cy="196" r="2.5" fill="var(--color-brand)" />
+          <circle className="sonar-blip" cx="184" cy="332" r="2" fill="var(--color-brand)" style={{ animationDelay: '1.1s' }} />
           <circle className="sonar-blip" cx="412" cy="356" r="1.8" fill="#aaff66" style={{ animationDelay: '2.2s' }} />
         </g>
-        <circle cx="280" cy="280" r="3" fill="#53fc18" fillOpacity="0.6" />
+        <circle cx="280" cy="280" r="3" fill="var(--color-brand)" fillOpacity="0.6" />
       </svg>
 
       {/* Counterweight glow, bottom-left — echoes the purple in clip art */}
@@ -132,12 +132,12 @@ function UploadView({ onFile, fileRef, history = [], onLoadRun, onDeleteRun }) {
         onDrop={(e) => { e.preventDefault(); setDrag(false); onFile(e.dataTransfer.files[0]); }}
         onClick={() => fileRef.current?.click()}
         className={`relative cursor-pointer rounded-2xl border-2 border-dashed p-16 text-center transition-all ${
-          drag ? 'border-[#53fc18] bg-[#53fc18]/5' : 'border-stone-700 hover:border-stone-600 bg-stone-900/30'
+          drag ? 'border-[var(--color-brand)] bg-[var(--color-brand)]/5' : 'border-stone-700 hover:border-stone-600 bg-stone-900/30'
         }`}
       >
         <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={(e) => onFile(e.target.files[0])} />
-        <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-[#53fc18]/20 to-[#53fc18]/10 border border-[#53fc18]/30 flex items-center justify-center mb-6">
-          <Upload className="w-7 h-7 text-[#53fc18]" />
+        <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-[var(--color-brand)]/20 to-[var(--color-brand)]/10 border border-[var(--color-brand)]/30 flex items-center justify-center mb-6">
+          <Upload className="w-7 h-7 text-[var(--color-brand)]" />
         </div>
         <div className="serif text-3xl mb-2">Drop a file or click to browse</div>
         <div className="text-stone-500 text-sm mono">Up to 4GB · .mp4 · .mov · .webm</div>
@@ -150,7 +150,7 @@ function UploadView({ onFile, fileRef, history = [], onLoadRun, onDeleteRun }) {
           { icon: Zap, t: 'Platform-ready exports', d: 'TikTok, Reels, Shorts, X, auto-cropped and captioned.' },
         ].map((f) => (
           <div key={f.t} className="p-6 rounded-xl border border-stone-800 bg-stone-900/30">
-            <f.icon className="w-5 h-5 text-[#53fc18] mb-4" />
+            <f.icon className="w-5 h-5 text-[var(--color-brand)] mb-4" />
             <div className="font-medium mb-1">{f.t}</div>
             <div className="text-sm text-stone-400 leading-relaxed">{f.d}</div>
           </div>
@@ -162,7 +162,7 @@ function UploadView({ onFile, fileRef, history = [], onLoadRun, onDeleteRun }) {
         <div className="mt-10">
           <div className="flex items-center justify-between mb-4">
             <div className="text-xs mono text-stone-500 tracking-wider flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" style={{ boxShadow: '0 0 6px #53fc18' }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" style={{ boxShadow: '0 0 6px var(--color-brand)' }} />
               YOUR RECENT RUNS · {history.length}
             </div>
             <div className="text-[10px] mono text-stone-600 tracking-wider">SAVED LOCALLY</div>
@@ -171,11 +171,11 @@ function UploadView({ onFile, fileRef, history = [], onLoadRun, onDeleteRun }) {
             {history.slice(0, 6).map((run) => (
               <div
                 key={run.id}
-                className="group flex items-center gap-4 p-4 rounded-xl border border-stone-800 bg-stone-900/30 hover:border-[#53fc18]/30 hover:bg-[#53fc18]/[0.02] transition cursor-pointer"
+                className="group flex items-center gap-4 p-4 rounded-xl border border-stone-800 bg-stone-900/30 hover:border-[var(--color-brand)]/30 hover:bg-[var(--color-brand)]/[0.02] transition cursor-pointer"
                 onClick={() => onLoadRun && onLoadRun(run)}
               >
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#53fc18]/20 to-[#53fc18]/5 border border-[#53fc18]/20 flex items-center justify-center flex-shrink-0">
-                  <Sparkles className="w-4 h-4 text-[#53fc18]" />
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[var(--color-brand)]/20 to-[var(--color-brand)]/5 border border-[var(--color-brand)]/20 flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-4 h-4 text-[var(--color-brand)]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm text-stone-200 truncate font-medium">
@@ -204,7 +204,7 @@ function UploadView({ onFile, fileRef, history = [], onLoadRun, onDeleteRun }) {
                 >
                   {confirmDelete === run.id ? 'CONFIRM' : 'DELETE'}
                 </button>
-                <ArrowUpRight className="w-4 h-4 text-stone-600 group-hover:text-[#53fc18] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition" />
+                <ArrowUpRight className="w-4 h-4 text-stone-600 group-hover:text-[var(--color-brand)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition" />
               </div>
             ))}
           </div>
@@ -298,7 +298,7 @@ function AnalyzingView({ progress, step, steps, videoMeta, stageHistory = [], mo
   return (
     <div className="animate-slide-up max-w-3xl mx-auto pt-16">
       <div className="text-center mb-8">
-        <div className="text-xs mono text-[#53fc18] mb-3 tracking-wider">→ PROCESSING</div>
+        <div className="text-xs mono text-[var(--color-brand)] mb-3 tracking-wider">→ PROCESSING</div>
         <h1 className="serif text-5xl mb-4">Working through your video</h1>
         <div className="text-stone-500 mono text-sm">{videoMeta?.name} · {videoMeta?.size} MB</div>
       </div>
@@ -307,13 +307,13 @@ function AnalyzingView({ progress, step, steps, videoMeta, stageHistory = [], mo
       <div className="relative rounded-2xl border border-stone-800 bg-stone-900/40 overflow-hidden mb-6">
         <div className="flex items-center justify-between px-4 pt-3 pb-2">
           <div className="text-[10px] mono uppercase tracking-[0.2em] text-stone-500 flex items-center gap-2">
-            <Loader2 className="w-3 h-3 text-[#53fc18] animate-spin" />
+            <Loader2 className="w-3 h-3 text-[var(--color-brand)] animate-spin" />
             Scanning source
           </div>
           <div role="status" aria-live="polite" className="flex items-baseline gap-1.5">
             <span
               className="serif text-2xl tabular-nums leading-none transition-colors"
-              style={{ color: momentsFound > 0 ? '#53fc18' : '#57534e', textShadow: momentsFound > 0 ? '0 0 14px rgba(83,252,24,0.5)' : 'none' }}
+              style={{ color: momentsFound > 0 ? 'var(--color-brand)' : '#57534e', textShadow: momentsFound > 0 ? '0 0 14px rgba(83,252,24,0.5)' : 'none' }}
             >
               {momentsFound}
             </span>
@@ -335,8 +335,8 @@ function AnalyzingView({ progress, step, steps, videoMeta, stageHistory = [], mo
                   className="flex-1 rounded-sm"
                   style={{
                     height: `${h}%`,
-                    background: nearHead ? '#aaff66' : played ? '#53fc18' : 'rgba(255,255,255,0.18)',
-                    boxShadow: nearHead ? '0 0 8px #53fc18' : 'none',
+                    background: nearHead ? '#aaff66' : played ? 'var(--color-brand)' : 'rgba(255,255,255,0.18)',
+                    boxShadow: nearHead ? '0 0 8px var(--color-brand)' : 'none',
                     transition: 'background 200ms linear',
                   }}
                 />
@@ -346,7 +346,7 @@ function AnalyzingView({ progress, step, steps, videoMeta, stageHistory = [], mo
             {/* playhead */}
             <div
               className="absolute top-0 bottom-0 w-px bg-[#aaff66]"
-              style={{ left: `${playhead * 100}%`, boxShadow: '0 0 10px #53fc18' }}
+              style={{ left: `${playhead * 100}%`, boxShadow: '0 0 10px var(--color-brand)' }}
             />
 
             {/* moment markers — light up as the counter climbs */}
@@ -359,8 +359,8 @@ function AnalyzingView({ progress, step, steps, videoMeta, stageHistory = [], mo
                     style={{
                       width: lit ? 9 : 5,
                       height: lit ? 9 : 5,
-                      background: lit ? '#53fc18' : 'rgba(255,255,255,0.25)',
-                      boxShadow: lit ? '0 0 10px #53fc18' : 'none',
+                      background: lit ? 'var(--color-brand)' : 'rgba(255,255,255,0.25)',
+                      boxShadow: lit ? '0 0 10px var(--color-brand)' : 'none',
                     }}
                   />
                 </div>
@@ -380,7 +380,7 @@ function AnalyzingView({ progress, step, steps, videoMeta, stageHistory = [], mo
                     key={idx}
                     className="font-medium transition-all"
                     style={{
-                      color: isActive ? '#53fc18' : isPast ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.25)',
+                      color: isActive ? 'var(--color-brand)' : isPast ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.25)',
                       textShadow: isActive ? '0 0 10px rgba(83,252,24,0.6)' : 'none',
                       transform: isActive ? 'scale(1.06)' : 'scale(1)',
                     }}
@@ -426,15 +426,15 @@ function AnalyzingView({ progress, step, steps, videoMeta, stageHistory = [], mo
           return (
             <div key={s} className={`flex items-center gap-4 p-4 rounded-xl border transition ${
               isDone ? 'border-stone-800 bg-stone-900/30 text-stone-500' :
-              isActive ? 'border-[#53fc18]/40 bg-[#53fc18]/5 text-stone-100' :
+              isActive ? 'border-[var(--color-brand)]/40 bg-[var(--color-brand)]/5 text-stone-100' :
               'border-stone-800/60 text-stone-600'
             }`}>
               <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0">
                 {isDone ? <CheckCircle2 className="w-5 h-5 text-emerald-400" /> :
-                 isActive ? <Loader2 className="w-5 h-5 text-[#53fc18] animate-spin" /> :
+                 isActive ? <Loader2 className="w-5 h-5 text-[var(--color-brand)] animate-spin" /> :
                  <div className="w-2 h-2 rounded-full bg-stone-700" />}
               </div>
-              <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-[#53fc18]' : isDone ? 'text-stone-500' : 'text-stone-700'}`} />
+              <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-[var(--color-brand)]' : isDone ? 'text-stone-500' : 'text-stone-700'}`} />
               <div className="flex-1 min-w-0">
                 <div className="truncate">{s}</div>
                 {isActive && (
@@ -444,7 +444,7 @@ function AnalyzingView({ progress, step, steps, videoMeta, stageHistory = [], mo
                 )}
               </div>
               <div className="text-xs mono tabular-nums">
-                {isDone ? (t || 'done') : isActive ? (t ? <span className="text-[#53fc18]">{t}</span> : 'running') : 'queued'}
+                {isDone ? (t || 'done') : isActive ? (t ? <span className="text-[var(--color-brand)]">{t}</span> : 'running') : 'queued'}
               </div>
             </div>
           );
@@ -504,14 +504,14 @@ function ScoreSpark({ scores }) {
       <line x1="0" y1="31" x2="100" y2="31" stroke="rgba(255,255,255,0.10)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
       <line x1="0" y1={Y(avg)} x2="100" y2={Y(avg)} stroke="rgba(255,255,255,0.18)" strokeWidth="1" strokeDasharray="1.5 2.5" vectorEffect="non-scaling-stroke" />
       {scores.map((s, i) => {
-        const col = s >= 90 ? '#34d399' : s >= 80 ? '#53fc18' : '#fbbf24';
+        const col = s >= 90 ? '#34d399' : s >= 80 ? 'var(--color-brand)' : '#fbbf24';
         const x = X(i);
         const y = Y(s);
         return (
           <g key={i}>
             <rect x={x - 1.7} y={y} width="3.4" height={31 - y} fill={col} opacity="0.12" />
             <line x1={x} y1="31" x2={x} y2={y} stroke={col} strokeOpacity="0.55" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
-            <path d={`M ${x} ${y} l 0.01 0`} stroke={col} strokeWidth="5" strokeLinecap="round" vectorEffect="non-scaling-stroke" style={{ filter: `drop-shadow(0 0 3px ${col}99)` }} />
+            <path d={`M ${x} ${y} l 0.01 0`} stroke={col} strokeWidth="5" strokeLinecap="round" vectorEffect="non-scaling-stroke" style={{ filter: `drop-shadow(0 0 3px color-mix(in srgb, ${col} 60%, transparent))` }} />
           </g>
         );
       })}
@@ -537,7 +537,7 @@ function RuntimeSpark({ durations }) {
         <g key={i}>
           <line
             x1={`${a + 0.9}%`} y1="14" x2={`${Math.max(a + 0.9, b - 0.9)}%`} y2="14"
-            stroke="#53fc18" strokeOpacity={i % 2 ? 0.5 : 0.9} strokeWidth="3.5" strokeLinecap="round"
+            stroke="var(--color-brand)" strokeOpacity={i % 2 ? 0.5 : 0.9} strokeWidth="3.5" strokeLinecap="round"
             style={{ filter: 'drop-shadow(0 0 3px rgba(83,252,24,0.35))' }}
           />
           {i < segs.length - 1 && (
@@ -568,8 +568,8 @@ function ReachSpark({ values }) {
     <svg viewBox="0 0 100 36" preserveAspectRatio="none" className="w-full h-9 block" aria-hidden="true">
       <defs>
         <linearGradient id="reachFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#53fc18" stopOpacity="0.28" />
-          <stop offset="100%" stopColor="#53fc18" stopOpacity="0" />
+          <stop offset="0%" stopColor="var(--color-brand)" stopOpacity="0.28" />
+          <stop offset="100%" stopColor="var(--color-brand)" stopOpacity="0" />
         </linearGradient>
       </defs>
       {[13, 23].map((y) => (
@@ -578,13 +578,13 @@ function ReachSpark({ values }) {
       <line x1="0" y1="33" x2="100" y2="33" stroke="rgba(255,255,255,0.10)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
       <polygon points={`0,33 ${line} 100,33`} fill="url(#reachFill)" />
       <polyline
-        points={line} fill="none" stroke="#53fc18" strokeWidth="1.5"
+        points={line} fill="none" stroke="var(--color-brand)" strokeWidth="1.5"
         strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"
         style={{ filter: 'drop-shadow(0 0 3px rgba(83,252,24,0.7))' }}
       />
       {pts.slice(1, -1).map(([x, y], i) => (
         <path
-          key={i} d={`M ${x.toFixed(2)} ${y.toFixed(2)} l 0.01 0`} stroke="#53fc18" strokeWidth="3"
+          key={i} d={`M ${x.toFixed(2)} ${y.toFixed(2)} l 0.01 0`} stroke="var(--color-brand)" strokeWidth="3"
           strokeLinecap="round" vectorEffect="non-scaling-stroke"
           style={{ filter: 'drop-shadow(0 0 3px rgba(83,252,24,0.7))' }}
         />
@@ -638,8 +638,8 @@ function StatCard({ m, index }) {
         opacity: hot ? 1 : 0, transition: 'opacity .35s',
       }} />
       <div className="relative flex items-center justify-between mb-3">
-        <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-[#53fc18]/25 bg-[#53fc18]/[0.06]">
-          <m.icon className="w-4 h-4 text-[#53fc18]" />
+        <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-[var(--color-brand)]/25 bg-[var(--color-brand)]/[0.06]">
+          <m.icon className="w-4 h-4 text-[var(--color-brand)]" />
         </span>
         {m.tag && <span className="text-[9px] mono uppercase tracking-[0.16em] text-stone-600">{m.tag}</span>}
       </div>
@@ -673,7 +673,7 @@ function Meter({ label, value, delay }) {
     <div>
       <div className="flex items-center justify-between mb-1">
         <span className="text-xs text-stone-400">{label}</span>
-        <StatCountUp value={value} durationMs={1000 + delay} className="text-xs mono text-[#53fc18] tabular-nums" />
+        <StatCountUp value={value} durationMs={1000 + delay} className="text-xs mono text-[var(--color-brand)] tabular-nums" />
       </div>
       <svg width="100%" height="15" className="block" aria-hidden="true">
         {Array.from({ length: 21 }, (_, i) => (
@@ -684,7 +684,7 @@ function Meter({ label, value, delay }) {
         ))}
         <line x1="0%" y1="5" x2="100%" y2="5" stroke="rgba(255,255,255,0.08)" strokeWidth="2" />
         <line
-          x1="0%" y1="5" x2="100%" y2="5" stroke="#53fc18" strokeWidth="3" strokeLinecap="round"
+          x1="0%" y1="5" x2="100%" y2="5" stroke="var(--color-brand)" strokeWidth="3" strokeLinecap="round"
           pathLength="100" strokeDasharray={`${value} 100`} strokeDashoffset={on ? 0 : value}
           style={{
             transition: 'stroke-dashoffset 1s cubic-bezier(.16,1,.3,1)',
@@ -732,7 +732,7 @@ function EngagementRadar({ profile }) {
       <g className="radar-in" style={{ animationDelay: '880ms' }}>
         <polygon
           points={poly.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ')}
-          fill="rgba(83,252,24,0.15)" stroke="#53fc18" strokeWidth="1.5" strokeLinejoin="round"
+          fill="rgba(83,252,24,0.15)" stroke="var(--color-brand)" strokeWidth="1.5" strokeLinejoin="round"
           style={{ filter: 'drop-shadow(0 0 5px rgba(83,252,24,0.5))' }}
         />
         {poly.map(([x, y], i) => (
@@ -788,21 +788,21 @@ function ResultsWave({ totalSec, sourceEnd, clips = [] }) {
         <svg viewBox="0 0 1200 80" preserveAspectRatio="none" className="block w-full h-16">
         <defs>
           <linearGradient id="rwStroke" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#53fc18" stopOpacity="0" />
-            <stop offset="16%" stopColor="#53fc18" stopOpacity="0.85" />
+            <stop offset="0%" stopColor="var(--color-brand)" stopOpacity="0" />
+            <stop offset="16%" stopColor="var(--color-brand)" stopOpacity="0.85" />
             <stop offset="52%" stopColor="#aaff66" stopOpacity="1" />
-            <stop offset="84%" stopColor="#53fc18" stopOpacity="0.7" />
-            <stop offset="100%" stopColor="#53fc18" stopOpacity="0" />
+            <stop offset="84%" stopColor="var(--color-brand)" stopOpacity="0.7" />
+            <stop offset="100%" stopColor="var(--color-brand)" stopOpacity="0" />
           </linearGradient>
           <linearGradient id="rwBody" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#53fc18" stopOpacity="0.13" />
-            <stop offset="50%" stopColor="#53fc18" stopOpacity="0.05" />
-            <stop offset="100%" stopColor="#53fc18" stopOpacity="0.11" />
+            <stop offset="0%" stopColor="var(--color-brand)" stopOpacity="0.13" />
+            <stop offset="50%" stopColor="var(--color-brand)" stopOpacity="0.05" />
+            <stop offset="100%" stopColor="var(--color-brand)" stopOpacity="0.11" />
           </linearGradient>
           <linearGradient id="rwRegion" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#53fc18" stopOpacity="0.22" />
-            <stop offset="55%" stopColor="#53fc18" stopOpacity="0.05" />
-            <stop offset="100%" stopColor="#53fc18" stopOpacity="0.14" />
+            <stop offset="0%" stopColor="var(--color-brand)" stopOpacity="0.22" />
+            <stop offset="55%" stopColor="var(--color-brand)" stopOpacity="0.05" />
+            <stop offset="100%" stopColor="var(--color-brand)" stopOpacity="0.14" />
           </linearGradient>
         </defs>
         <line x1="0" y1="40" x2="1200" y2="40" stroke="rgba(255,255,255,0.07)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
@@ -819,8 +819,8 @@ function ResultsWave({ totalSec, sourceEnd, clips = [] }) {
               onMouseEnter={() => setHov(i)}
               onMouseLeave={() => setHov(null)}
             />
-            <line x1={x1} y1={6} x2={x1} y2={74} stroke="#53fc18" strokeOpacity={hov === i ? 0.9 : 0.45} strokeWidth="1" vectorEffect="non-scaling-stroke" style={{ transition: 'stroke-opacity .25s ease' }} />
-            <line x1={x2} y1={6} x2={x2} y2={74} stroke="#53fc18" strokeOpacity={hov === i ? 0.9 : 0.45} strokeWidth="1" vectorEffect="non-scaling-stroke" style={{ transition: 'stroke-opacity .25s ease' }} />
+            <line x1={x1} y1={6} x2={x1} y2={74} stroke="var(--color-brand)" strokeOpacity={hov === i ? 0.9 : 0.45} strokeWidth="1" vectorEffect="non-scaling-stroke" style={{ transition: 'stroke-opacity .25s ease' }} />
+            <line x1={x2} y1={6} x2={x2} y2={74} stroke="var(--color-brand)" strokeOpacity={hov === i ? 0.9 : 0.45} strokeWidth="1" vectorEffect="non-scaling-stroke" style={{ transition: 'stroke-opacity .25s ease' }} />
           </g>
         ))}
         <polyline
@@ -840,7 +840,7 @@ function ResultsWave({ totalSec, sourceEnd, clips = [] }) {
           points={bottom}
           pathLength="1"
           fill="none"
-          stroke="#53fc18"
+          stroke="var(--color-brand)"
           strokeOpacity="0.35"
           strokeWidth="1"
           strokeLinejoin="round"
@@ -872,7 +872,7 @@ function ResultsWave({ totalSec, sourceEnd, clips = [] }) {
       <div className="flex items-center justify-between mt-1 text-[9px] mono tracking-[0.18em] text-stone-600 uppercase">
         <span>0:00</span>
         {hov != null && clips[hov] ? (
-          <span className="text-[#53fc18] normal-case tracking-[0.12em]" style={{ textShadow: '0 0 10px rgba(83,252,24,0.4)' }}>
+          <span className="text-[var(--color-brand)] normal-case tracking-[0.12em]" style={{ textShadow: '0 0 10px rgba(83,252,24,0.4)' }}>
             №{String(hov + 1).padStart(2, '0')} · {clips[hov].title} · {clips[hov].duration}s · {clips[hov].timestamp}
           </span>
         ) : (
@@ -963,7 +963,7 @@ function ResultsView({ clips, onSelect, onReset, videoMeta, processedMs, bookCal
             ))}
             <line x1="0%" y1="5" x2="100%" y2="5" stroke="rgba(255,255,255,0.08)" strokeWidth="2" />
             <line
-              x1="0%" y1="5" x2={`${top}%`} y2="5" stroke="#53fc18" strokeWidth="3" strokeLinecap="round"
+              x1="0%" y1="5" x2={`${top}%`} y2="5" stroke="var(--color-brand)" strokeWidth="3" strokeLinecap="round"
               style={{ filter: 'drop-shadow(0 0 3px rgba(83,252,24,0.5))' }}
             />
             <circle cx={`${top}%`} cy="5" r="3" fill="#aaff66" style={{ filter: 'drop-shadow(0 0 4px rgba(83,252,24,0.9))' }} />
@@ -999,7 +999,7 @@ function ResultsView({ clips, onSelect, onReset, videoMeta, processedMs, bookCal
           <h1 className="serif text-5xl tracking-tight">
             <span className="relative inline-block">
               <span aria-hidden className="head-ping" />
-              <StatCountUp value={clips.length} className="relative text-[#53fc18] tabular-nums" style={{ textShadow: '0 0 26px rgba(83,252,24,0.55)' }} />
+              <StatCountUp value={clips.length} className="relative text-[var(--color-brand)] tabular-nums" style={{ textShadow: '0 0 26px rgba(83,252,24,0.55)' }} />
             </span>{' '}
             {clips.length === 1 ? 'clip' : 'clips'} <span className="italic gradient-green">ready to ship</span>
           </h1>
@@ -1024,8 +1024,8 @@ function ResultsView({ clips, onSelect, onReset, videoMeta, processedMs, bookCal
           <span aria-hidden className="panel-grid" />
           <span aria-hidden className="absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(83,252,24,0.6), transparent)' }} />
           <div className="relative flex items-center gap-2 mb-4">
-            <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-[#53fc18]/25 bg-[#53fc18]/[0.06]">
-              <Zap className="w-3.5 h-3.5 text-[#53fc18]" />
+            <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-[var(--color-brand)]/25 bg-[var(--color-brand)]/[0.06]">
+              <Zap className="w-3.5 h-3.5 text-[var(--color-brand)]" />
             </span>
             <span className="text-xs mono text-stone-400 tracking-wider">ENGAGEMENT PROFILE</span>
           </div>
@@ -1047,8 +1047,8 @@ function ResultsView({ clips, onSelect, onReset, videoMeta, processedMs, bookCal
           <span aria-hidden className="absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(83,252,24,0.6), transparent)' }} />
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-[#53fc18]/25 bg-[#53fc18]/[0.06]">
-                <Sparkles className="w-3.5 h-3.5 text-[#53fc18]" />
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-[var(--color-brand)]/25 bg-[var(--color-brand)]/[0.06]">
+                <Sparkles className="w-3.5 h-3.5 text-[var(--color-brand)]" />
               </span>
               <span className="text-xs mono text-stone-400 tracking-wider">SIGNALS DETECTED</span>
             </div>
@@ -1056,10 +1056,10 @@ function ResultsView({ clips, onSelect, onReset, videoMeta, processedMs, bookCal
           </div>
           <div className="flex flex-wrap gap-2 mb-5">
             {signals.map(([name, count]) => (
-              <span key={name} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#53fc18]/25 bg-[#53fc18]/[0.05] text-xs text-stone-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" style={{ boxShadow: '0 0 6px rgba(83,252,24,0.9)' }} />
+              <span key={name} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[var(--color-brand)]/25 bg-[var(--color-brand)]/[0.05] text-xs text-stone-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" style={{ boxShadow: '0 0 6px rgba(83,252,24,0.9)' }} />
                 {name}
-                {count > 1 && <span className="mono text-[10px] text-[#53fc18]">×{count}</span>}
+                {count > 1 && <span className="mono text-[10px] text-[var(--color-brand)]">×{count}</span>}
               </span>
             ))}
           </div>
@@ -1089,10 +1089,10 @@ function ResultsView({ clips, onSelect, onReset, videoMeta, processedMs, bookCal
           </button>
         ))}
         <div className="flex-1" />
-        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#53fc18]/40 bg-[#53fc18]/[0.06] text-[#53fc18] text-xs mono">
+        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[var(--color-brand)]/40 bg-[var(--color-brand)]/[0.06] text-[var(--color-brand)] text-xs mono">
           <span className="relative flex w-1.5 h-1.5">
-            <span className="motion-safe:animate-ping absolute inline-flex w-full h-full rounded-full bg-[#53fc18] opacity-60" />
-            <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-[#53fc18]" style={{ boxShadow: '0 0 6px rgba(83,252,24,0.9)' }} />
+            <span className="motion-safe:animate-ping absolute inline-flex w-full h-full rounded-full bg-[var(--color-brand)] opacity-60" />
+            <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" style={{ boxShadow: '0 0 6px rgba(83,252,24,0.9)' }} />
           </span>
           <CheckCircle2 className="w-3.5 h-3.5" />
           Editor-reviewed · delivered to your queue
@@ -1105,21 +1105,21 @@ function ResultsView({ clips, onSelect, onReset, videoMeta, processedMs, bookCal
         ))}
       </div>
 
-      <div className="vf-corners relative overflow-hidden mt-12 rounded-2xl border border-[#53fc18]/30 bg-gradient-to-br from-[#53fc18]/[0.07] to-transparent p-8 text-center">
+      <div className="vf-corners relative overflow-hidden mt-12 rounded-2xl border border-[var(--color-brand)]/30 bg-gradient-to-br from-[var(--color-brand)]/[0.07] to-transparent p-8 text-center">
         {/* Decorative concentric rings — anchor the panel's corners */}
         <svg aria-hidden viewBox="0 0 200 200" fill="none" className="absolute -right-16 -top-20 w-72 h-72 pointer-events-none" style={{ opacity: 0.22 }}>
-          <circle cx="100" cy="100" r="34" stroke="#53fc18" strokeOpacity="0.55" strokeWidth="1" />
-          <circle cx="100" cy="100" r="58" stroke="#53fc18" strokeOpacity="0.35" strokeWidth="1" strokeDasharray="2 7" />
-          <circle cx="100" cy="100" r="82" stroke="#53fc18" strokeOpacity="0.22" strokeWidth="1" />
-          <circle cx="100" cy="100" r="2.5" fill="#53fc18" fillOpacity="0.7" />
+          <circle cx="100" cy="100" r="34" stroke="var(--color-brand)" strokeOpacity="0.55" strokeWidth="1" />
+          <circle cx="100" cy="100" r="58" stroke="var(--color-brand)" strokeOpacity="0.35" strokeWidth="1" strokeDasharray="2 7" />
+          <circle cx="100" cy="100" r="82" stroke="var(--color-brand)" strokeOpacity="0.22" strokeWidth="1" />
+          <circle cx="100" cy="100" r="2.5" fill="var(--color-brand)" fillOpacity="0.7" />
         </svg>
         <svg aria-hidden viewBox="0 0 200 200" fill="none" className="absolute -left-20 -bottom-24 w-64 h-64 pointer-events-none" style={{ opacity: 0.14 }}>
-          <circle cx="100" cy="100" r="46" stroke="#53fc18" strokeOpacity="0.5" strokeWidth="1" strokeDasharray="2 7" />
-          <circle cx="100" cy="100" r="78" stroke="#53fc18" strokeOpacity="0.28" strokeWidth="1" />
+          <circle cx="100" cy="100" r="46" stroke="var(--color-brand)" strokeOpacity="0.5" strokeWidth="1" strokeDasharray="2 7" />
+          <circle cx="100" cy="100" r="78" stroke="var(--color-brand)" strokeOpacity="0.28" strokeWidth="1" />
         </svg>
 
         <div className="relative">
-          <div className="text-xs mono text-[#53fc18] mb-3 tracking-wider">→ THIS IS A SAMPLE</div>
+          <div className="text-xs mono text-[var(--color-brand)] mb-3 tracking-wider">→ THIS IS A SAMPLE</div>
           <h2 className="serif text-3xl tracking-tight mb-3">This is a sample of what we'd deliver from a single recording.</h2>
           <p className="text-stone-400 max-w-xl mx-auto mb-7">
             Your account team handles the whole pipeline: strategy, editing, and review. Finished clips land in your queue. No tools to learn.
@@ -1154,7 +1154,7 @@ function ClipFrame({ clip, rank, className = '' }) {
           {String(rank).padStart(2, '0')}
         </div>
         {platforms[0] && (
-          <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/55 backdrop-blur-sm text-[9px] mono text-[#53fc18] leading-none">
+          <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/55 backdrop-blur-sm text-[9px] mono text-[var(--color-brand)] leading-none">
             {platforms[0]}
           </div>
         )}
@@ -1190,7 +1190,7 @@ function ClipFrame({ clip, rank, className = '' }) {
                 key={i}
                 className="font-bold leading-tight text-[11px] sm:text-xs"
                 style={{
-                  color: i === lines.length - 1 ? '#53fc18' : '#ffffff',
+                  color: i === lines.length - 1 ? 'var(--color-brand)' : '#ffffff',
                   textShadow:
                     i === lines.length - 1
                       ? '0 0 10px rgba(83,252,24,0.7), 0 2px 4px rgba(0,0,0,0.85)'
@@ -1241,7 +1241,7 @@ const gaugeArc = (r, fromDeg, toDeg) => {
 
 function ScoreGauge({ score, gid }) {
   const tone = scoreTone(score);
-  const color = score >= 90 ? '#34d399' : score >= 80 ? '#53fc18' : '#fbbf24';
+  const color = score >= 90 ? '#34d399' : score >= 80 ? 'var(--color-brand)' : '#fbbf24';
   const colorHi = score >= 90 ? '#6ee7b7' : score >= 80 ? '#aaff66' : '#fde68a';
 
   const reduced = prefersReducedMotion();
@@ -1299,7 +1299,7 @@ function ScoreGauge({ score, gid }) {
         strokeDashoffset={drawn ? 0 : score}
         style={{
           transition: 'stroke-dashoffset 1.2s cubic-bezier(.16,1,.3,1)',
-          filter: `drop-shadow(0 0 4px ${color}77)`,
+          filter: `drop-shadow(0 0 4px color-mix(in srgb, ${color} 46.667%, transparent))`,
         }}
       />
       {/* head dot at the arc tip — fades in once the draw lands */}
@@ -1333,7 +1333,7 @@ function ScoreGauge({ score, gid }) {
 
 function ClipCard({ clip, rank, onSelect, sourceEnd }) {
   const score = clipScore(clip);
-  const ringColor = score >= 90 ? '#34d399' : score >= 80 ? '#53fc18' : '#fbbf24';
+  const ringColor = score >= 90 ? '#34d399' : score >= 80 ? 'var(--color-brand)' : '#fbbf24';
   const platforms = clip.platforms || [];
 
   /* ── Delivery materialization ──
@@ -1395,7 +1395,7 @@ function ClipCard({ clip, rank, onSelect, sourceEnd }) {
       <div className="p-4 sm:p-5 flex flex-col gap-2.5 flex-1 min-w-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <button onClick={onSelect} className="text-left font-medium block w-full hover:text-[#53fc18] transition line-clamp-2">
+            <button onClick={onSelect} className="text-left font-medium block w-full hover:text-[var(--color-brand)] transition line-clamp-2">
               {clip.title}
             </button>
             <div className="serif italic text-stone-400 text-sm line-clamp-1 mt-0.5">{clip.hook}</div>
@@ -1433,7 +1433,7 @@ function ClipCard({ clip, rank, onSelect, sourceEnd }) {
               <line
                 x1={`${segA}%`} y1="6" x2={`${segB}%`} y2="6"
                 stroke={ringColor} strokeWidth="4" strokeLinecap="round"
-                style={{ filter: `drop-shadow(0 0 4px ${ringColor}aa)` }}
+                style={{ filter: `drop-shadow(0 0 4px color-mix(in srgb, ${ringColor} 66.667%, transparent))` }}
               />
             </svg>
             <span className="text-xs mono text-stone-500 shrink-0 tabular-nums">{clip.timestamp}</span>
@@ -1444,7 +1444,7 @@ function ClipCard({ clip, rank, onSelect, sourceEnd }) {
 
         <div className="mt-auto flex items-center gap-2 pt-1">
           <span
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#53fc18]/40 bg-[#53fc18]/[0.06] text-[#53fc18] text-[11px] mono ${entered ? '' : 'clip-stamp'}`}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[var(--color-brand)]/40 bg-[var(--color-brand)]/[0.06] text-[var(--color-brand)] text-[11px] mono ${entered ? '' : 'clip-stamp'}`}
             style={entered ? undefined : { animationDelay: `${d + 820}ms` }}
           >
             <CheckCircle2 className="w-3.5 h-3.5" /> Editor-reviewed
@@ -1519,10 +1519,10 @@ function ClipPlaybackStage({ clip }) {
       <div className="absolute top-0 inset-x-0 flex items-center justify-between px-4 pt-3 z-10 text-[10px] mono">
         <span className="px-2 py-0.5 rounded bg-black/45 backdrop-blur-sm text-white/85">CC · Auto-captioned</span>
         {clip.platforms && clip.platforms[0] && (
-          <span className="px-2 py-0.5 rounded bg-black/45 backdrop-blur-sm text-[#53fc18]">{clip.platforms[0]}</span>
+          <span className="px-2 py-0.5 rounded bg-black/45 backdrop-blur-sm text-[var(--color-brand)]">{clip.platforms[0]}</span>
         )}
       </div>
-      <div className="absolute top-12 right-3 z-10 px-1.5 py-0.5 rounded bg-black/45 backdrop-blur text-[8px] mono text-[#53fc18] tracking-wider">
+      <div className="absolute top-12 right-3 z-10 px-1.5 py-0.5 rounded bg-black/45 backdrop-blur text-[8px] mono text-[var(--color-brand)] tracking-wider">
         CLIPPER.AI · {score}
       </div>
 
@@ -1538,8 +1538,8 @@ function ClipPlaybackStage({ clip }) {
               style={{
                 transform: `scaleY(${h / 100})`,
                 transformOrigin: 'bottom',
-                background: active ? '#53fc18' : 'rgba(255,255,255,0.28)',
-                boxShadow: active && distance < 4 ? '0 0 6px #53fc18' : 'none',
+                background: active ? 'var(--color-brand)' : 'rgba(255,255,255,0.28)',
+                boxShadow: active && distance < 4 ? '0 0 6px var(--color-brand)' : 'none',
               }}
             />
           );
@@ -1552,7 +1552,7 @@ function ClipPlaybackStage({ clip }) {
             key={otIdx}
             className="animate-slide-up font-bold leading-tight text-2xl"
             style={{
-              color: otIsPayoff ? '#53fc18' : '#ffffff',
+              color: otIsPayoff ? 'var(--color-brand)' : '#ffffff',
               textShadow: otIsPayoff
                 ? '0 0 16px rgba(83,252,24,0.7), 0 2px 6px rgba(0,0,0,0.85)'
                 : '0 2px 6px rgba(0,0,0,0.85)',
@@ -1574,7 +1574,7 @@ function ClipPlaybackStage({ clip }) {
                   key={i}
                   className="text-base font-bold transition-all"
                   style={{
-                    color: isActive ? '#53fc18' : isPast ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.4)',
+                    color: isActive ? 'var(--color-brand)' : isPast ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.4)',
                     textShadow: isActive
                       ? '0 0 12px rgba(83,252,24,0.8), 0 2px 4px rgba(0,0,0,0.8)'
                       : '0 2px 4px rgba(0,0,0,0.8)',
@@ -1593,11 +1593,11 @@ function ClipPlaybackStage({ clip }) {
         <div className="relative h-1 rounded-full bg-white/20">
           <div
             className="absolute inset-y-0 left-0 right-0 rounded-full"
-            style={{ transform: `scaleX(${frac})`, transformOrigin: 'left', background: 'linear-gradient(90deg,#53fc18,#aaff66)', boxShadow: '0 0 6px #53fc18' }}
+            style={{ transform: `scaleX(${frac})`, transformOrigin: 'left', background: 'linear-gradient(90deg,var(--color-brand),#aaff66)', boxShadow: '0 0 6px var(--color-brand)' }}
           />
           <div
-            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-[#53fc18]"
-            style={{ left: `${progress}%`, boxShadow: '0 0 8px #53fc18' }}
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-[var(--color-brand)]"
+            style={{ left: `${progress}%`, boxShadow: '0 0 8px var(--color-brand)' }}
           />
         </div>
         <div className="flex items-center justify-between mt-1 text-[9px] mono text-white/60">
@@ -1645,7 +1645,7 @@ function ClipDetailView({ clip, onBack, bookCall }) {
           <div className="grid grid-cols-3 gap-3 mt-4">
             {['9:16', '1:1', '16:9'].map((r, i) => (
               <button key={r} className={`p-3 rounded-lg border text-xs mono transition ${
-                i === 0 ? 'border-[#53fc18] bg-[#53fc18]/10 text-[#53fc18]' : 'border-stone-800 text-stone-400 hover:border-stone-700'
+                i === 0 ? 'border-[var(--color-brand)] bg-[var(--color-brand)]/10 text-[var(--color-brand)]' : 'border-stone-800 text-stone-400 hover:border-stone-700'
               }`}>
                 {r} {i === 0 && '· active'}
               </button>
@@ -1679,9 +1679,9 @@ function ClipDetailView({ clip, onBack, bookCall }) {
         <div className="space-y-6">
           <div>
             <div className="flex items-center gap-2 text-xs mono text-stone-500 mb-3 tracking-wider">
-              <Flame className="w-3.5 h-3.5 text-[#53fc18]" /> VIRALITY BREAKDOWN
+              <Flame className="w-3.5 h-3.5 text-[var(--color-brand)]" /> VIRALITY BREAKDOWN
             </div>
-            <div className="serif text-7xl text-[#53fc18] leading-none mb-2">{shownScore}</div>
+            <div className="serif text-7xl text-[var(--color-brand)] leading-none mb-2">{shownScore}</div>
             <div className="text-stone-400 text-sm">out of 100 · our model’s predicted reach potential</div>
           </div>
 
@@ -1701,7 +1701,7 @@ function ClipDetailView({ clip, onBack, bookCall }) {
                 </div>
                 <div className="h-1.5 rounded-full bg-stone-800 overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-[#53fc18] to-[#aaff66] transition-[width] duration-700 ease-out"
+                    className="h-full rounded-full bg-gradient-to-r from-[var(--color-brand)] to-[#aaff66] transition-[width] duration-700 ease-out"
                     style={{ width: barsIn ? `${v}%` : '0%', transitionDelay: `${bi * 120}ms` }}
                   />
                 </div>
@@ -1714,7 +1714,7 @@ function ClipDetailView({ clip, onBack, bookCall }) {
             <div className="space-y-2">
               {clip.reasons.map((r) => (
                 <div key={r} className="flex items-start gap-2.5 p-3 rounded-lg bg-stone-900/40 border border-stone-800">
-                  <Sparkles className="w-4 h-4 text-[#53fc18] mt-0.5 flex-shrink-0" />
+                  <Sparkles className="w-4 h-4 text-[var(--color-brand)] mt-0.5 flex-shrink-0" />
                   <div className="text-sm text-stone-300">{r}</div>
                 </div>
               ))}
@@ -1733,7 +1733,7 @@ function ClipDetailView({ clip, onBack, bookCall }) {
           </div>
 
           <div className="pt-2 space-y-3">
-            <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[#53fc18]/40 bg-[#53fc18]/[0.06] text-[#53fc18] text-xs mono">
+            <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--color-brand)]/40 bg-[var(--color-brand)]/[0.06] text-[var(--color-brand)] text-xs mono">
               <CheckCircle2 className="w-3.5 h-3.5" /> Editor-reviewed · delivered to your queue
             </div>
             <button

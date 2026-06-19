@@ -28,10 +28,10 @@ const SAMPLE_RECORDINGS = [
 // Shared display helpers (mirror the production results UI).
 
 const CLIP_GRADIENTS = {
-  'gradient-1': 'from-[#53fc18] via-[#3fd80f] to-emerald-500',
+  'gradient-1': 'from-[var(--color-brand)] via-[#3fd80f] to-emerald-500',
   'gradient-2': 'from-cyan-400 via-blue-500 to-indigo-600',
   'gradient-3': 'from-emerald-400 via-teal-500 to-cyan-600',
-  'gradient-4': 'from-[#53fc18] via-emerald-500 to-teal-600',
+  'gradient-4': 'from-[var(--color-brand)] via-emerald-500 to-teal-600',
   'gradient-5': 'from-violet-400 via-purple-500 to-fuchsia-600',
 };
 
@@ -48,7 +48,7 @@ const fmtCompact = (n) => {
   return String(Math.round(n));
 };
 
-const scoreTone = (s) => (s >= 90 ? 'text-emerald-400' : s >= 80 ? 'text-[#53fc18]' : 'text-amber-400');
+const scoreTone = (s) => (s >= 90 ? 'text-emerald-400' : s >= 80 ? 'text-[var(--color-brand)]' : 'text-amber-400');
 
 // Pre-seeded showcase shown in the studio history sidebar.
 

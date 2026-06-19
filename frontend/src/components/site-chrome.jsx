@@ -258,7 +258,7 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.9' /%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' /%3E%3C/svg%3E");
         }
         .gradient-green {
-          background: linear-gradient(120deg, #53fc18 0%, #b8ff7d 90%);
+          background: linear-gradient(120deg, var(--color-brand) 0%, #b8ff7d 90%);
           -webkit-background-clip: text;
           background-clip: text;
           -webkit-text-fill-color: transparent;
@@ -273,7 +273,7 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
         .link-underline { position: relative; }
         .link-underline::after {
           content: ''; position: absolute; left: 0; bottom: -2px; width: 100%; height: 1px;
-          background: #53fc18; transform-origin: right; transform: scaleX(0);
+          background: var(--color-brand); transform-origin: right; transform: scaleX(0);
           transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .link-underline:hover::after { transform-origin: left; transform: scaleX(1); }
@@ -310,7 +310,7 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
         .cta-glow { box-shadow: 0 8px 30px rgba(83,252,24,0.14); }
 
         /* ── Unified neon button system (uniform + interactive) ─────── */
-        .btn-neon { position: relative; overflow: hidden; background: #53fc18; color: #000;
+        .btn-neon { position: relative; overflow: hidden; background: var(--color-brand); color: #000;
           box-shadow: 0 0 0 1px rgba(83,252,24,0.0), 0 8px 28px rgba(83,252,24,0.20);
           transition: transform .25s cubic-bezier(.16,1,.3,1), box-shadow .35s ease, background-color .25s ease; }
         .btn-neon:hover { transform: translateY(-1px); background: #62ff2b;
@@ -334,7 +334,7 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
 
         /* ── Phase 1 · atmosphere & a11y ─────────────────────────────── */
         .scroll-progress { position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 90; pointer-events: none; background: rgba(83,252,24,0.08); }
-        .scroll-progress > span { display: block; height: 100%; width: 100%; transform: scaleX(0); transform-origin: 0 50%; background: linear-gradient(90deg, #53fc18, #aaff66); box-shadow: 0 0 12px rgba(83,252,24,0.7); will-change: transform; }
+        .scroll-progress > span { display: block; height: 100%; width: 100%; transform: scaleX(0); transform-origin: 0 50%; background: linear-gradient(90deg, var(--color-brand), #aaff66); box-shadow: 0 0 12px rgba(83,252,24,0.7); will-change: transform; }
         .grid-glow {
           position: fixed; inset: 0; z-index: 35; pointer-events: none; opacity: 0;
           transition: opacity 0.45s ease; mix-blend-mode: screen;
@@ -361,8 +361,8 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
         /* Phase 5 -- hero auto-clip reel */
         .autoclip-reel { perspective: 1000px; }
         .ac-bar { flex: 1 1 0; min-width: 3px; border-radius: 2px 2px 0 0; background: rgba(255,255,255,0.10); transform-origin: bottom; }
-        .ac-bar.ac-hot { background: linear-gradient(to top, #53fc18, #aaff66); box-shadow: 0 0 10px rgba(83,252,24,0.55); }
-        .ac-scan { position: absolute; top: 0; bottom: 0; left: 0; width: 2px; background: linear-gradient(to bottom, transparent, #53fc18, transparent); box-shadow: 0 0 16px rgba(83,252,24,0.9); opacity: 0; pointer-events: none; }
+        .ac-bar.ac-hot { background: linear-gradient(to top, var(--color-brand), #aaff66); box-shadow: 0 0 10px rgba(83,252,24,0.55); }
+        .ac-scan { position: absolute; top: 0; bottom: 0; left: 0; width: 2px; background: linear-gradient(to bottom, transparent, var(--color-brand), transparent); box-shadow: 0 0 16px rgba(83,252,24,0.9); opacity: 0; pointer-events: none; }
         .ac-status-scan { opacity: 0; }
         .ac-status-done { opacity: 1; }
         .ac-thumb { aspect-ratio: 3 / 4; }
@@ -393,12 +393,12 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
         .pl-track { cursor: grab; }
         .pl-track.is-grabbing { cursor: grabbing; }
         .pl-rail { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04); }
-        .pl-fill { transform: scaleX(var(--p, 0)); transform-origin: left center; will-change: transform; background-color: #53fc18; box-shadow: 0 0 10px rgba(83,252,24,0.55), inset 0 0 6px rgba(255,255,255,0.25); opacity: var(--seam, 1); }
+        .pl-fill { transform: scaleX(var(--p, 0)); transform-origin: left center; will-change: transform; background-color: var(--color-brand); box-shadow: 0 0 10px rgba(83,252,24,0.55), inset 0 0 6px rgba(255,255,255,0.25); opacity: var(--seam, 1); }
         .pl-tick { transition: background-color 0.2s ease, box-shadow 0.2s ease; }
         .pl-tick-on { box-shadow: 0 0 6px rgba(83,252,24,0.85); }
         .pl-head { left: 0; width: 100%; z-index: 5; pointer-events: none; transform: translateX(calc(var(--p, 0) * 100%)); will-change: transform; opacity: var(--seam, 1); }
-        .pl-head-line { position: absolute; left: 0; top: 0; bottom: 0; width: 2px; transform: translateX(-1px); border-radius: 1px; background: linear-gradient(to bottom, rgba(83,252,24,0) 0%, #53fc18 28%, #53fc18 72%, rgba(83,252,24,0) 100%); box-shadow: 0 0 8px rgba(83,252,24,0.85); }
-        .pl-head-cap { position: absolute; left: 0; top: 50%; width: 11px; height: 11px; transform: translate(-50%, -50%) rotate(45deg); border-radius: 2px; background: #53fc18; box-shadow: 0 0 10px rgba(83,252,24,0.95), 0 0 22px rgba(83,252,24,0.55); animation: plCap 1.6s ease-in-out infinite; }
+        .pl-head-line { position: absolute; left: 0; top: 0; bottom: 0; width: 2px; transform: translateX(-1px); border-radius: 1px; background: linear-gradient(to bottom, rgba(83,252,24,0) 0%, var(--color-brand) 28%, var(--color-brand) 72%, rgba(83,252,24,0) 100%); box-shadow: 0 0 8px rgba(83,252,24,0.85); }
+        .pl-head-cap { position: absolute; left: 0; top: 50%; width: 11px; height: 11px; transform: translate(-50%, -50%) rotate(45deg); border-radius: 2px; background: var(--color-brand); box-shadow: 0 0 10px rgba(83,252,24,0.95), 0 0 22px rgba(83,252,24,0.55); animation: plCap 1.6s ease-in-out infinite; }
         .pl-track.is-grabbing .pl-head-cap { transform: translate(-50%, -50%) rotate(45deg) scale(1.18); }
         @keyframes plCap { 0%, 100% { box-shadow: 0 0 10px rgba(83,252,24,0.95), 0 0 22px rgba(83,252,24,0.5); } 50% { box-shadow: 0 0 15px rgba(83,252,24,1), 0 0 30px rgba(83,252,24,0.8); } }
         .pl-node { transition: transform 0.18s ease, border-color 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease; cursor: pointer; }
@@ -410,7 +410,7 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
         .pl-node.is-active .pl-glyph svg, .pl-node.is-focus .pl-glyph svg { filter: drop-shadow(0 0 4px rgba(83,252,24,0.55)); }
         .pl-val { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; transition: color 0.25s ease; }
         .pl-bar { border-radius: 0 0 0.5rem 0.5rem; overflow: hidden; }
-        .pl-bar-fill { width: 100%; transform-origin: left center; transform: scaleX(clamp(0, calc(var(--q, 0) * 6 - var(--i, 0)), 1)); will-change: transform; background-color: #53fc18; box-shadow: 0 0 8px rgba(83,252,24,0.55), 0 0 2px rgba(83,252,24,0.9); }
+        .pl-bar-fill { width: 100%; transform-origin: left center; transform: scaleX(clamp(0, calc(var(--q, 0) * 6 - var(--i, 0)), 1)); will-change: transform; background-color: var(--color-brand); box-shadow: 0 0 8px rgba(83,252,24,0.55), 0 0 2px rgba(83,252,24,0.9); }
         .pl-detail { transition: border-color 0.25s ease; }
         .pl-replay { letter-spacing: 0.1em; }
         @keyframes plLive { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
@@ -426,9 +426,9 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
         .pl-cnr { position: absolute; width: 9px; height: 9px; pointer-events: none; border: 0 solid currentColor; color: rgba(255,255,255,0.22); opacity: 0.6; transition: color 0.25s ease, opacity 0.25s ease; }
         .pl-cnr-tl { top: 6px; left: 6px; border-top-width: 1.5px; border-left-width: 1.5px; border-top-left-radius: 3px; }
         .pl-cnr-br { bottom: 6px; right: 6px; border-bottom-width: 1.5px; border-right-width: 1.5px; border-bottom-right-radius: 3px; }
-        .pl-node.is-done .pl-cnr { color: #53fc18; opacity: 0.8; }
-        .pl-node.is-active .pl-cnr, .pl-node.is-focus .pl-cnr { color: #53fc18; opacity: 1; }
-        .pl-caret { display: none; width: 2px; height: 12px; margin: 0 1px 0 3px; vertical-align: -1px; border-radius: 1px; background: #53fc18; box-shadow: 0 0 6px rgba(83,252,24,0.9); }
+        .pl-node.is-done .pl-cnr { color: var(--color-brand); opacity: 0.8; }
+        .pl-node.is-active .pl-cnr, .pl-node.is-focus .pl-cnr { color: var(--color-brand); opacity: 1; }
+        .pl-caret { display: none; width: 2px; height: 12px; margin: 0 1px 0 3px; vertical-align: -1px; border-radius: 1px; background: var(--color-brand); box-shadow: 0 0 6px rgba(83,252,24,0.9); }
         .pl-node.is-active .pl-caret { display: inline-block; animation: plCaret 1s step-end infinite; }
         @keyframes plCaret { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
         @media (prefers-reduced-motion: reduce) {
@@ -456,7 +456,7 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
         @keyframes cmdkPop { from { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.985); }
                              to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } }
         .cmdk-item[data-active="true"] { background: rgba(83,252,24,0.08); }
-        .cmdk-item[data-active="true"] .cmdk-glyph { color: #53fc18; }
+        .cmdk-item[data-active="true"] .cmdk-glyph { color: var(--color-brand); }
         kbd.kbd { padding: 2px 6px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.14);
           border-bottom-width: 2px; background: rgba(255,255,255,0.04); font-size: 10px;
           font-family: 'JetBrains Mono', monospace; color: #a8a29e; line-height: 1.4; }
@@ -475,7 +475,7 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
         /* ── Manifesto — each word lights as the statement scrolls through ── */
         .mf-word { color: rgba(255,255,255,0.16); transition: color 0.45s ease, text-shadow 0.45s ease; }
         .mf-word.lit { color: #fafaf9; }
-        .mf-word.lit.mf-accent { color: #53fc18; text-shadow: 0 0 26px rgba(83,252,24,0.45); }
+        .mf-word.lit.mf-accent { color: var(--color-brand); text-shadow: 0 0 26px rgba(83,252,24,0.45); }
 
         /* ── Bento micro-visuals ─────────────────────────────────────── */
         @keyframes hookCycle { 0%, 26% { opacity: 1; transform: none; } 33%, 93% { opacity: 0; transform: translateY(-6px); } 100% { opacity: 1; transform: none; } }
@@ -500,7 +500,7 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
           .cmdk-backdrop, .cmdk-panel { animation: none !important; }
           .aurora-a, .aurora-b { animation: none !important; }
           .mf-word { transition: none !important; color: #fafaf9; }
-          .mf-word.mf-accent { color: #53fc18; }
+          .mf-word.mf-accent { color: var(--color-brand); }
           .hook-line, .stamp-pulse, .cal-today { animation: none !important; }
           .hook-line { opacity: 0; }
           .hook-line:first-child { opacity: 1; }
@@ -516,11 +516,11 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
         }
 
         .cm-range { -webkit-appearance: none; appearance: none; width: 100%; height: 4px; border-radius: 999px;
-          background: linear-gradient(90deg, #53fc18 var(--fill, 30%), rgba(255,255,255,0.10) var(--fill, 30%)); outline: none; }
+          background: linear-gradient(90deg, var(--color-brand) var(--fill, 30%), rgba(255,255,255,0.10) var(--fill, 30%)); outline: none; }
         .cm-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%;
-          background: #53fc18; border: 3px solid #0a0a0a; box-shadow: 0 0 0 1px rgba(83,252,24,0.6), 0 0 16px rgba(83,252,24,0.8); cursor: grab; transition: transform 0.15s ease; }
+          background: var(--color-brand); border: 3px solid #0a0a0a; box-shadow: 0 0 0 1px rgba(83,252,24,0.6), 0 0 16px rgba(83,252,24,0.8); cursor: grab; transition: transform 0.15s ease; }
         .cm-range::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.12); }
-        .cm-range::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #53fc18; border: 3px solid #0a0a0a;
+        .cm-range::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: var(--color-brand); border: 3px solid #0a0a0a;
           box-shadow: 0 0 0 1px rgba(83,252,24,0.6), 0 0 16px rgba(83,252,24,0.8); cursor: grab; }
         .cm-val { transition: color 0.2s ease; will-change: contents; }
         .cm-tile { transition: border-color 0.3s ease, background-color 0.3s ease; }
@@ -535,7 +535,7 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
            travels through the gradient instead of sitting still, with a faint
            neon halo so the green reads as emitted light, not flat ink. */
         .gradient-green {
-          background: linear-gradient(110deg, #53fc18 0%, #d9ffb0 26%, #53fc18 50%, #b8ff7d 76%, #53fc18 100%);
+          background: linear-gradient(110deg, var(--color-brand) 0%, #d9ffb0 26%, var(--color-brand) 50%, #b8ff7d 76%, var(--color-brand) 100%);
           background-size: 240% 240%;
           -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
           animation: greenFlow 8s ease-in-out infinite;
@@ -640,7 +640,7 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
       {/* Top announcement banner */}
       <button
         onClick={bookCall}
-        className="banner-sheen relative z-30 w-full block bg-[#53fc18] text-black hover:bg-[#48e012] group transition-colors"
+        className="banner-sheen relative z-30 w-full block bg-[var(--color-brand)] text-black hover:bg-[#48e012] group transition-colors"
       >
         <div className="max-w-[1400px] mx-auto px-6 md:px-8 py-2.5 flex items-center justify-center gap-3 text-xs font-medium">
           <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-black/15">
@@ -654,9 +654,9 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
       {/* Ambient orbs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute inset-0 grid-bg" />
-        <div className="absolute -top-40 -left-40 w-[700px] h-[700px] rounded-full bg-[#53fc18]/[0.06] blur-[160px] animate-ambient" />
-        <div className="absolute top-[40%] -right-40 w-[600px] h-[600px] rounded-full bg-[#53fc18]/[0.04] blur-[160px] animate-ambient" style={{ animationDelay: '4s' }} />
-        <div className="absolute bottom-0 left-[30%] w-[500px] h-[500px] rounded-full bg-[#53fc18]/[0.02] blur-[160px] animate-ambient" style={{ animationDelay: '8s' }} />
+        <div className="absolute -top-40 -left-40 w-[700px] h-[700px] rounded-full bg-[var(--color-brand)]/[0.06] blur-[160px] animate-ambient" />
+        <div className="absolute top-[40%] -right-40 w-[600px] h-[600px] rounded-full bg-[var(--color-brand)]/[0.04] blur-[160px] animate-ambient" style={{ animationDelay: '4s' }} />
+        <div className="absolute bottom-0 left-[30%] w-[500px] h-[500px] rounded-full bg-[var(--color-brand)]/[0.02] blur-[160px] animate-ambient" style={{ animationDelay: '8s' }} />
       </div>
 
       {/* Primary nav */}
@@ -666,7 +666,7 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
           <div className="flex items-center gap-4 lg:gap-7">
             <button onClick={() => handleNav('home')} className="logo-btn flex items-center gap-3 flex-shrink-0">
               <LogoMark size={32} />
-              <span className="serif text-2xl tracking-tight">Clipper<span className="text-[#53fc18]">.ai</span></span>
+              <span className="serif text-2xl tracking-tight">Clipper<span className="text-[var(--color-brand)]">.ai</span></span>
             </button>
 
             {/* Desktop nav — quiet text links; the CTA owns the neon */}
@@ -675,11 +675,11 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
                 <button
                   key={item.k}
                   onClick={() => handleNav(item.k)}
-                  className={`relative px-4 lg:px-5 py-2.5 rounded-lg whitespace-nowrap transition-colors duration-300 group ${page === item.k ? 'text-[#53fc18]' : 'text-stone-400 hover:text-stone-100'}`}
+                  className={`relative px-4 lg:px-5 py-2.5 rounded-lg whitespace-nowrap transition-colors duration-300 group ${page === item.k ? 'text-[var(--color-brand)]' : 'text-stone-400 hover:text-stone-100'}`}
                 >
                   {item.l}
                   <span
-                    className={`absolute left-4 right-4 lg:left-5 lg:right-5 bottom-1.5 h-px bg-[#53fc18] origin-left transition-transform duration-300 ${page === item.k ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'}`}
+                    className={`absolute left-4 right-4 lg:left-5 lg:right-5 bottom-1.5 h-px bg-[var(--color-brand)] origin-left transition-transform duration-300 ${page === item.k ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'}`}
                     style={{ boxShadow: '0 0 8px rgba(83,252,24,0.7)' }}
                     aria-hidden="true"
                   />
@@ -693,7 +693,7 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
             <button
               onClick={() => setCmdOpen(true)}
               aria-label="Open command palette"
-              className="hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-md border border-white/[0.1] text-xs mono text-stone-400 hover:text-stone-100 hover:border-[#53fc18]/30 transition-colors"
+              className="hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-md border border-white/[0.1] text-xs mono text-stone-400 hover:text-stone-100 hover:border-[var(--color-brand)]/30 transition-colors"
             >
               <Search className="w-3.5 h-3.5" />
               <kbd className="kbd">⌘K</kbd>
@@ -704,7 +704,7 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
             {/* Mobile hamburger — visible below md */}
             <button
               onClick={() => setMobileOpen((v) => !v)}
-              className="md:hidden relative w-10 h-10 rounded-md border border-[#53fc18]/[0.12] flex items-center justify-center hover:bg-[#53fc18]/[0.08] hover:border-white/[0.16]"
+              className="md:hidden relative w-10 h-10 rounded-md border border-[var(--color-brand)]/[0.12] flex items-center justify-center hover:bg-[var(--color-brand)]/[0.08] hover:border-white/[0.16]"
               aria-label="Menu"
               aria-expanded={mobileOpen}
             >
@@ -759,8 +759,8 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
                   onClick={() => handleNav(item.k)}
                   className={`group flex items-center justify-between px-3 py-3 rounded-md text-left ${
                     page === item.k
-                      ? 'text-[#53fc18] bg-[#53fc18]/[0.10]'
-                      : 'text-stone-300 hover:bg-[#53fc18]/[0.08] hover:text-stone-100'
+                      ? 'text-[var(--color-brand)] bg-[var(--color-brand)]/[0.10]'
+                      : 'text-stone-300 hover:bg-[var(--color-brand)]/[0.08] hover:text-stone-100'
                   }`}
                   style={{
                     opacity: mobileOpen ? 1 : 0,
@@ -769,7 +769,7 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
                   }}
                 >
                   <span className="text-base">{item.l}</span>
-                  <ArrowUpRight className={`w-3.5 h-3.5 ${page === item.k ? 'text-[#53fc18]' : 'text-stone-600 group-hover:text-stone-300'}`} />
+                  <ArrowUpRight className={`w-3.5 h-3.5 ${page === item.k ? 'text-[var(--color-brand)]' : 'text-stone-600 group-hover:text-stone-300'}`} />
                 </button>
               ))}
             </div>
@@ -778,7 +778,7 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
             <div className="text-[10px] mono text-stone-500 tracking-[0.2em] uppercase mb-3 px-2 pt-2 border-t border-white/[0.12]">Start here</div>
             <button
               onClick={() => { setMobileOpen(false); bookCall(); }}
-              className="w-full flex items-center justify-between px-3 py-3 rounded-md text-left bg-[#53fc18] text-black font-medium hover:bg-[#48e012]"
+              className="w-full flex items-center justify-between px-3 py-3 rounded-md text-left bg-[var(--color-brand)] text-black font-medium hover:bg-[#48e012]"
               style={{
                 opacity: mobileOpen ? 1 : 0,
                 transform: mobileOpen ? 'translateX(0)' : 'translateX(-8px)',
@@ -799,7 +799,7 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
               }}
             >
               <div className="flex items-center gap-2">
-                <span className="w-1 h-1 rounded-full bg-[#53fc18] animate-pulse-soft" />
+                <span className="w-1 h-1 rounded-full bg-[var(--color-brand)] animate-pulse-soft" />
                 <span>Pre-launch · onboarding first partners</span>
               </div>
               <span>Status →</span>
@@ -825,7 +825,7 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
           {/* Brand */}
           <div className="flex items-center gap-2.5">
             <LogoMark size={20} />
-            <span className="serif text-base">Clipper<span className="text-[#53fc18]">.ai</span></span>
+            <span className="serif text-base">Clipper<span className="text-[var(--color-brand)]">.ai</span></span>
             <span className="hidden lg:inline text-xs text-stone-600 ml-2">Long videos in. Viral clips out.</span>
           </div>
 
@@ -838,7 +838,7 @@ function SiteShell({ children, page, goto, openApp, bookCall }) {
               ['Resources', 'docs'],
               ['Status', 'status'],
             ].map(([label, target]) => (
-              <button key={label} onClick={() => goto(target)} className="text-stone-400 hover:text-[#53fc18]">
+              <button key={label} onClick={() => goto(target)} className="text-stone-400 hover:text-[var(--color-brand)]">
                 {label}
               </button>
             ))}
@@ -971,8 +971,8 @@ function PageHero({ eyebrow, title, italic, sub }) {
       <NeonGrid />
       <div className="relative max-w-4xl">
         <div className="flex items-center gap-2 mb-6">
-          <span className="w-6 h-px bg-[#53fc18]" />
-          <span className="text-[10px] mono text-[#53fc18] tracking-[0.2em] uppercase">{eyebrow}</span>
+          <span className="w-6 h-px bg-[var(--color-brand)]" />
+          <span className="text-[10px] mono text-[var(--color-brand)] tracking-[0.2em] uppercase">{eyebrow}</span>
         </div>
         <h1 className="serif text-5xl md:text-7xl leading-[1.02] mb-6">
           {title} <span className="italic gradient-green">{italic}</span>
@@ -1003,7 +1003,7 @@ function FAQItem({ q, a, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div
-      className={`rounded-xl border overflow-hidden ${open ? 'border-[#53fc18]/30 bg-[#53fc18]/[0.015]' : 'border-white/[0.06] hover:border-white/[0.12]'}`}
+      className={`rounded-xl border overflow-hidden ${open ? 'border-[var(--color-brand)]/30 bg-[var(--color-brand)]/[0.015]' : 'border-white/[0.06] hover:border-white/[0.12]'}`}
       style={{ transition: 'border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }}
     >
       <button
@@ -1066,12 +1066,12 @@ function FAQ() {
       <Reveal>
         <div className="grid md:grid-cols-[1fr_1.6fr] gap-16">
           <div className="md:sticky md:top-32 self-start">
-            <div className="text-[10px] mono text-[#53fc18] mb-4 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" /> Frequently asked</div>
+            <div className="text-[10px] mono text-[var(--color-brand)] mb-4 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" /> Frequently asked</div>
             <h2 className="serif text-5xl leading-[1.05] mb-4">
               The answers <span className="italic text-stone-400">to the questions we keep getting.</span>
             </h2>
             <p className="text-stone-400 leading-relaxed">
-              Don't see yours? <a className="text-[#53fc18] hover:underline cursor-pointer">Email us</a>. We read everything.
+              Don't see yours? <a className="text-[var(--color-brand)] hover:underline cursor-pointer">Email us</a>. We read everything.
             </p>
           </div>
 
@@ -1081,7 +1081,7 @@ function FAQ() {
               return (
                 <div
                   key={item.q}
-                  className={`rounded-xl border overflow-hidden ${isOpen ? 'border-[#53fc18]/30 bg-[#53fc18]/[0.015]' : 'border-white/[0.06] hover:border-white/[0.12]'}`}
+                  className={`rounded-xl border overflow-hidden ${isOpen ? 'border-[var(--color-brand)]/30 bg-[var(--color-brand)]/[0.015]' : 'border-white/[0.06] hover:border-white/[0.12]'}`}
                   style={{ transition: 'border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }}
                 >
                   <button
@@ -1131,7 +1131,7 @@ function CTABand({ goto, openApp, bookCall }) {
     <section className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-8 pt-12 pb-12 border-t border-white/[0.12] mt-4">
       <Reveal>
         <div className="text-center max-w-3xl mx-auto">
-          <div className="text-[10px] mono text-[#53fc18] mb-4 tracking-[0.2em] uppercase flex items-center justify-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" /> 
+          <div className="text-[10px] mono text-[var(--color-brand)] mb-4 tracking-[0.2em] uppercase flex items-center justify-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" /> 
             Ready when you are
           </div>
           <h2 className="serif text-4xl md:text-5xl leading-[1.05] mb-4">

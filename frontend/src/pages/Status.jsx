@@ -23,13 +23,13 @@ function StatusPage({ goto, bookCall }) {
 
       <section className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-8 pb-10">
         <Reveal>
-          <div className="rounded-2xl border border-[#53fc18]/30 bg-[#53fc18]/[0.04] p-8 flex items-center gap-4">
+          <div className="rounded-2xl border border-[var(--color-brand)]/30 bg-[var(--color-brand)]/[0.04] p-8 flex items-center gap-4">
             <div className="relative">
-              <span className="w-3 h-3 rounded-full bg-[#53fc18] block" style={{ boxShadow: '0 0 16px #53fc18' }} />
-              <span className="absolute inset-0 w-3 h-3 rounded-full bg-[#53fc18] animate-ping opacity-60" />
+              <span className="w-3 h-3 rounded-full bg-[var(--color-brand)] block" style={{ boxShadow: '0 0 16px var(--color-brand)' }} />
+              <span className="absolute inset-0 w-3 h-3 rounded-full bg-[var(--color-brand)] animate-ping opacity-60" />
             </div>
             <div>
-              <div className="serif text-3xl text-[#53fc18]">Pre-launch, not yet live</div>
+              <div className="serif text-3xl text-[var(--color-brand)]">Pre-launch, not yet live</div>
               <div className="text-xs mono text-stone-400 tracking-wider mt-1">LIVE SERVICE STATUS BEGINS WHEN WE OPEN TO CLIENTS</div>
             </div>
           </div>
@@ -40,17 +40,17 @@ function StatusPage({ goto, bookCall }) {
         <Reveal>
           <div className="flex items-baseline justify-between mb-8">
             <div>
-              <div className="text-[10px] mono text-[#53fc18] mb-2 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" /> 
+              <div className="text-[10px] mono text-[var(--color-brand)] mb-2 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" /> 
                 Systems
               </div>
               <h2 className="serif text-4xl">Components</h2>
             </div>
             <div className="text-[10px] mono text-stone-500 tracking-wider">STATUS PUBLISHED AT LAUNCH</div>
           </div>
-          <div className="rounded-2xl border border-[#53fc18]/[0.10] bg-stone-900/30 overflow-hidden divide-y divide-[#53fc18]/[0.08]">
+          <div className="rounded-2xl border border-[var(--color-brand)]/[0.10] bg-stone-900/30 overflow-hidden divide-y divide-[var(--color-brand)]/[0.08]">
             {systems.map((sys, i) => (
               <Reveal key={sys.name} delay={i * 30}>
-                <div className="px-6 py-5 flex items-center justify-between gap-6 hover:bg-[#53fc18]/[0.015]">
+                <div className="px-6 py-5 flex items-center justify-between gap-6 hover:bg-[var(--color-brand)]/[0.015]">
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="w-1.5 h-1.5 rounded-full bg-stone-500 flex-shrink-0" />
                     <div className="text-sm font-medium text-stone-100">{sys.name}</div>
@@ -67,13 +67,13 @@ function StatusPage({ goto, bookCall }) {
         <Reveal>
           <div className="flex items-baseline justify-between mb-8">
             <div>
-              <div className="text-[10px] mono text-[#53fc18] mb-2 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" /> 
+              <div className="text-[10px] mono text-[var(--color-brand)] mb-2 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" /> 
                 History
               </div>
               <h2 className="serif text-4xl">Incidents</h2>
             </div>
           </div>
-          <div className="rounded-xl border border-[#53fc18]/[0.10] bg-[#53fc18]/[0.02] p-6 text-center">
+          <div className="rounded-xl border border-[var(--color-brand)]/[0.10] bg-[var(--color-brand)]/[0.02] p-6 text-center">
             <div className="text-sm text-stone-400">No incidents to report. Public incident history starts when Clipper begins serving live traffic.</div>
             <div className="text-[10px] mono text-stone-600 tracking-wider mt-2">STATUS UPDATES → STATUS@CLIPPER.AI</div>
           </div>

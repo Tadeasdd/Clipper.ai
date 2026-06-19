@@ -41,10 +41,10 @@ function Landing({ onStart, goto, bookCall }) {
           <div className="aurora aurora-b" />
         </div>
         <div className="relative max-w-5xl">
-          <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-full border border-[#53fc18]/[0.12] bg-[#53fc18]/[0.015] backdrop-blur text-[11px] mono text-stone-300 mb-6 animate-blur-in" style={{ animationDelay: '0.05s' }}>
+          <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-full border border-[var(--color-brand)]/[0.12] bg-[var(--color-brand)]/[0.015] backdrop-blur text-[11px] mono text-stone-300 mb-6 animate-blur-in" style={{ animationDelay: '0.05s' }}>
             <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inset-0 rounded-full bg-[#53fc18] animate-ping opacity-60" />
-              <span className="relative rounded-full h-1.5 w-1.5 bg-[#53fc18]" />
+              <span className="absolute inset-0 rounded-full bg-[var(--color-brand)] animate-ping opacity-60" />
+              <span className="relative rounded-full h-1.5 w-1.5 bg-[var(--color-brand)]" />
             </span>
             <span className="tracking-wider uppercase">Done-for-you content operations · AI-native</span>
           </div>
@@ -82,10 +82,10 @@ function Landing({ onStart, goto, bookCall }) {
                 {s}
               </span>
             ))}
-            <ChevronRight className="w-4 h-4 text-[#53fc18] mx-1 flex-shrink-0" />
-            <span className="text-[10px] mono tracking-[0.22em] uppercase text-[#53fc18]/60 mr-1">Out</span>
+            <ChevronRight className="w-4 h-4 text-[var(--color-brand)] mx-1 flex-shrink-0" />
+            <span className="text-[10px] mono tracking-[0.22em] uppercase text-[var(--color-brand)]/60 mr-1">Out</span>
             {['TikTok', 'Reels', 'Shorts', 'X', 'LinkedIn'].map((s) => (
-              <span key={s} className="px-2.5 py-1 rounded-md border border-[#53fc18]/25 bg-[#53fc18]/[0.06] text-[11px] mono text-[#aaff66] whitespace-nowrap">
+              <span key={s} className="px-2.5 py-1 rounded-md border border-[var(--color-brand)]/25 bg-[var(--color-brand)]/[0.06] text-[11px] mono text-[#aaff66] whitespace-nowrap">
                 {s}
               </span>
             ))}
@@ -119,7 +119,7 @@ function Landing({ onStart, goto, bookCall }) {
         <Reveal>
           <div className="score-head mb-10">
             <div>
-              <div className="text-[10px] mono text-[#53fc18] mb-4 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" /> How scoring works</div>
+              <div className="text-[10px] mono text-[var(--color-brand)] mb-4 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" /> How scoring works</div>
               <h2 className="serif text-4xl md:text-5xl leading-[1.05] mb-4">
                 Every clip gets a <span className="italic gradient-green">virality score.</span>
               </h2>
@@ -127,11 +127,11 @@ function Landing({ onStart, goto, bookCall }) {
                 Each clip is rated 0-100 on hook strength, self-containment, emotional intensity, and quotability, so the strongest moments rise to the top before an editor signs off. The distribution below is illustrative; your real scores come from your content.
               </p>
             </div>
-            <div className="tilt-card card-lift rounded-2xl border border-[#53fc18]/[0.12] bg-gradient-to-b from-[#53fc18]/[0.03] to-transparent p-6 md:p-7 score-range-panel">
-              <div className="serif text-5xl text-[#53fc18] leading-none" style={{ textShadow: '0 0 24px rgba(83,252,24,0.35)' }}>0-100</div>
+            <div className="tilt-card card-lift rounded-2xl border border-[var(--color-brand)]/[0.12] bg-gradient-to-b from-[var(--color-brand)]/[0.03] to-transparent p-6 md:p-7 score-range-panel">
+              <div className="serif text-5xl text-[var(--color-brand)] leading-none" style={{ textShadow: '0 0 24px rgba(83,252,24,0.35)' }}>0-100</div>
               <div className="text-[10px] mono text-stone-500 tracking-wider uppercase mt-3">Virality score range</div>
               <div className="text-[10px] mono text-stone-500 tracking-wider uppercase mt-2">
-                <span className="text-[#53fc18]">90+</span> = ready to post
+                <span className="text-[var(--color-brand)]">90+</span> = ready to post
               </div>
             </div>
           </div>
@@ -153,7 +153,7 @@ function Landing({ onStart, goto, bookCall }) {
       <section className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-8 pt-12 pb-16 border-t border-white/[0.12] mt-4">
         <Reveal>
           <div className="text-center max-w-3xl mx-auto">
-            <div className="text-[10px] mono text-[#53fc18] mb-4 tracking-[0.2em] uppercase flex items-center justify-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" /> Start this week</div>
+            <div className="text-[10px] mono text-[var(--color-brand)] mb-4 tracking-[0.2em] uppercase flex items-center justify-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" /> Start this week</div>
             <h2 className="serif text-5xl md:text-6xl leading-[1.05] mb-4">
               Ship clips at the<br />
               <span className="italic gradient-green">speed of attention.</span>

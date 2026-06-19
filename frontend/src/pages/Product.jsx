@@ -23,9 +23,9 @@ function ProductPage({ goto, openApp, bookCall }) {
         <div className="grid md:grid-cols-2 gap-3">
           {features.map((f, i) => (
             <Reveal key={f.t} delay={i * 60}>
-              <div className="tilt-card group p-8 rounded-xl border border-[#53fc18]/[0.08] hover:border-[#53fc18]/30 hover:bg-[#53fc18]/[0.015] h-full">
-                <div className="w-10 h-10 rounded-md border border-[#53fc18]/[0.12] flex items-center justify-center mb-5 group-hover:border-[#53fc18]/40 group-hover:bg-[#53fc18]/5">
-                  <f.icon className="w-4 h-4 text-stone-400 group-hover:text-[#53fc18]" />
+              <div className="tilt-card group p-8 rounded-xl border border-[var(--color-brand)]/[0.08] hover:border-[var(--color-brand)]/30 hover:bg-[var(--color-brand)]/[0.015] h-full">
+                <div className="w-10 h-10 rounded-md border border-[var(--color-brand)]/[0.12] flex items-center justify-center mb-5 group-hover:border-[var(--color-brand)]/40 group-hover:bg-[var(--color-brand)]/5">
+                  <f.icon className="w-4 h-4 text-stone-400 group-hover:text-[var(--color-brand)]" />
                 </div>
                 <div className="font-medium mb-2 text-lg">{f.t}</div>
                 <div className="text-sm text-stone-400 leading-relaxed">{f.d}</div>
@@ -39,16 +39,16 @@ function ProductPage({ goto, openApp, bookCall }) {
         <Reveal>
           <div className="grid md:grid-cols-[1fr_1.2fr] gap-16">
             <div>
-              <div className="text-[10px] mono text-[#53fc18] mb-4 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" /> What you get</div>
-              <h2 className="serif text-5xl leading-[1.05] tracking-tight mb-6">One show becomes <span className="italic text-[#53fc18]">weeks of content.</span></h2>
+              <div className="text-[10px] mono text-[var(--color-brand)] mb-4 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" /> What you get</div>
+              <h2 className="serif text-5xl leading-[1.05] tracking-tight mb-6">One show becomes <span className="italic text-[var(--color-brand)]">weeks of content.</span></h2>
               <p className="text-stone-400 leading-relaxed text-lg">Hand us a single recording and a steady stream of reviewed, ready-to-post clips comes back, on a cadence you can build an audience around.</p>
             </div>
-            <div className="tilt-card rounded-2xl border border-[#53fc18]/[0.12] bg-black/40 backdrop-blur overflow-hidden">
+            <div className="tilt-card rounded-2xl border border-[var(--color-brand)]/[0.12] bg-black/40 backdrop-blur overflow-hidden">
               <div className="border-b border-white/[0.06] px-5 py-3 text-[10px] mono text-stone-500 tracking-wider uppercase flex items-center justify-between">
                 <span>From one 60-minute show</span>
-                <span className="text-[#53fc18]">Typical output</span>
+                <span className="text-[var(--color-brand)]">Typical output</span>
               </div>
-              <div className="divide-y divide-[#53fc18]/[0.08]">
+              <div className="divide-y divide-[var(--color-brand)]/[0.08]">
                 {[
                   ['Short-form clips', '12-20'],
                   ['Platform formats', '9:16 · 1:1 · 16:9'],
@@ -64,7 +64,7 @@ function ProductPage({ goto, openApp, bookCall }) {
               </div>
               <div className="border-t border-white/[0.12] px-5 py-3 flex items-center justify-between text-xs">
                 <span className="mono text-stone-500">Delivered</span>
-                <span className="serif text-2xl text-[#53fc18]">Every week</span>
+                <span className="serif text-2xl text-[var(--color-brand)]">Every week</span>
               </div>
             </div>
           </div>
@@ -79,7 +79,7 @@ function ProductPage({ goto, openApp, bookCall }) {
       <section className="relative z-10 max-w-[1400px] mx-auto px-8 py-16 border-t border-white/[0.12]">
         <Reveal>
           <div className="text-center mb-8">
-            <div className="text-[10px] mono text-[#53fc18] mb-4 tracking-[0.2em] uppercase flex items-center justify-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" /> Behind the scenes</div>
+            <div className="text-[10px] mono text-[var(--color-brand)] mb-4 tracking-[0.2em] uppercase flex items-center justify-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" /> Behind the scenes</div>
             <h2 className="serif text-5xl leading-[1.05] mb-4">
               The production system <span className="italic gradient-green">behind your content.</span>
             </h2>

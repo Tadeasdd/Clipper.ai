@@ -2,7 +2,7 @@
    (docs/ARCHITECTURE.md: ops dashboard first, client dashboard is a window).
 
    Visual direction: the same company as the marketing site — black, hairline
-   borders, #53fc18 as the single signal color — but turned inward: a dense
+   borders, var(--color-brand) as the single signal color — but turned inward: a dense
    utilitarian command deck. Mono everywhere data lives, serif only for the
    page title. No marketing chrome, no orbs; a faint engineering grid. */
 import React, { useEffect, useState } from 'react';
@@ -15,7 +15,7 @@ export const T = {
   lineSoft: 'rgba(255,255,255,0.05)',
   dim: '#71717a',
   text: '#e7e5e4',
-  green: '#53fc18',
+  green: 'var(--color-brand)',
   amber: '#fbbf24',
   red: '#f87171',
   panel: 'rgba(255,255,255,0.022)',
@@ -73,8 +73,10 @@ export const Empty = ({ children }) => (
 );
 export const btnStyle = (accent) => ({
   fontSize: 11, padding: '5px 12px', borderRadius: 6, cursor: 'pointer',
-  border: `1px solid ${accent ? accent + '55' : T.line}`,
-  color: accent || T.text, background: accent ? accent + '14' : 'transparent',
+  // U1: alpha composed via color-mix (byte-identical to the old hex +'55'/+'14':
+  // 0x55=33.333%, 0x14=7.843%) so it works with the var(--color-brand) token too.
+  border: `1px solid ${accent ? `color-mix(in srgb, ${accent} 33.333%, transparent)` : T.line}`,
+  color: accent || T.text, background: accent ? `color-mix(in srgb, ${accent} 7.843%, transparent)` : 'transparent',
 });
 
 /* ── sign in (B7: real sessions against /api/auth) ────────────────────── */

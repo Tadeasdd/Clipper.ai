@@ -4,7 +4,7 @@
    the report.
 
    Visual direction: the same company as /ops — black, hairline borders,
-   #53fc18 as the single signal color — but turned outward: calmer, fewer
+   var(--color-brand) as the single signal color — but turned outward: calmer, fewer
    columns, no machinery. Clients see outcomes, not pipelines.
 
    Scoping lives on the server (B7): every endpoint this app calls is pinned
@@ -21,7 +21,7 @@ const T = {
   lineSoft: 'rgba(255,255,255,0.05)',
   dim: '#71717a',
   text: '#e7e5e4',
-  green: '#53fc18',
+  green: 'var(--color-brand)',
   amber: '#fbbf24',
   red: '#f87171',
   sky: '#7dd3fc',
@@ -78,8 +78,9 @@ const Empty = ({ children }) => (
 );
 const btn = (accent) => ({
   fontSize: 11, padding: '5px 12px', borderRadius: 6, cursor: 'pointer',
-  border: `1px solid ${accent ? accent + '55' : T.line}`,
-  color: accent || T.text, background: accent ? accent + '14' : 'transparent',
+  // U1: alpha via color-mix (byte-identical to old +'55'/+'14') so the token works.
+  border: `1px solid ${accent ? `color-mix(in srgb, ${accent} 33.333%, transparent)` : T.line}`,
+  color: accent || T.text, background: accent ? `color-mix(in srgb, ${accent} 7.843%, transparent)` : 'transparent',
 });
 const field = {
   width: '100%', boxSizing: 'border-box', fontSize: 13, padding: '10px 14px',

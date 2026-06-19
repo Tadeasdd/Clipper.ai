@@ -67,7 +67,7 @@ function PricingPage({ goto, openApp, bookCall }) {
             <Reveal key={t.name} delay={i * 80}>
               <div className="h-full pricing-card-hover">
               <div style={{ '--tilt-scale': t.popular ? '1.02' : '1' }}
-                className={`tilt-card relative rounded-2xl border h-full flex flex-col transition-all ${t.popular ? 'border-[#53fc18]/50 bg-gradient-to-b from-[#53fc18]/[0.06] via-[#53fc18]/[0.02] to-transparent shadow-[0_0_60px_-12px_rgba(83,252,24,0.45)] md:scale-[1.02]' : 'border-[#53fc18]/[0.10] bg-[#53fc18]/[0.01] hover:border-[#53fc18]/20'}`}
+                className={`tilt-card relative rounded-2xl border h-full flex flex-col transition-all ${t.popular ? 'border-[var(--color-brand)]/50 bg-gradient-to-b from-[var(--color-brand)]/[0.06] via-[var(--color-brand)]/[0.02] to-transparent shadow-[0_0_60px_-12px_rgba(83,252,24,0.45)] md:scale-[1.02]' : 'border-[var(--color-brand)]/[0.10] bg-[var(--color-brand)]/[0.01] hover:border-[var(--color-brand)]/20'}`}
                 onMouseMove={(e) => { const el = e.currentTarget; const r = el.getBoundingClientRect(); el.style.setProperty('--sx', ((e.clientX - r.left) / r.width * 100).toFixed(1) + '%'); el.style.setProperty('--sy', ((e.clientY - r.top) / r.height * 100).toFixed(1) + '%'); el.style.setProperty('--sheen', '1'); }}
                 onMouseLeave={(e) => { e.currentTarget.style.setProperty('--sheen', '0'); }}
               >
@@ -80,7 +80,7 @@ function PricingPage({ goto, openApp, bookCall }) {
 
                     {/* Badge */}
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-20">
-                      <div className="relative px-3.5 py-1.5 rounded-full bg-gradient-to-b from-[#aaff66] to-[#53fc18] text-black overflow-hidden" style={{ boxShadow: '0 4px 24px -4px rgba(83,252,24,0.6), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.15)' }}>
+                      <div className="relative px-3.5 py-1.5 rounded-full bg-gradient-to-b from-[#aaff66] to-[var(--color-brand)] text-black overflow-hidden" style={{ boxShadow: '0 4px 24px -4px rgba(83,252,24,0.6), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.15)' }}>
                         {/* Shimmer sweep */}
                         <div className="absolute inset-0 opacity-50" style={{
                           background: 'linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.5) 50%, transparent 70%)',
@@ -98,7 +98,7 @@ function PricingPage({ goto, openApp, bookCall }) {
                 <div className="relative z-[1] p-8 flex flex-col flex-1">
                   <div className="flex items-baseline justify-between mb-4">
                     <div className="text-[10px] mono text-stone-500 tracking-wider uppercase">{t.name}</div>
-                    <div className="text-[10px] mono text-[#53fc18] tracking-wider">{t.tag}</div>
+                    <div className="text-[10px] mono text-[var(--color-brand)] tracking-wider">{t.tag}</div>
                   </div>
                   <div className="flex items-baseline gap-1.5 mb-1">
                     <span className="serif text-5xl tracking-tight leading-none">{t.volume}</span>
@@ -108,12 +108,12 @@ function PricingPage({ goto, openApp, bookCall }) {
                   <div className="text-xs text-stone-400 leading-relaxed mb-6 min-h-[32px]">{t.who}</div>
 
                   {t.baseline && (
-                    <div className="text-[10px] mono text-[#53fc18] tracking-wider uppercase mb-3 pb-3 border-b border-white/[0.08]">{t.baseline}</div>
+                    <div className="text-[10px] mono text-[var(--color-brand)] tracking-wider uppercase mb-3 pb-3 border-b border-white/[0.08]">{t.baseline}</div>
                   )}
                   <ul className="space-y-3 mb-6">
                     {t.features.map((f) => (
                       <li key={f} className="flex items-start gap-2.5 text-sm text-stone-300">
-                        <Check className="w-4 h-4 text-[#53fc18] mt-0.5 flex-shrink-0" />
+                        <Check className="w-4 h-4 text-[var(--color-brand)] mt-0.5 flex-shrink-0" />
                         <span>{f}</span>
                       </li>
                     ))}
@@ -134,14 +134,14 @@ function PricingPage({ goto, openApp, bookCall }) {
 
         {/* The non-negotiables apply to every plan, stated once */}
         <Reveal delay={240}>
-          <div className="max-w-5xl mx-auto mt-8 grid sm:grid-cols-3 gap-px bg-white/[0.06] rounded-2xl overflow-hidden border border-[#53fc18]/[0.08]">
+          <div className="max-w-5xl mx-auto mt-8 grid sm:grid-cols-3 gap-px bg-white/[0.06] rounded-2xl overflow-hidden border border-[var(--color-brand)]/[0.08]">
             {[
               { icon: Users, t: 'A human editor signs off on every clip' },
               { icon: Shield, t: 'Your recordings stay your IP, never trained on' },
               { icon: Zap, t: 'No seats, no software for you to run' },
             ].map((b) => (
               <div key={b.t} className="bg-black px-6 py-5 flex items-center gap-3">
-                <b.icon className="w-4 h-4 text-[#53fc18] flex-shrink-0" />
+                <b.icon className="w-4 h-4 text-[var(--color-brand)] flex-shrink-0" />
                 <span className="text-xs text-stone-400 leading-relaxed">{b.t}</span>
               </div>
             ))}
@@ -152,10 +152,10 @@ function PricingPage({ goto, openApp, bookCall }) {
 
       <section className="relative z-10 max-w-[1400px] mx-auto px-8 py-16 border-t border-white/[0.12]">
         <Reveal>
-          <div className="text-[10px] mono text-[#53fc18] mb-4 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" /> Compare in detail</div>
+          <div className="text-[10px] mono text-[var(--color-brand)] mb-4 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" /> Compare in detail</div>
           <h2 className="serif text-5xl leading-tight tracking-tight mb-6">What's handled at each level.</h2>
         </Reveal>
-        <div className="rounded-2xl border border-[#53fc18]/[0.08] overflow-hidden">
+        <div className="rounded-2xl border border-[var(--color-brand)]/[0.08] overflow-hidden">
           {[
             ['', 'Launch', 'Growth', 'Scale'],
             ['Recordings in / mo', 'Up to 4', 'Up to 12', 'Unlimited'],
@@ -167,10 +167,10 @@ function PricingPage({ goto, openApp, bookCall }) {
             ['Human editor review', 'Every clip', 'Every clip', 'Every clip · senior pod'],
           ].map((row, i) => (
             <Reveal key={i} delay={i * 40}>
-              <div className={`grid grid-cols-4 px-6 py-4 text-sm transition-colors duration-200 ${i === 0 ? 'border-b border-white/[0.08]' : `hover:bg-[#53fc18]/[0.04] ${i % 2 === 1 ? 'bg-[#53fc18]/[0.015]' : ''}`}`}>
+              <div className={`grid grid-cols-4 px-6 py-4 text-sm transition-colors duration-200 ${i === 0 ? 'border-b border-white/[0.08]' : `hover:bg-[var(--color-brand)]/[0.04] ${i % 2 === 1 ? 'bg-[var(--color-brand)]/[0.015]' : ''}`}`}>
                 <div className={i === 0 ? 'text-stone-500 text-[10px] mono tracking-wider uppercase' : 'text-stone-300 font-medium'}>{row[0]}</div>
                 {row.slice(1).map((cell, j) => (
-                  <div key={j} className={i === 0 ? 'text-[#53fc18] text-[10px] mono tracking-wider uppercase flex items-center' : 'text-stone-400 mono text-xs flex items-center'}>{cell}</div>
+                  <div key={j} className={i === 0 ? 'text-[var(--color-brand)] text-[10px] mono tracking-wider uppercase flex items-center' : 'text-stone-400 mono text-xs flex items-center'}>{cell}</div>
                 ))}
               </div>
             </Reveal>
@@ -181,7 +181,7 @@ function PricingPage({ goto, openApp, bookCall }) {
       {/* Pricing FAQ — how a managed engagement works */}
       <section className="relative z-10 max-w-[1100px] mx-auto px-8 py-20 border-t border-white/[0.12]">
         <Reveal>
-          <div className="text-[10px] mono text-[#53fc18] mb-4 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" /> 
+          <div className="text-[10px] mono text-[var(--color-brand)] mb-4 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" /> 
             Pricing questions
           </div>
           <h2 className="serif text-4xl md:text-5xl leading-[1.05] mb-12">

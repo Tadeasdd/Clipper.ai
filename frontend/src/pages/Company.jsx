@@ -17,8 +17,8 @@ function CompanyPage({ goto, bookCall }) {
             { icon: Globe, t: 'Open by default', d: 'How we work is on the website. Our pricing is too. No mystery process, no hidden floors.' },
           ].map((p, i) => (
             <Reveal key={p.t} delay={i * 80}>
-              <div className="tilt-card p-8 rounded-xl border border-[#53fc18]/[0.08] h-full">
-                <p.icon className="w-5 h-5 text-[#53fc18] mb-5" />
+              <div className="tilt-card p-8 rounded-xl border border-[var(--color-brand)]/[0.08] h-full">
+                <p.icon className="w-5 h-5 text-[var(--color-brand)] mb-5" />
                 <div className="font-medium mb-2 text-lg">{p.t}</div>
                 <div className="text-sm text-stone-400 leading-relaxed">{p.d}</div>
               </div>
@@ -30,10 +30,10 @@ function CompanyPage({ goto, bookCall }) {
       <section className="relative z-10 max-w-[1400px] mx-auto px-8 py-16 border-t border-white/[0.12]">
         <Reveal>
           <div className="max-w-2xl">
-            <div className="text-[10px] mono text-[#53fc18] mb-4 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" /> Careers</div>
+            <div className="text-[10px] mono text-[var(--color-brand)] mb-4 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" /> Careers</div>
             <h2 className="serif text-5xl leading-tight tracking-tight mb-6">Come build the<br /><span className="italic">attention layer.</span></h2>
             <p className="text-stone-400 leading-relaxed text-lg mb-6">We're a small, pre-launch team and aren't running formal openings yet. If this is the problem you'd want to spend your time on, we'd still like to hear from you.</p>
-            <a href="mailto:jobs@clipper.ai" className="inline-flex items-center gap-2 text-sm text-stone-300 hover:text-[#53fc18] group">
+            <a href="mailto:jobs@clipper.ai" className="inline-flex items-center gap-2 text-sm text-stone-300 hover:text-[var(--color-brand)] group">
               jobs@clipper.ai
               <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </a>
@@ -45,10 +45,10 @@ function CompanyPage({ goto, bookCall }) {
         <div className="grid md:grid-cols-3 gap-8">
           <Reveal>
             <div>
-              <div className="text-[10px] mono text-[#53fc18] mb-3 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" /> Status</div>
+              <div className="text-[10px] mono text-[var(--color-brand)] mb-3 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" /> Status</div>
               <h3 className="serif text-3xl mb-4">Where we are</h3>
               <div className="space-y-3 text-sm text-stone-400">
-                <div className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" style={{ boxShadow: '0 0 6px #53fc18' }} /> Pre-launch, early access opens in small batches</div>
+                <div className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" style={{ boxShadow: '0 0 6px var(--color-brand)' }} /> Pre-launch, early access opens in small batches</div>
                 <div className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-stone-500" /> Private beta, onboarding our first design partners</div>
                 <div className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-stone-500" /> Independently built, talking to potential backers</div>
                 <div className="text-xs text-stone-600 pt-2">Press inquiries → press@clipper.ai</div>
@@ -57,7 +57,7 @@ function CompanyPage({ goto, bookCall }) {
           </Reveal>
           <Reveal delay={80}>
             <div>
-              <div className="text-[10px] mono text-[#53fc18] mb-3 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" /> Contact</div>
+              <div className="text-[10px] mono text-[var(--color-brand)] mb-3 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" /> Contact</div>
               <h3 className="serif text-3xl mb-4">Get in touch</h3>
               <div className="space-y-2 text-sm text-stone-400">
                 <div className="flex items-center gap-2"><Mail className="w-3.5 h-3.5 text-stone-500" /> hello@clipper.ai</div>
@@ -68,7 +68,7 @@ function CompanyPage({ goto, bookCall }) {
           </Reveal>
           <Reveal delay={160}>
             <div>
-              <div className="text-[10px] mono text-[#53fc18] mb-3 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" /> Backing</div>
+              <div className="text-[10px] mono text-[var(--color-brand)] mb-3 tracking-[0.2em] uppercase flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" /> Backing</div>
               <h3 className="serif text-3xl mb-4">Independent and early</h3>
               <div className="text-sm text-stone-400 leading-relaxed">Clipper is independently built and pre-launch. If you back AI-native content operations for creators and media teams, we'd love to talk.</div>
             </div>

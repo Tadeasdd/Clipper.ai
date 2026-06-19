@@ -36,7 +36,7 @@ function DocsPage({ goto, bookCall }) {
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search topics · try 'turnaround' or 'approvals'"
               aria-label="Search resource topics"
-              className="w-full pl-11 pr-4 py-3.5 rounded-md bg-[#53fc18]/[0.015] border border-[#53fc18]/[0.12] focus:border-[#53fc18]/30 focus:outline-none text-sm placeholder:text-stone-500"
+              className="w-full pl-11 pr-4 py-3.5 rounded-md bg-[var(--color-brand)]/[0.015] border border-[var(--color-brand)]/[0.12] focus:border-[var(--color-brand)]/30 focus:outline-none text-sm placeholder:text-stone-500"
             />
 
           </div>
@@ -53,10 +53,10 @@ function DocsPage({ goto, bookCall }) {
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
           {shown.map((d, i) => (
             <Reveal key={d.t} delay={i * 50}>
-              <div className="tilt-card group p-7 rounded-xl border border-[#53fc18]/[0.08] hover:border-[#53fc18]/30 hover:bg-[#53fc18]/[0.015] h-full">
+              <div className="tilt-card group p-7 rounded-xl border border-[var(--color-brand)]/[0.08] hover:border-[var(--color-brand)]/30 hover:bg-[var(--color-brand)]/[0.015] h-full">
                 <div className="flex items-start justify-between mb-5">
-                  <div className="w-10 h-10 rounded-md border border-[#53fc18]/[0.12] flex items-center justify-center group-hover:border-[#53fc18]/40 group-hover:bg-[#53fc18]/5">
-                    <d.icon className="w-4 h-4 text-stone-400 group-hover:text-[#53fc18]" />
+                  <div className="w-10 h-10 rounded-md border border-[var(--color-brand)]/[0.12] flex items-center justify-center group-hover:border-[var(--color-brand)]/40 group-hover:bg-[var(--color-brand)]/5">
+                    <d.icon className="w-4 h-4 text-stone-400 group-hover:text-[var(--color-brand)]" />
                   </div>
                   <span className="text-[10px] mono text-stone-500 tracking-wider uppercase">{d.count}</span>
                 </div>
@@ -71,8 +71,8 @@ function DocsPage({ goto, bookCall }) {
 
       <section className="relative z-10 max-w-[1400px] mx-auto px-8 py-16 border-t border-white/[0.12]">
         <Reveal>
-          <div className="rounded-2xl border border-[#53fc18]/[0.10] bg-[#53fc18]/[0.02] p-10 md:p-12 text-center max-w-2xl mx-auto">
-            <div className="text-[10px] mono text-[#53fc18] mb-4 tracking-[0.2em] uppercase">Still have questions?</div>
+          <div className="rounded-2xl border border-[var(--color-brand)]/[0.10] bg-[var(--color-brand)]/[0.02] p-10 md:p-12 text-center max-w-2xl mx-auto">
+            <div className="text-[10px] mono text-[var(--color-brand)] mb-4 tracking-[0.2em] uppercase">Still have questions?</div>
             <h2 className="serif text-4xl leading-tight mb-4">The fastest answer is <span className="italic gradient-green">a conversation.</span></h2>
             <p className="text-stone-400 leading-relaxed mb-8 max-w-lg mx-auto">Tell us about your show and what you’re trying to grow. We’ll walk you through how we’d run your content.</p>
             <button onClick={bookCall || (() => goto('home'))} className="btn-neon group px-6 py-4 rounded-md font-medium inline-flex items-center gap-2">

@@ -81,7 +81,7 @@ export default function Studio({
 
         /* Gradient text for italic green — adds dimension */
         .gradient-green {
-          background: linear-gradient(120deg, #53fc18 0%, #b8ff7d 90%);
+          background: linear-gradient(120deg, var(--color-brand) 0%, #b8ff7d 90%);
           -webkit-background-clip: text;
           background-clip: text;
           -webkit-text-fill-color: transparent;
@@ -100,7 +100,7 @@ export default function Studio({
         .link-underline { position: relative; }
         .link-underline::after {
           content: ''; position: absolute; left: 0; bottom: -2px; width: 100%; height: 1px;
-          background: #53fc18; transform-origin: right; transform: scaleX(0);
+          background: var(--color-brand); transform-origin: right; transform: scaleX(0);
           transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .link-underline:hover::after { transform-origin: left; transform: scaleX(1); }
@@ -158,7 +158,7 @@ export default function Studio({
         /* ── Studio wow layer (additive, dependency-free) ─────────────── */
         /* Unified neon button system — mirrors the marketing site so the
            studio's CTAs read as real buttons, not bare text. */
-        .btn-neon { position: relative; overflow: hidden; background: #53fc18; color: #000;
+        .btn-neon { position: relative; overflow: hidden; background: var(--color-brand); color: #000;
           box-shadow: 0 0 0 1px rgba(83,252,24,0.0), 0 8px 28px rgba(83,252,24,0.20);
           transition: transform .25s cubic-bezier(.16,1,.3,1), box-shadow .35s ease, background-color .25s ease; }
         .btn-neon:hover { transform: translateY(-1px); background: #62ff2b;
@@ -211,7 +211,7 @@ export default function Studio({
 
         /* Living gradient text — same breathing flow as the marketing site. */
         .gradient-green {
-          background: linear-gradient(120deg, #53fc18 0%, #b8ff7d 30%, #53fc18 55%, #d2ff9e 80%, #53fc18 100%);
+          background: linear-gradient(120deg, var(--color-brand) 0%, #b8ff7d 30%, var(--color-brand) 55%, #d2ff9e 80%, var(--color-brand) 100%);
           background-size: 240% 240%;
           -webkit-background-clip: text; background-clip: text;
           -webkit-text-fill-color: transparent;
@@ -411,7 +411,7 @@ export default function Studio({
               <span className="serif text-2xl tracking-tight">Clipper.ai</span>
             </button>
             <span className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.12] bg-white/[0.04] text-[11px] mono tracking-wider text-stone-300">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" />
               SAMPLE RUN · WHAT WE'D DELIVER
             </span>
           </div>

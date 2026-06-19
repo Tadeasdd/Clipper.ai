@@ -62,7 +62,7 @@ function HookEditor({ clip, onSaved }) {
     <div>
       <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={2} autoFocus
         onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save(); if (e.key === 'Escape') setEditing(false); }}
-        style={{ width: '100%', boxSizing: 'border-box', fontSize: 13, lineHeight: 1.5, padding: '6px 8px', background: 'rgba(255,255,255,0.05)', border: `1px solid ${T.green}55`, borderRadius: 6, color: T.text, outline: 'none', resize: 'vertical', fontFamily: 'inherit' }} />
+        style={{ width: '100%', boxSizing: 'border-box', fontSize: 13, lineHeight: 1.5, padding: '6px 8px', background: 'rgba(255,255,255,0.05)', border: `1px solid color-mix(in srgb, ${T.green} 33.333%, transparent)`, borderRadius: 6, color: T.text, outline: 'none', resize: 'vertical', fontFamily: 'inherit' }} />
       <div style={{ display: 'flex', gap: 8, marginTop: 6, alignItems: 'center' }}>
         <button onClick={save} disabled={busy} className="mono" style={btnStyle(T.green)}>{busy ? 'saving…' : 'save hook'}</button>
         <button onClick={() => setEditing(false)} className="mono" style={btnStyle()}>cancel</button>

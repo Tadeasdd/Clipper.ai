@@ -26,6 +26,8 @@
     "smoke:shutdown": "node scripts/smoke-shutdown.mjs",
     "smoke:resilience": "node scripts/smoke-resilience.mjs",
     "smoke:slo": "node scripts/smoke-slo.mjs",
+    "smoke:restore": "node scripts/smoke-restore.mjs",
+    "smoke:chaos": "node scripts/smoke-chaos.mjs",
     "smoke:prod": "node scripts/smoke-prod.mjs",
     "seed:demo": "node scripts/seed-demo.mjs",
     "eval": "node scripts/eval.mjs",

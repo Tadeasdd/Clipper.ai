@@ -124,6 +124,8 @@ services:
         npm run smoke:shutdown &&
         npm run smoke:resilience &&
         npm run smoke:slo &&
+        npm run smoke:restore &&
+        npm run smoke:chaos &&
         npm run smoke:authz &&
         npm run smoke:ssrf &&
         npm run smoke:ingest &&

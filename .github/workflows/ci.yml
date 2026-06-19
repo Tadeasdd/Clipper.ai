@@ -136,6 +136,22 @@ jobs:
       - run: npm run smoke:slo
         timeout-minutes: 3
 
+      # ── R5: DR — portable restore drill (reproduce-to-point-in-time) + chaos
+      #    drill (worker crash mid-pipeline self-heals within RTO).
+      - run: npm run smoke:restore
+        timeout-minutes: 3
+      - run: npm run smoke:chaos
+        timeout-minutes: 3
+
+      # ── R5: the real pg_dump/pg_restore production tooling, end to end.
+      - name: DR — pg_dump → pg_restore round-trip
+        run: |
+          sudo apt-get install -y -qq postgresql-client
+          DUMP=$(BACKUP_DIR=/tmp/bk bash ops/backup/backup.sh | tail -1)
+          ADMIN_URL=postgres://clipper:clipper@localhost:5432/postgres RESTORE_DB=clipper_pgrestore bash ops/backup/restore.sh "$DUMP"
+          psql postgres://clipper:clipper@localhost:5432/clipper_pgrestore -tAc 'select count(*) from schema_migrations;'
+        timeout-minutes: 4
+
       # ── S4: cross-tenant IDOR — id-addressed resources are tenant-scoped (404).
       - run: npm run smoke:authz
         timeout-minutes: 3

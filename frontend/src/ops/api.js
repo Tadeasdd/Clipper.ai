@@ -51,6 +51,7 @@ export const ops = {
   // stubs that fill in with B5/B6 (shaped, honest)
   publishQueue: () => json('GET', '/api/publish/queue'),
   opsAnalytics: () => json('GET', '/api/analytics/ops'),
+  opsMargin: () => json('GET', '/api/analytics/margin'),
 };
 
 /** Poll an endpoint on an interval. Pauses when the tab is hidden; exposes

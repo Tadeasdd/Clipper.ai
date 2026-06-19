@@ -16,6 +16,9 @@ import { log } from '../lib/log.js';
 import { STAGES } from '../pipeline/index.js';
 
 const r = Router();
+const round2 = (v) => Number(Number(v || 0).toFixed(2));
+const round3 = (v) => Number(Number(v || 0).toFixed(3));
+const round4 = (v) => Number(Number(v || 0).toFixed(4));
 
 // GET /api/analytics/queues — ops queue health (M5). Per-stage pipeline depth,
 // publish queue depth, and how many published posts are due a metrics capture —
@@ -172,6 +175,52 @@ r.get('/cost', requireAuth(...INTERNAL), async (_req, res, next) => {
 // GET /api/analytics/cost/:recordingId — itemized + summed cost for one recording.
 r.get('/cost/:recordingId', requireAuth(...INTERNAL), async (req, res, next) => {
   try { res.json(await recordingCost(req.params.recordingId)); } catch (e) { next(e); }
+});
+
+// GET /api/analytics/margin — E3 per-client profitability: plan revenue minus
+// AI cost (E1) minus estimated human-editor cost, with a month-over-month trend,
+// sorted by margin (most profitable first). Editor cost is an estimate from
+// review activity × a configurable rate — labeled, never presented as measured.
+r.get('/margin', requireAuth(...INTERNAL), async (_req, res, next) => {
+  try {
+    const hourly = Number(process.env.EDITOR_HOURLY_USD || 35);
+    const minPer = Number(process.env.EDITOR_MIN_PER_REVIEW || 4);
+    const editorCost = (reviews) => round2(reviews * minPer * hourly / 60);
+    const { rows } = await q(`
+      WITH month_cost AS (
+        SELECT client_id, sum(cost_usd) c FROM cost_entries WHERE created_at >= date_trunc('month', now()) GROUP BY client_id),
+      last_cost AS (
+        SELECT client_id, sum(cost_usd) c FROM cost_entries
+        WHERE created_at >= date_trunc('month', now()) - interval '1 month' AND created_at < date_trunc('month', now()) GROUP BY client_id),
+      reviews AS (
+        SELECT r.client_id,
+          count(*) FILTER (WHERE e.created_at >= date_trunc('month', now())) AS this,
+          count(*) FILTER (WHERE e.created_at >= date_trunc('month', now()) - interval '1 month' AND e.created_at < date_trunc('month', now())) AS last
+        FROM review_events e JOIN clips cl ON cl.id = e.clip_id JOIN recordings r ON r.id = cl.recording_id GROUP BY r.client_id)
+      SELECT c.id, c.name, c.plan,
+        COALESCE(p.monthly_price_usd, 0) AS revenue,
+        COALESCE(mc.c, 0) AS ai_cost, COALESCE(lc.c, 0) AS ai_cost_last,
+        COALESCE(rv.this, 0) AS reviews, COALESCE(rv.last, 0) AS reviews_last
+      FROM clients c
+      LEFT JOIN plans p ON p.name = c.plan
+      LEFT JOIN month_cost mc ON mc.client_id = c.id
+      LEFT JOIN last_cost lc ON lc.client_id = c.id
+      LEFT JOIN reviews rv ON rv.client_id = c.id`);
+    const clients = rows.map((r) => {
+      const revenue = Number(r.revenue);
+      const aiCost = round4(Number(r.ai_cost));
+      const edCost = editorCost(Number(r.reviews));
+      const margin = round2(revenue - aiCost - edCost);
+      const lastMargin = revenue - Number(r.ai_cost_last) - editorCost(Number(r.reviews_last));
+      return {
+        clientId: r.id, client: r.name, plan: r.plan, revenue: round2(revenue),
+        aiCost, editorCost: edCost, editorCostEstimated: true,
+        margin, marginPct: revenue > 0 ? round3(margin / revenue) : null,
+        trend: margin > lastMargin + 0.01 ? 'up' : margin < lastMargin - 0.01 ? 'down' : 'flat',
+      };
+    }).sort((a, b) => b.margin - a.margin);
+    res.json({ clients, rate: { editorHourlyUsd: hourly, editorMinPerReview: minPer } });
+  } catch (e) { next(e); }
 });
 
 // GET /api/analytics/slo — R4 reliability report: each SLI vs its target + the

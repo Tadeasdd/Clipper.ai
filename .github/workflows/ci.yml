@@ -136,6 +136,10 @@ jobs:
       - run: npm run smoke:metering
         timeout-minutes: 3
 
+      # ── E3: per-client margin = plan revenue − AI cost − editor est, sorted.
+      - run: npm run smoke:margin
+        timeout-minutes: 3
+
       # ── R3: timeouts + circuit breakers + bulkheads on external calls.
       - run: npm run smoke:resilience
         timeout-minutes: 2

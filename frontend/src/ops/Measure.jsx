@@ -87,6 +87,7 @@ function Analytics() {
           </Panel>
         </>
       )}
+      <Margin />
     </>
   );
 }
@@ -146,6 +147,43 @@ function Publish() {
         ))}
       </Panel>
     </>
+  );
+}
+
+// E3 — per-client margin: plan revenue − AI cost (E1 ledger) − estimated editor
+// cost, sorted by profitability with a month-over-month trend. Same Panel/grid
+// idiom as the publishing queue; editor cost is labeled an estimate.
+function Margin() {
+  const { data, error, loading, refresh } = usePoll(ops.opsMargin, { ms: 15000 });
+  const clients = data?.clients || [];
+  const usd = (v) => (v == null ? '—' : `$${Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+  const grid = '1.4fr 0.8fr 0.9fr 0.9fr 0.9fr 0.9fr 0.7fr 0.5fr';
+  const cols = ['client', 'plan', 'revenue', 'ai cost', 'editor est', 'margin', 'margin %', 'trend'];
+  const arrow = (t) => (t === 'up' ? '▲' : t === 'down' ? '▼' : '—');
+  const good = (m) => (m >= 0 ? T.green : T.red);
+  return (
+    <Panel className="ops-rise" style={{ animationDelay: '0.12s', marginTop: 14 }}>
+      <PanelHead title="Margin & profitability — revenue − AI − editor (est), per client"
+        right={data?.rate && <Label>editor est ${data.rate.editorHourlyUsd}/h · {data.rate.editorMinPerReview}m/review</Label>} />
+      <div style={{ display: 'grid', gridTemplateColumns: grid, gap: 12, padding: '9px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
+        {cols.map((c, i) => <Label key={i}>{c}</Label>)}
+      </div>
+      {error && !data && <ErrorBand error={error} retry={refresh} />}
+      {loading && !data && !error && <Empty>loading…</Empty>}
+      {data && !clients.length && <Empty>no clients on a plan yet — margin appears as recordings accrue cost against plan revenue</Empty>}
+      {clients.map((c) => (
+        <div key={c.clientId} className="ops-row" style={{ display: 'grid', gridTemplateColumns: grid, gap: 12, alignItems: 'center', padding: '10px 16px', borderTop: `1px solid ${T.lineSoft}` }}>
+          <Mono style={{ fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.client}</Mono>
+          <Mono style={{ fontSize: 11, color: T.dim }}>{c.plan || '—'}</Mono>
+          <Mono style={{ fontSize: 11 }}>{usd(c.revenue)}</Mono>
+          <Mono style={{ fontSize: 11, color: T.dim }}>{usd(c.aiCost)}</Mono>
+          <Mono style={{ fontSize: 11, color: T.dim }}>{usd(c.editorCost)}</Mono>
+          <Mono style={{ fontSize: 11, color: good(c.margin) }}>{usd(c.margin)}</Mono>
+          <Mono style={{ fontSize: 11, color: good(c.margin) }}>{c.marginPct == null ? '—' : `${Math.round(c.marginPct * 100)}%`}</Mono>
+          <Mono style={{ fontSize: 12, color: c.trend === 'up' ? T.green : c.trend === 'down' ? T.red : T.dim }}>{arrow(c.trend)}</Mono>
+        </div>
+      ))}
+    </Panel>
   );
 }
 

@@ -7,6 +7,7 @@ import { q } from '../db/index.js';
 import { runAdapter } from './index.js';
 import { instrumentStage } from '../lib/telemetry.js';
 import { recordOutcome } from '../billing/index.js';
+import { notify } from '../notify/index.js';
 
 const MAX_ATTEMPTS = 3;
 const POLL_MS = Number(process.env.PUBLISH_POLL_MS || 1000);
@@ -84,6 +85,7 @@ async function runOne(job) {
     // idempotent on clip_id, so multi-platform delivery of one clip bills once
     // and a billing hiccup never rolls back a successful publish.
     await recordOutcome({ clipId: job.clip_id, publishId: job.id, clientId: row.client_id });
+    await notify('published', { clientId: row.client_id, clipId: job.clip_id }); // O4: clip is live
     console.log(`[publish] ${job.platform} ${job.clip_id} → ${url}`);
   } catch (e) {
     const parked = job.attempts >= MAX_ATTEMPTS;

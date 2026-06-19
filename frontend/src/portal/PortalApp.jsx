@@ -249,6 +249,28 @@ function DeliverableCard({ clip }) {
   );
 }
 
+/* O4 — recent updates: the client's lifecycle notification feed (content
+   received, ready for approval, published, delivery-at-risk). Additive panel;
+   reuses the portal's Panel idiom and tokens — no new colors/SVGs/fonts. */
+function UpdatesPanel() {
+  const { data } = usePoll(() => portal.notifications(), { ms: 10000 });
+  const items = (data?.notifications || []).slice(0, 6);
+  if (!items.length) return null;
+  return (
+    <Panel style={{ marginBottom: 16 }} className="portal-rise">
+      <PanelHead title="Recent updates" />
+      <div>
+        {items.map((n) => (
+          <div key={n.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, padding: '9px 14px', borderTop: `1px solid ${T.lineSoft}` }}>
+            <span style={{ fontSize: 12.5, color: n.event === 'sla_risk' ? T.amber : T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.subject}</span>
+            <span className="mono" style={{ fontSize: 10.5, color: T.dim, whiteSpace: 'nowrap' }}>{fmtAgo(n.created_at)}</span>
+          </div>
+        ))}
+      </div>
+    </Panel>
+  );
+}
+
 function Deliverables() {
   const [filter, setFilter] = useState('delivered'); // delivered | production | all
   const { data, error, loading, refresh } = usePoll(() => portal.clips(), { ms: 8000 });
@@ -267,6 +289,7 @@ function Deliverables() {
           ))}
         </div>
       } />
+      <UpdatesPanel />
       {error && <Panel style={{ marginBottom: 16 }}><ErrorBand error={error} retry={refresh} /></Panel>}
       {!error && !loading && !shown.length && (
         <Panel><Empty>

@@ -21,6 +21,8 @@ export const portal = {
   submit: (body) => json('POST', '/api/intake', body),
   uploadUrl: (recordingId) => `${API_BASE}/api/intake/upload/${recordingId}`,
   submissions: () => json('GET', '/api/intake/queue'),
+  // updates — notification feed, pinned to the session's client server-side (O4)
+  notifications: () => json('GET', '/api/notifications'),
   // report + account
   report: (clientId, days) => json('GET', `/api/analytics/clients/${clientId}?days=${days || 30}`),
   client: (id) => json('GET', `/api/clients/${id}`),

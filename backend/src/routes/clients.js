@@ -16,6 +16,7 @@ const clientSchema = {
   cadence: { type: 'string', maxLength: 80 },
   brandConfig: { type: 'object' },
   lifecycleStage: { type: 'string', enum: LIFECYCLE_STAGES },
+  notifyPrefs: { type: 'object' }, // O4: opt-out + channel config
 };
 
 r.get('/', requireAuth(...INTERNAL), async (req, res, next) => {
@@ -82,15 +83,16 @@ r.get('/:id/health', requireAuth(...INTERNAL), async (req, res, next) => {
 
 r.patch('/:id', requireAuth('ops', 'account_manager'), validate(clientSchema), async (req, res, next) => {
   try {
-    const { name, plan, cadence, brandConfig, lifecycleStage } = req.body || {};
+    const { name, plan, cadence, brandConfig, lifecycleStage, notifyPrefs } = req.body || {};
     // O3: advancing into 'active' stamps onboarded_at the first time it happens.
     const { rows } = await q(
       `UPDATE clients SET name = COALESCE($2, name), plan = COALESCE($3, plan),
          cadence = COALESCE($4, cadence), brand_config = COALESCE($5, brand_config),
          lifecycle_stage = COALESCE($6, lifecycle_stage),
-         onboarded_at = CASE WHEN $6 = 'active' AND onboarded_at IS NULL THEN now() ELSE onboarded_at END
+         onboarded_at = CASE WHEN $6 = 'active' AND onboarded_at IS NULL THEN now() ELSE onboarded_at END,
+         notify_prefs = COALESCE($7, notify_prefs)
        WHERE id = $1 RETURNING *`,
-      [req.params.id, name || null, plan || null, cadence || null, brandConfig || null, lifecycleStage || null]
+      [req.params.id, name || null, plan || null, cadence || null, brandConfig || null, lifecycleStage || null, notifyPrefs || null]
     );
     if (!rows.length) return res.status(404).json({ error: 'unknown client' });
     res.json(rows[0]);

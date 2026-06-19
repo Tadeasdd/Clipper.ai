@@ -160,6 +160,11 @@ jobs:
       - run: npm run smoke:health
         timeout-minutes: 3
 
+      # ── O4: lifecycle notifications (log driver), opt-out honored, SLA-risk
+      #        sweep dedups — all offline.
+      - run: npm run smoke:notify
+        timeout-minutes: 3
+
       # ── R3: timeouts + circuit breakers + bulkheads on external calls.
       - run: npm run smoke:resilience
         timeout-minutes: 2

@@ -9,6 +9,7 @@ import { requireAuth, INTERNAL } from '../lib/auth.js';
 import { rateLimit } from '../lib/ratelimit.js';
 import { validate, paginate } from '../lib/validate.js';
 import { checkIntake } from '../lib/metering.js';
+import { notify } from '../notify/index.js';
 
 const r = Router();
 
@@ -70,6 +71,7 @@ r.post('/', requireAuth(),
     const upload = sourceUrl ? null : await createUploadTarget(recId, filename);
     if (upload) await q('UPDATE recordings SET storage_key = $1 WHERE id = $2', [upload.key, recId]);
     if (sourceUrl && !meter.hold) await enqueue(recId, 'ingest'); // file path enqueues on upload completion; held over-quota jobs wait
+    await notify('content_received', { clientId, recordingId: recId }); // O4: tell the client we have it (best-effort)
     res.status(201).json({ recordingId: recId, status, upload, held: meter.hold, meter });
   } catch (e) { next(e); }
 });

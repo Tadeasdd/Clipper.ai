@@ -35,6 +35,7 @@
     "smoke:sla": "node scripts/smoke-sla.mjs",
     "smoke:capacity": "node scripts/smoke-capacity.mjs",
     "smoke:health": "node scripts/smoke-health.mjs",
+    "smoke:notify": "node scripts/smoke-notify.mjs",
     "smoke:prod": "node scripts/smoke-prod.mjs",
     "seed:demo": "node scripts/seed-demo.mjs",
     "eval": "node scripts/eval.mjs",

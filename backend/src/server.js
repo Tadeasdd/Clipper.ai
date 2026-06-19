@@ -23,12 +23,14 @@ import usersRoutes from './routes/users.js';
 import authRoutes from './routes/auth.js';
 import leadsRoutes from './routes/leads.js';
 import billingRoutes from './routes/billing.js';
+import notificationsRoutes from './routes/notifications.js';
 import { migrate, q, pool } from './db/index.js';
 import { csrfGuard } from './lib/auth.js';
 import { startWorkers, drainWorkers } from './pipeline/index.js';
 import { startPublisher, drainPublisher } from './publish/scheduler.js';
 import { startMetricsPoller, stopMetricsPoller } from './metrics/index.js';
 import { startBillingReporter, stopBillingReporter } from './billing/index.js';
+import { startNotifier, stopNotifier } from './notify/index.js';
 import { startQualityMonitor, stopQualityMonitor } from './metrics/monitor.js';
 import { assertProdConfig, corsOptions } from './lib/config.js';
 import { log, reportError } from './lib/log.js';
@@ -131,6 +133,7 @@ app.use('/api/auth', authRoutes);       // B7: sessions, the only door
 app.use('/api/users', usersRoutes);     // B4→B7: account management (ops-gated)
 app.use('/api/leads', leadsRoutes);     // F3: waitlist / strategy-call form
 app.use('/api/billing', billingRoutes); // E4: metered outcomes billing (webhook + reconcile)
+app.use('/api/notifications', notificationsRoutes); // O4: client-facing notification feed
 
 // Central error handler — routes call next(e); nothing leaks stack traces.
 // M7/S6: structured, redacted logging + a best-effort Sentry report. The client
@@ -146,13 +149,13 @@ await migrate();
 // B3: pipeline workers run in-process by default; set WORKERS_ENABLED=false
 // to run them separately via `npm run worker` (SKIP LOCKED makes both safe).
 if (process.env.WORKERS_ENABLED !== 'false') {
-  startWorkers(); startPublisher(); startMetricsPoller(); startQualityMonitor(); startBillingReporter();
+  startWorkers(); startPublisher(); startMetricsPoller(); startQualityMonitor(); startBillingReporter(); startNotifier();
   // R2: on shutdown, the job queues drain in-flight work (zero loss); the
   // metrics poller + calibration monitor + billing reporter just stop (their
   // work self-heals — pending billable outcomes flush on the next boot's sweep).
   onShutdown(() => drainWorkers());
   onShutdown(() => drainPublisher());
-  onShutdown(() => { stopMetricsPoller(); stopQualityMonitor(); stopBillingReporter(); });
+  onShutdown(() => { stopMetricsPoller(); stopQualityMonitor(); stopBillingReporter(); stopNotifier(); });
 }
 const server = app.listen(port, () => log.info('clipper-ops listening', { port: Number(port), env: process.env.NODE_ENV || 'development' }));
 

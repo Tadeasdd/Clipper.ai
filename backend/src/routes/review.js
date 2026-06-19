@@ -24,6 +24,7 @@ import { q } from '../db/index.js';
 import { id } from '../lib/ids.js';
 import { autoScheduleApproved } from '../publish/index.js';
 import { assignClip, balanceAssignments, leastLoadedReviewer } from '../ops/capacity.js';
+import { notify } from '../notify/index.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
 import { validate, paginate } from '../lib/validate.js';
 
@@ -179,6 +180,8 @@ r.post('/:clipId/send', requireAuth(...INTERNAL), validate(notesOnly), async (re
     if (!clip) return res.status(404).json({ error: 'unknown clip' });
     const event = await transition(clip.id, 'approved_internal', 'awaiting_client', u.id, 'send_to_client', req.body?.notes);
     if (!event) return conflict(res, await clipContext(clip.id));
+    // O4: the clip is now in the client's sign-off queue — tell them (best-effort).
+    await notify('ready_for_approval', { clientId: clip.client_id, clipId: clip.id });
     res.json({ clipId: clip.id, from: 'approved_internal', to: 'awaiting_client', event });
   } catch (e) { next(e); }
 });

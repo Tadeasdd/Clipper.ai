@@ -24,6 +24,7 @@ import authRoutes from './routes/auth.js';
 import leadsRoutes from './routes/leads.js';
 import billingRoutes from './routes/billing.js';
 import notificationsRoutes from './routes/notifications.js';
+import auditRoutes from './routes/audit.js';
 import { migrate, q, pool } from './db/index.js';
 import { csrfGuard } from './lib/auth.js';
 import { startWorkers, drainWorkers } from './pipeline/index.js';
@@ -134,6 +135,7 @@ app.use('/api/users', usersRoutes);     // B4→B7: account management (ops-gate
 app.use('/api/leads', leadsRoutes);     // F3: waitlist / strategy-call form
 app.use('/api/billing', billingRoutes); // E4: metered outcomes billing (webhook + reconcile)
 app.use('/api/notifications', notificationsRoutes); // O4: client-facing notification feed
+app.use('/api/audit', auditRoutes); // O5: system-wide activity feed (ops + scoped client)
 
 // Central error handler — routes call next(e); nothing leaks stack traces.
 // M7/S6: structured, redacted logging + a best-effort Sentry report. The client

@@ -159,6 +159,7 @@ const NAV = [
   { to: '/ops/clients', label: 'Clients' },
   { to: '/ops/publish', label: 'Publish' },
   { to: '/ops/analytics', label: 'Analytics' },
+  { to: '/ops/activity', label: 'Activity' },
 ];
 
 function Shell({ user, onLogout, children }) {
@@ -227,6 +228,7 @@ import RecordingDetail from './RecordingDetail.jsx';
 import ReviewDesk from './ReviewDesk.jsx';
 import Clients from './Clients.jsx';
 import Measure from './Measure.jsx';
+import Activity from './Activity.jsx';
 
 export default function OpsApp() {
   const [authState, setAuthState] = useState({ phase: 'checking', user: null });
@@ -256,6 +258,7 @@ export default function OpsApp() {
           <Route path="clients" element={<Clients />} />
           <Route path="publish" element={<Measure surface="publish" />} />
           <Route path="analytics" element={<Measure surface="analytics" />} />
+          <Route path="activity" element={<Activity />} />
           <Route path="*" element={<Stub kicker="404" title="No such surface" body={<Link to="/ops" className="mono" style={btnStyle()}>back to the board</Link>} />} />
         </Routes>
       </Shell>

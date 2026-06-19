@@ -16,6 +16,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { q } from '../db/index.js';
 import { id } from '../lib/ids.js';
 import { log } from '../lib/log.js';
+import { audit } from '../lib/audit.js';
 import * as dryrun from './dryrun.js';
 import * as stripe from './stripe.js';
 
@@ -62,6 +63,8 @@ async function reportOne(row) {
       `UPDATE billing_usage SET status = 'reported', provider = $2, provider_ref = $3,
               error = NULL, reported_at = now() WHERE id = $1`,
       [row.id, provider, providerRef]);
+    await audit('billing', 'usage_reported', { clientId: row.client_id, entityType: 'usage', entityId: row.id, // O5
+      summary: `Outcome reported via ${provider}`, meta: { provider, providerRef, clipId: row.clip_id } });
     return { id: row.id, status: 'reported' };
   } catch (e) {
     await q(`UPDATE billing_usage SET status = 'failed', error = $2 WHERE id = $1`,

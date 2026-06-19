@@ -10,6 +10,7 @@
  *   ingest → transcribe → analyze → score → generate
  */
 import { q } from '../db/index.js';
+import { audit } from '../lib/audit.js';
 import { id } from '../lib/ids.js';
 import { instrumentStage } from '../lib/telemetry.js';
 
@@ -97,7 +98,8 @@ async function runOne(job) {
     if (next) {
       await enqueue(job.recording_id, next);
     } else {
-      await q(`UPDATE recordings SET status = 'ready' WHERE id = $1`, [job.recording_id]);
+      const done = await q(`UPDATE recordings SET status = 'ready' WHERE id = $1 RETURNING client_id`, [job.recording_id]);
+      await audit('processing', 'recording_ready', { clientId: done.rows[0]?.client_id, entityType: 'recording', entityId: job.recording_id, summary: 'Processing complete — clips ready for review' });
     }
   } catch (e) {
     const parked = job.attempts >= MAX_ATTEMPTS;
@@ -109,7 +111,10 @@ async function runOne(job) {
        WHERE id = $1`,
       [job.id, parked ? 'failed' : 'pending', String(e.message).slice(0, 2000), String(backoffS), parked]
     );
-    if (parked) await q(`UPDATE recordings SET status = 'failed' WHERE id = $1`, [job.recording_id]);
+    if (parked) {
+      const failed = await q(`UPDATE recordings SET status = 'failed' WHERE id = $1 RETURNING client_id`, [job.recording_id]);
+      await audit('processing', 'recording_failed', { clientId: failed.rows[0]?.client_id, entityType: 'recording', entityId: job.recording_id, summary: `Processing failed at ${job.stage}`, meta: { stage: job.stage } });
+    }
   }
 }
 

@@ -7,6 +7,7 @@ import { q } from '../db/index.js';
 import { id } from '../lib/ids.js';
 import { requireAuth, INTERNAL, hashPassword } from '../lib/auth.js';
 import { validate, paginate } from '../lib/validate.js';
+import { audit } from '../lib/audit.js';
 
 const r = Router();
 const ROLES = ['ops', 'editor', 'reviewer', 'account_manager', 'client'];
@@ -46,6 +47,8 @@ r.post('/', requireAuth('ops', 'account_manager'), validate({
       `INSERT INTO users (id, email, role, client_id, password_hash) VALUES ($1,$2,$3,$4,$5)
        RETURNING id, email, role, client_id, created_at`,
       [id('usr'), trimmed, role, role === 'client' ? clientId : null, hashPassword(String(password))]);
+    await audit('admin', 'user_created', { actorId: req.user?.id, actorRole: req.user?.role, // O5
+      clientId: rows[0].client_id, entityType: 'user', entityId: rows[0].id, summary: `User created: ${rows[0].email} (${rows[0].role})` });
     res.status(201).json(rows[0]);
   } catch (e) { next(e); }
 });

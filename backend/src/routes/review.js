@@ -25,6 +25,7 @@ import { id } from '../lib/ids.js';
 import { autoScheduleApproved } from '../publish/index.js';
 import { assignClip, balanceAssignments, leastLoadedReviewer } from '../ops/capacity.js';
 import { notify } from '../notify/index.js';
+import { audit } from '../lib/audit.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
 import { validate, paginate } from '../lib/validate.js';
 
@@ -167,6 +168,12 @@ r.post('/:clipId/decision', requireAuth(), validate({
     // schedule it now on every platform the client has connected. Best-effort:
     // a scheduling hiccup never rolls back the decision.
     const scheduled = to === 'approved' ? await autoScheduleApproved(clip.id, u.id) : [];
+    // O5: the decision lands in the activity feed; a client's own sign-off is
+    // visible to them, internal QA steps are not.
+    await audit('review', 'review_decision', {
+      actorId: u.id, actorRole: u.role, clientId: clip.client_id, entityType: 'clip', entityId: clip.id,
+      summary: `${u.role === 'client' ? 'Client' : 'Reviewer'} ${decision} → ${to}`,
+      meta: { decision, from, to }, clientVisible: u.role === 'client' });
     res.json({ clipId: clip.id, from, to, autoPublished, scheduled, event });
   } catch (e) { next(e); }
 });

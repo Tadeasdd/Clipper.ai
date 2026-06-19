@@ -6,6 +6,7 @@ import { requireAuth, INTERNAL } from '../lib/auth.js';
 import { validate, paginate } from '../lib/validate.js';
 import { meterStatus } from '../lib/metering.js';
 import { clientHealth, healthOverview } from '../ops/health.js';
+import { audit } from '../lib/audit.js';
 
 const r = Router();
 
@@ -41,6 +42,8 @@ r.post('/', requireAuth('ops', 'account_manager'),
       `INSERT INTO clients (id, name, plan, cadence, brand_config) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
       [cliId, String(name).trim(), plan || null, cadence || null, brandConfig || {}]
     );
+    await audit('admin', 'client_created', { actorId: req.user?.id, actorRole: req.user?.role, // O5
+      clientId: cliId, entityType: 'client', entityId: cliId, summary: `Client created: ${String(name).trim()}` });
     res.status(201).json(rows[0]);
   } catch (e) { next(e); }
 });
@@ -95,6 +98,9 @@ r.patch('/:id', requireAuth('ops', 'account_manager'), validate(clientSchema), a
       [req.params.id, name || null, plan || null, cadence || null, brandConfig || null, lifecycleStage || null, notifyPrefs || null]
     );
     if (!rows.length) return res.status(404).json({ error: 'unknown client' });
+    await audit('admin', 'client_updated', { actorId: req.user?.id, actorRole: req.user?.role, // O5
+      clientId: req.params.id, entityType: 'client', entityId: req.params.id,
+      summary: lifecycleStage ? `Lifecycle → ${lifecycleStage}` : 'Client updated', meta: { lifecycleStage } });
     res.json(rows[0]);
   } catch (e) { next(e); }
 });

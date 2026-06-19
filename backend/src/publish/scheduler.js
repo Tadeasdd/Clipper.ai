@@ -8,6 +8,7 @@ import { runAdapter } from './index.js';
 import { instrumentStage } from '../lib/telemetry.js';
 import { recordOutcome } from '../billing/index.js';
 import { notify } from '../notify/index.js';
+import { audit } from '../lib/audit.js';
 
 const MAX_ATTEMPTS = 3;
 const POLL_MS = Number(process.env.PUBLISH_POLL_MS || 1000);
@@ -86,6 +87,8 @@ async function runOne(job) {
     // and a billing hiccup never rolls back a successful publish.
     await recordOutcome({ clipId: job.clip_id, publishId: job.id, clientId: row.client_id });
     await notify('published', { clientId: row.client_id, clipId: job.clip_id }); // O4: clip is live
+    await audit('publish', 'clip_published', { clientId: row.client_id, entityType: 'clip', entityId: job.clip_id, // O5
+      summary: `Published to ${job.platform}`, meta: { platform: job.platform, url }, clientVisible: true });
     console.log(`[publish] ${job.platform} ${job.clip_id} → ${url}`);
   } catch (e) {
     const parked = job.attempts >= MAX_ATTEMPTS;

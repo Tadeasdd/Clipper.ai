@@ -14,6 +14,7 @@ import { rateLimit } from '../lib/ratelimit.js';
 import { validate } from '../lib/validate.js';
 import { log } from '../lib/log.js';
 import { id } from '../lib/ids.js';
+import { audit } from '../lib/audit.js';
 
 const r = Router();
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -93,6 +94,8 @@ r.post('/login', validate(credentials), async (req, res, next) => {
     const { token, expiresAt } = await createSession(u.id);
     setCookie(res, token);
     log.security('auth.login.ok', { userId: u.id, email: u.email, role: u.role, ip: req.ip, requestId: req.id });
+    await audit('admin', 'login_success', { actorId: u.id, actorRole: u.role, clientId: u.client_id, // O5
+      entityType: 'user', entityId: u.id, summary: `Signed in: ${u.email} (${u.role})` });
     res.json({ token, expiresAt, user: { id: u.id, email: u.email, role: u.role, clientId: u.client_id } });
   } catch (e) { next(e); }
 });

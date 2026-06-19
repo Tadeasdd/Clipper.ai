@@ -5,14 +5,17 @@ import { id } from '../lib/ids.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
 import { validate, paginate } from '../lib/validate.js';
 import { meterStatus } from '../lib/metering.js';
+import { clientHealth, healthOverview } from '../ops/health.js';
 
 const r = Router();
 
+const LIFECYCLE_STAGES = ['onboarding', 'active', 'at_risk', 'churned'];
 const clientSchema = {
   name: { type: 'string', maxLength: 200 },
   plan: { type: 'string', maxLength: 80 },
   cadence: { type: 'string', maxLength: 80 },
   brandConfig: { type: 'object' },
+  lifecycleStage: { type: 'string', enum: LIFECYCLE_STAGES },
 };
 
 r.get('/', requireAuth(...INTERNAL), async (req, res, next) => {
@@ -41,6 +44,13 @@ r.post('/', requireAuth('ops', 'account_manager'),
   } catch (e) { next(e); }
 });
 
+// GET /api/clients/health — O3: health + lifecycle for every client (the ops
+// panel). At-risk clients sort first. Registered before /:id so 'health' isn't
+// read as a client id.
+r.get('/health', requireAuth(...INTERNAL), async (_req, res, next) => {
+  try { res.json(await healthOverview()); } catch (e) { next(e); }
+});
+
 r.get('/:id', requireAuth(), async (req, res, next) => {
   // internal roles see any client; client users see exactly their own (F5).
   // S4: another client's id is a 404, not a 403 — don't confirm it exists.
@@ -60,14 +70,27 @@ r.get('/:id/usage', requireAuth(...INTERNAL), async (req, res, next) => {
   try { res.json(await meterStatus(req.params.id)); } catch (e) { next(e); }
 });
 
+// GET /api/clients/:id/health — O3: one client's health score, onboarding
+// checklist, lifecycle stage, and churn signals.
+r.get('/:id/health', requireAuth(...INTERNAL), async (req, res, next) => {
+  try {
+    const h = await clientHealth(req.params.id);
+    if (!h) return res.status(404).json({ error: 'unknown client' });
+    res.json(h);
+  } catch (e) { next(e); }
+});
+
 r.patch('/:id', requireAuth('ops', 'account_manager'), validate(clientSchema), async (req, res, next) => {
   try {
-    const { name, plan, cadence, brandConfig } = req.body || {};
+    const { name, plan, cadence, brandConfig, lifecycleStage } = req.body || {};
+    // O3: advancing into 'active' stamps onboarded_at the first time it happens.
     const { rows } = await q(
       `UPDATE clients SET name = COALESCE($2, name), plan = COALESCE($3, plan),
-         cadence = COALESCE($4, cadence), brand_config = COALESCE($5, brand_config)
+         cadence = COALESCE($4, cadence), brand_config = COALESCE($5, brand_config),
+         lifecycle_stage = COALESCE($6, lifecycle_stage),
+         onboarded_at = CASE WHEN $6 = 'active' AND onboarded_at IS NULL THEN now() ELSE onboarded_at END
        WHERE id = $1 RETURNING *`,
-      [req.params.id, name || null, plan || null, cadence || null, brandConfig || null]
+      [req.params.id, name || null, plan || null, cadence || null, brandConfig || null, lifecycleStage || null]
     );
     if (!rows.length) return res.status(404).json({ error: 'unknown client' });
     res.json(rows[0]);

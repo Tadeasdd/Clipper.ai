@@ -55,6 +55,7 @@ export const ops = {
   opsTurnaround: () => json('GET', '/api/analytics/turnaround'),
   opsCapacity: () => json('GET', '/api/analytics/capacity'),
   balanceReview: () => json('POST', '/api/review/assign/balance', {}),
+  opsHealth: () => json('GET', '/api/clients/health'),
 };
 
 /** Poll an endpoint on an interval. Pauses when the tab is hidden; exposes

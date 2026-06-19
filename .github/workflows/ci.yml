@@ -155,6 +155,11 @@ jobs:
       - run: npm run smoke:capacity
         timeout-minutes: 3
 
+      # ── O3: client onboarding checklist + health score + churn signals,
+      #        lifecycle stage as the operator workflow field.
+      - run: npm run smoke:health
+        timeout-minutes: 3
+
       # ── R3: timeouts + circuit breakers + bulkheads on external calls.
       - run: npm run smoke:resilience
         timeout-minutes: 2

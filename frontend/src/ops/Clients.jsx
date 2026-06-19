@@ -18,6 +18,7 @@ function ClientEditor({ client, onDone, onCancel }) {
   const [plan, setPlan] = useState(client?.plan || '');
   const [cadence, setCadence] = useState(client?.cadence || '');
   const [autoPublish, setAutoPublish] = useState(client?.brand_config?.auto_publish === true);
+  const [stage, setStage] = useState(client?.lifecycle_stage || 'onboarding');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const save = async () => {
@@ -25,6 +26,7 @@ function ClientEditor({ client, onDone, onCancel }) {
     const body = {
       name: name.trim(), plan: plan.trim() || null, cadence: cadence.trim() || null,
       brandConfig: { ...(client?.brand_config || {}), auto_publish: autoPublish },
+      ...(isNew ? {} : { lifecycleStage: stage }), // O3: operator advances the lifecycle
     };
     try {
       if (isNew) await ops.createClient(body);
@@ -55,6 +57,14 @@ function ClientEditor({ client, onDone, onCancel }) {
           auto-publish <Mono style={{ fontSize: 10.5, color: T.amber }}>— client opts OUT of per-clip sign-off; internal approval publishes directly</Mono>
         </span>
       </label>
+      {!isNew && (
+        <div style={{ maxWidth: 240 }}>
+          <Label style={{ marginBottom: 5 }}>lifecycle stage</Label>
+          <select value={stage} onChange={(e) => setStage(e.target.value)} style={field()}>
+            {['onboarding', 'active', 'at_risk', 'churned'].map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+      )}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <button onClick={save} disabled={busy || !name.trim()} className="mono" style={{ ...btnStyle(T.green), opacity: !name.trim() ? 0.4 : 1 }}>
           {busy ? 'saving…' : isNew ? 'create client' : 'save changes'}
@@ -63,6 +73,51 @@ function ClientEditor({ client, onDone, onCancel }) {
         {err && <Mono style={{ fontSize: 11, color: T.red }}>{String(err.message)}</Mono>}
       </div>
     </div>
+  );
+}
+
+/* O3 — client health & lifecycle. Per client: lifecycle stage, a computed
+   health score (usage/turnaround/approval/performance), onboarding progress,
+   and churn flags. At-risk clients sort first and flag in T.red. Additive panel;
+   the Accounts table below is unchanged. No new colors. */
+const scoreColor = (s) => (s == null ? T.dim : s >= 70 ? T.green : s >= 50 ? T.amber : T.red);
+const stageColor = (st) => (st === 'active' ? T.green : st === 'at_risk' ? T.red : st === 'churned' ? T.dim : T.amber);
+
+function HealthPanel() {
+  const { data, error, loading, refresh } = usePoll(ops.opsHealth, { ms: 8000 });
+  const clients = data?.clients || [];
+  const t = data?.totals;
+  return (
+    <Panel style={{ marginBottom: 16 }} className="ops-rise">
+      <PanelHead title="Client health & lifecycle"
+        right={<Label>{t ? `${t.atRisk} at-risk · ${t.onboarding} onboarding` : '…'}</Label>} />
+      {error && !data && <ErrorBand error={error} retry={refresh} />}
+      {loading && !data && !error && <Empty>loading…</Empty>}
+      {data && !clients.length && <Empty>no clients yet</Empty>}
+      {clients.length > 0 && (
+        <div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(160px,1.5fr) 100px 80px 110px 1fr', gap: 12, padding: '8px 16px', borderTop: `1px solid ${T.lineSoft}` }}>
+            {['Client', 'Stage', 'Health', 'Onboarding', 'Churn signals'].map((h, i) => (
+              <Label key={h} style={{ textAlign: i === 2 ? 'right' : 'left' }}>{h}</Label>
+            ))}
+          </div>
+          {clients.map((c) => (
+            <div key={c.clientId} className="ops-row" style={{ display: 'grid', gridTemplateColumns: 'minmax(160px,1.5fr) 100px 80px 110px 1fr', gap: 12, alignItems: 'center', padding: '10px 16px', borderTop: `1px solid ${T.lineSoft}` }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
+                <Mono style={{ fontSize: 10.5, color: T.dim }}>{c.plan || 'no plan'}</Mono>
+              </div>
+              <Mono style={{ fontSize: 11, color: stageColor(c.stage) }}>{c.stage}</Mono>
+              <Mono style={{ fontSize: 13, color: scoreColor(c.score), textAlign: 'right' }}>{c.score == null ? '—' : c.score}</Mono>
+              <Mono style={{ fontSize: 11.5, color: c.onboarding.complete ? T.dim : T.amber }}>{c.onboarding.done}/{c.onboarding.total}{c.onboarding.complete ? ' ✓' : ''}</Mono>
+              <Mono style={{ fontSize: 11, color: c.churn.atRisk ? T.red : T.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {c.churn.atRisk ? c.churn.reasons.join(', ') : 'healthy'}
+              </Mono>
+            </div>
+          ))}
+        </div>
+      )}
+    </Panel>
   );
 }
 
@@ -80,6 +135,7 @@ export default function Clients() {
           <ClientEditor onDone={() => { setEditing(null); refresh(); }} onCancel={() => setEditing(null)} />
         </Panel>
       )}
+      <HealthPanel />
       <Panel className="ops-rise">
         <PanelHead title="Accounts" right={<Label>{clients.length} clients</Label>} />
         {error && !data && <ErrorBand error={error} retry={refresh} />}

@@ -9,6 +9,7 @@ import { computeCorrelation, retrain, loadWeights, computeEditorAgreement } from
 import { snapshotCalibration, calibrationHistory, windowedCalibration } from '../metrics/monitor.js';
 import { recentTraces, traceFor } from '../lib/telemetry.js';
 import { evaluateSlos } from '../ops/slo.js';
+import { recordingCost, costRollup } from '../ops/cost-ledger.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
 import { validate } from '../lib/validate.js';
 import { log } from '../lib/log.js';
@@ -161,6 +162,16 @@ r.get('/ops', requireAuth(...INTERNAL), async (_req, res, next) => {
       scoringWeights: await loadWeights(),
     });
   } catch (e) { next(e); }
+});
+
+// GET /api/analytics/cost — E1 cost rollup per client (the E3 margin input).
+r.get('/cost', requireAuth(...INTERNAL), async (_req, res, next) => {
+  try { res.json({ clients: await costRollup() }); } catch (e) { next(e); }
+});
+
+// GET /api/analytics/cost/:recordingId — itemized + summed cost for one recording.
+r.get('/cost/:recordingId', requireAuth(...INTERNAL), async (req, res, next) => {
+  try { res.json(await recordingCost(req.params.recordingId)); } catch (e) { next(e); }
 });
 
 // GET /api/analytics/slo — R4 reliability report: each SLI vs its target + the

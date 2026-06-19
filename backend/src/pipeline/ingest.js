@@ -4,13 +4,14 @@
  *  watch page returns HTML, not media; direct media URLs fall back to fetch.
  *  ffprobe fills duration + stream info the rest of the pipeline relies on. */
 import { spawn } from 'node:child_process';
-import { mkdtempSync, rmSync, readdirSync } from 'node:fs';
+import { mkdtempSync, rmSync, readdirSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { q } from '../db/index.js';
 import { saveStream, localPathFor, putFile } from '../storage/index.js';
 import { probe } from './media.js';
 import { safeFetch } from '../lib/safe-fetch.js';
+import { recordCost } from '../ops/cost-ledger.js';
 
 export async function ingest(recordingId) {
   const { rows } = await q('SELECT * FROM recordings WHERE id = $1', [recordingId]);
@@ -27,11 +28,14 @@ export async function ingest(recordingId) {
   }
   if (!key) throw new Error('no media: neither uploaded file nor source_url');
 
-  const info = await probe(await localPathFor(key));
+  const localSrc = await localPathFor(key);
+  const info = await probe(localSrc);
   if (!info.hasAudio) throw new Error('media has no audio stream — nothing to clip');
   if (info.durationS < 5) throw new Error(`media too short (${info.durationS.toFixed(1)}s)`);
   await q('UPDATE recordings SET duration_s = $1, media_info = $2 WHERE id = $3',
     [Math.round(info.durationS), info, recordingId]);
+  // E1: the stored source bytes are the precious, billable storage of a job.
+  await recordCost(recordingId, 'ingest', [{ resource: 'storage_bytes', quantity: statSync(localSrc).size, meta: { kind: 'source' } }]);
   return { durationS: info.durationS, hasVideo: info.hasVideo };
 }
 

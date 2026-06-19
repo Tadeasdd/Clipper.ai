@@ -121,6 +121,7 @@ services:
         npm run smoke:labels &&
         npm run smoke:auth &&
         npm run smoke:observability &&
+        npm run smoke:cost &&
         npm run smoke:shutdown &&
         npm run smoke:resilience &&
         npm run smoke:slo &&

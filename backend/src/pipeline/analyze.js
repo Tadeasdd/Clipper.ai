@@ -16,6 +16,7 @@ import { loudnessSeries } from './media.js';
 import { semanticSignals, nominateSpans, semanticSource, semanticProvenance } from './llm.js';
 import { hashFile, hashJson, getCache, putCache } from './cache.js';
 import { analyzeCost } from './cost.js';
+import { recordCost } from '../ops/cost-ledger.js';
 
 const WIN_S = 4;          // scoring window
 const MIN_CLIP_S = 12;    // candidate bounds
@@ -98,8 +99,13 @@ export async function analyze(recordingId) {
     const ranked = moments.slice(0, MAX_CANDIDATES);
     // Q2/Q4: the routed semantic pass returns the signals + the provenance of
     // the model ACTUALLY used (cheap, or strong after escalation).
-    const { signals: sigs, provenance } = await semanticSignals(ranked.map((m) => ({ text: spanText(words, m.start, m.end) })));
+    const { signals: sigs, provenance, usage } = await semanticSignals(ranked.map((m) => ({ text: spanText(words, m.start, m.end) })));
     ranked.forEach((m, i) => { m.semantic = sigs[i]; });
+    // E1: the analysis pass's LLM tokens (in/out) — $0 under the builtin heuristic.
+    await recordCost(recordingId, 'analyze', [
+      { resource: 'llm_tokens_in', quantity: usage?.in || 0, meta: { provider: provenance.provider } },
+      { resource: 'llm_tokens_out', quantity: usage?.out || 0, meta: { provider: provenance.provider } },
+    ]);
     const payload = { moments: ranked, baseline: { meanLufs: Number(mean.toFixed(1)), sdLufs: Number(sd.toFixed(1)) }, signalsSource, provenance };
     await putCache(cacheKey, 'analyze', payload); // Q4: free on the next identical input
     return { ...payload, cached: false, cost: analyzeCost(provenance, false) };
@@ -109,6 +115,11 @@ export async function analyze(recordingId) {
   // is well-defined and the ops desk sees zeros, not invented numbers.
   for (const m of moments) m.semantic = NEUTRAL_SEMANTIC;
   const payload = { moments, baseline: { meanLufs: Number(mean.toFixed(1)), sdLufs: Number(sd.toFixed(1)) }, signalsSource, provenance: { provider: 'audio_only', model: null } };
+  // E1: audio-only ran no LLM — record the honest $0 AI line so the cost stays itemized.
+  await recordCost(recordingId, 'analyze', [
+    { resource: 'llm_tokens_in', quantity: 0, meta: { provider: 'audio_only' } },
+    { resource: 'llm_tokens_out', quantity: 0, meta: { provider: 'audio_only' } },
+  ]);
   await putCache(cacheKey, 'analyze', payload);
   return { ...payload, cached: false, cost: analyzeCost(payload.provenance, false) };
 }

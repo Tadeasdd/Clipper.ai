@@ -16,6 +16,7 @@ import { extractAudioWav } from './media.js';
 import { hashFile, findCachedTranscript } from './cache.js';
 import { transcribeCost } from './cost.js';
 import { resilientFetch } from '../lib/resilience.js';
+import { recordCost } from '../ops/cost-ledger.js';
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync, readFileSync, createReadStream } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -23,8 +24,9 @@ import path from 'node:path';
 
 export async function transcribe(recordingId) {
   const provider = process.env.TRANSCRIPTION_PROVIDER || 'builtin';
-  const { rows } = await q('SELECT storage_key FROM recordings WHERE id = $1', [recordingId]);
+  const { rows } = await q('SELECT storage_key, duration_s FROM recordings WHERE id = $1', [recordingId]);
   const key = rows[0]?.storage_key;
+  const durationS = Number(rows[0]?.duration_s) || 0;
   if (!key) throw new Error('recording has no media');
 
   // Q4: content-addressed ASR cache. Byte-identical audio that's been
@@ -68,6 +70,9 @@ export async function transcribe(recordingId) {
      ON CONFLICT (recording_id) DO UPDATE SET provider = $2, words = $3, text = $4, ai_provenance = $5, content_hash = $6`,
     [recordingId, provider, JSON.stringify(result.words || []), result.text, JSON.stringify(provenance), contentHash]
   );
+  // E1: a cloud ASR provider bills per audio-second; builtin runs no ASR ($0).
+  const asrSeconds = (provider === 'whisper' || provider === 'deepgram') ? durationS : 0;
+  await recordCost(recordingId, 'transcribe', [{ resource: 'asr_seconds', quantity: asrSeconds, meta: { provider } }]);
   return { provider, words: (result.words || []).length, cached: false, cost: transcribeCost(provider, false) };
 }
 

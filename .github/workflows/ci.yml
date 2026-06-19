@@ -128,6 +128,10 @@ jobs:
       - run: npm run smoke:shutdown
         timeout-minutes: 4
 
+      # ── E1: per-job cost ledger — itemized + summed + rolled up to the client.
+      - run: npm run smoke:cost
+        timeout-minutes: 4
+
       # ── R3: timeouts + circuit breakers + bulkheads on external calls.
       - run: npm run smoke:resilience
         timeout-minutes: 2

@@ -34,6 +34,7 @@ import { httpMetrics, renderProm, registerGauge } from './lib/telemetry.js';
 import { isDraining, onShutdown, gracefulShutdown, readiness } from './lib/lifecycle.js';
 import { circuitGauge } from './lib/resilience.js';
 import { sloGauge } from './ops/slo.js';
+import { costGauge } from './ops/cost-ledger.js';
 
 // M7: refuse to boot insecurely in production (dev/test are untouched).
 assertProdConfig();
@@ -76,6 +77,8 @@ registerGauge('clipper_queue_depth', 'jobs per queue, stage and state', async ()
 registerGauge('clipper_circuit_state', 'external-dependency circuit breaker state (0 closed, 1 open, 2 half-open)', () => circuitGauge());
 // R4: error-budget burn per SLO (>1 means over budget); reflects the last evaluation.
 registerGauge('clipper_slo_budget_burn', 'SLO error-budget burn per objective (>1 over budget)', () => sloGauge());
+// E1: total USD cost per stage from the cost ledger.
+registerGauge('clipper_cost_usd_total', 'per-job cost in USD by stage', () => costGauge());
 
 // R1: Prometheus scrape endpoint. Guarded by METRICS_TOKEN when set (a scraper
 // presents it as a bearer); open in dev/CI when unset. Outside /api on purpose.

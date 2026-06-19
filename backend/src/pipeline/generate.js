@@ -8,13 +8,14 @@
  *  and a transcript exists, an honest labelled placeholder otherwise.
  *  Rendered clips move to 'awaiting_review' — stage B4's queue.
  */
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { q } from '../db/index.js';
 import { localPathFor, putFile } from '../storage/index.js';
 import { renderVertical, buildCaptions, captionStyle, captionsEnabled } from './media.js';
 import { hookVariants } from './llm.js';
+import { recordCost } from '../ops/cost-ledger.js';
 
 const TOP_N = Number(process.env.GENERATE_TOP_N || 4);
 
@@ -40,6 +41,7 @@ export async function generate(recordingId) {
   const words = transcript?.words || [];
   const tmp = mkdtempSync(path.join(tmpdir(), 'clipper-gen-'));
   let rendered = 0;
+  let cpuMs = 0, assetBytes = 0; // E1: render compute + rendered-asset storage
   try {
     for (const [i, clip] of clips.entries()) {
       const start = Number(clip.t_start_s), end = Number(clip.t_end_s);
@@ -48,7 +50,10 @@ export async function generate(recordingId) {
       const captionsPath = captionsOn
         ? buildCaptions({ words, start, end, style, outPath: path.join(tmp, `${clip.id}.ass`) })
         : null;
+      const renderStart = Date.now();
       await renderVertical(src, out, { start, end, hasVideo, captionsPath });
+      cpuMs += Date.now() - renderStart;
+      assetBytes += statSync(out).size;
 
       const assetKey = `${recordingId}/clips/${clip.id}.mp4`;
       await putFile(assetKey, out);
@@ -63,6 +68,10 @@ export async function generate(recordingId) {
         [clip.id, assetKey, hook, JSON.stringify({ hookVariants: variants, captioned: !!captionsPath })]);
       rendered++;
     }
+    await recordCost(recordingId, 'generate', [
+      { resource: 'cpu_ms', quantity: cpuMs, meta: { clips: rendered } },
+      { resource: 'storage_bytes', quantity: assetBytes, meta: { kind: 'rendered' } },
+    ]);
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }

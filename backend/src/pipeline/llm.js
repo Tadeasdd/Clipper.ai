@@ -80,23 +80,26 @@ export async function semanticSignals(spans) {
 
   if (provider !== 'anthropic') {
     const scored = trimmed.map((s) => heuristicSignals(s.text));
-    return { signals: spans.map((_, i) => scored[i] || neutral('no result')), provenance: semanticProvenance() };
+    return { signals: spans.map((_, i) => scored[i] || neutral('no result')), provenance: semanticProvenance(), usage: { in: 0, out: 0 } };
   }
 
   const route = modelRoute();
   let scored, model = route.cheap, escalated = false;
+  let usage = { in: 0, out: 0 }; // E1: real token usage for the cost ledger
   try {
-    scored = await anthropicSignals(trimmed, route.cheap);
+    const r1 = await anthropicSignals(trimmed, route.cheap);
+    scored = r1.signals; usage = { in: r1.usage.in, out: r1.usage.out };
     if (route.strong !== route.cheap && shouldEscalate(scored)) {
       escalated = true; model = route.strong;
-      scored = await anthropicSignals(trimmed, route.strong);
+      const r2 = await anthropicSignals(trimmed, route.strong);
+      scored = r2.signals; usage = { in: usage.in + r2.usage.in, out: usage.out + r2.usage.out };
     }
   } catch (e) {
     console.warn(`[llm] semantic pass failed (${e.message}) — degrading this batch to neutral signals`);
     scored = trimmed.map(() => neutral('provider error'));
   }
   const provenance = { provider: 'anthropic', model, escalated, ...promptMeta('semantic-signals'), params: { temperature: 0 } };
-  return { signals: spans.map((_, i) => scored[i] || neutral('no result')), provenance };
+  return { signals: spans.map((_, i) => scored[i] || neutral('no result')), provenance, usage };
 }
 
 /** Nominate up to `limit` candidate spans from the full word list — sentence-
@@ -212,15 +215,15 @@ function rationaleFor(s) {
 
 // ── anthropic provider ──────────────────────────────────────────────────────
 async function anthropicSignals(spans, model) {
-  const data = await anthropicJSON(getPrompt('semantic-signals').build(spans), 1024, model);
+  const { data, usage } = await anthropicJSON(getPrompt('semantic-signals').build(spans), 1024, model);
   const arr = Array.isArray(data) ? data : [];
-  return spans.map((_, i) => normalizeSignals(arr[i]));
+  return { signals: spans.map((_, i) => normalizeSignals(arr[i])), usage };
 }
 
 async function anthropicNominate(sentences, limit) {
   // Hand the model the full sentence list with indices; ask for the best spans.
   const joined = sentences.map((s, i) => `[${i}] (${s.start.toFixed(0)}s) ${s.text}`).join('\n').slice(0, NOMINATE_CHARS);
-  const data = await anthropicJSON(getPrompt('nominate-spans').build({ joined, limit }), 512);
+  const { data } = await anthropicJSON(getPrompt('nominate-spans').build({ joined, limit }), 512);
   const out = [];
   for (const r of Array.isArray(data) ? data : []) {
     const a = Math.max(0, Math.min(sentences.length - 1, Number(r.from)));
@@ -251,7 +254,8 @@ async function anthropicJSON(prompt, maxTokens, model) {
   if (!res.ok) throw new Error(`anthropic ${res.status}: ${(await res.text()).slice(0, 300)}`);
   const body = await res.json();
   const text = (body.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').trim();
-  return JSON.parse(stripFences(text));
+  // E1: surface token usage for the cost ledger alongside the parsed result.
+  return { data: JSON.parse(stripFences(text)), usage: { in: Number(body.usage?.input_tokens) || 0, out: Number(body.usage?.output_tokens) || 0 } };
 }
 
 /** The repo's documented "respond ONLY in JSON, strip fences" guard. */

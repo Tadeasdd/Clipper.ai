@@ -5,6 +5,7 @@
  *  stays on the job rows (a clip is 'published' once it's live anywhere). */
 import { q } from '../db/index.js';
 import { runAdapter } from './index.js';
+import { instrumentStage } from '../lib/telemetry.js';
 
 const MAX_ATTEMPTS = 3;
 const POLL_MS = Number(process.env.PUBLISH_POLL_MS || 1000);
@@ -46,7 +47,7 @@ async function claim() {
 async function runOne(job) {
   try {
     const ctx = await q(`
-      SELECT cl.id, cl.asset_key, cl.hook, cl.t_start_s, cl.t_end_s,
+      SELECT cl.id, cl.asset_key, cl.hook, cl.t_start_s, cl.t_end_s, r.id AS recording_id,
              c.id AS client_id, c.name AS client_name,
              pc.id AS conn_id, pc.handle, pc.credentials_enc, pc.status AS conn_status
       FROM clips cl
@@ -58,12 +59,15 @@ async function runOne(job) {
     if (!row) throw new Error('clip vanished');
     if (!row.conn_id || row.conn_status !== 'active') throw new Error('platform connection missing or revoked');
 
-    const { externalId, url } = await runAdapter({
-      job,
-      clip: { id: row.id, asset_key: row.asset_key, hook: row.hook },
-      client: { id: row.client_id, name: row.client_name },
-      connection: { id: row.conn_id, handle: row.handle, credentials_enc: row.credentials_enc },
-    });
+    // R1: the publish span joins the recording's trace (intake→publish lifecycle).
+    const { externalId, url } = await instrumentStage(
+      { queue: 'publish', stage: 'publish', recordingId: row.recording_id, attempt: job.attempts },
+      () => runAdapter({
+        job,
+        clip: { id: row.id, asset_key: row.asset_key, hook: row.hook },
+        client: { id: row.client_id, name: row.client_name },
+        connection: { id: row.conn_id, handle: row.handle, credentials_enc: row.credentials_enc },
+      }));
 
     await q(`
       WITH done AS (

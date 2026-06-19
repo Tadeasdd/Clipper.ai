@@ -7,6 +7,7 @@ import { Router } from 'express';
 import { q } from '../db/index.js';
 import { computeCorrelation, retrain, loadWeights, computeEditorAgreement } from '../metrics/loop.js';
 import { snapshotCalibration, calibrationHistory, windowedCalibration } from '../metrics/monitor.js';
+import { recentTraces, traceFor } from '../lib/telemetry.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
 import { validate } from '../lib/validate.js';
 import { log } from '../lib/log.js';
@@ -159,6 +160,18 @@ r.get('/ops', requireAuth(...INTERNAL), async (_req, res, next) => {
       scoringWeights: await loadWeights(),
     });
   } catch (e) { next(e); }
+});
+
+// GET /api/analytics/traces — R1 trace inspector: recent pipeline/publish
+// lifecycle traces (one per recording), for the ops board + debugging.
+r.get('/traces', requireAuth(...INTERNAL), (_req, res) => res.json({ traces: recentTraces(50) }));
+
+// GET /api/analytics/trace/:recordingId — the full span list for one recording's
+// lifecycle (ingest → … → generate → publish), correlated by trace id.
+r.get('/trace/:recordingId', requireAuth(...INTERNAL), (req, res) => {
+  const trace = traceFor(req.params.recordingId);
+  if (!trace) return res.status(404).json({ error: 'no trace for this recording (it may have aged out of the in-memory window)' });
+  res.json(trace);
 });
 
 // GET /api/analytics/calibration — Q5 quality-drift dashboard: the current

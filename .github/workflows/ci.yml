@@ -120,6 +120,10 @@ jobs:
       - run: npm run smoke:auth
         timeout-minutes: 3
 
+      # ── R1: traces span the recording lifecycle + /metrics serves the series.
+      - run: npm run smoke:observability
+        timeout-minutes: 4
+
       # ── S4: cross-tenant IDOR — id-addressed resources are tenant-scoped (404).
       - run: npm run smoke:authz
         timeout-minutes: 3

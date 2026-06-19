@@ -1,0 +1,51 @@
+{
+  "__comment": "R1 — ready-made Grafana dashboard for the Clipper.ai pipeline. Import against a Prometheus datasource scraping GET /metrics. Panels reference the metric families telemetry.js exposes.",
+  "title": "Clipper.ai — Pipeline Observability",
+  "uid": "clipper-observability",
+  "schemaVersion": 39,
+  "version": 1,
+  "tags": ["clipper", "pipeline"],
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "id": 1, "title": "Queue depth by stage", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [{ "expr": "sum by (queue, stage, state) (clipper_queue_depth)", "legendFormat": "{{queue}}/{{stage}} {{state}}" }]
+    },
+    {
+      "id": 2, "title": "Stage latency p50 / p95 / p99 (s)", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "clipper_stage_duration_seconds{quantile=\"0.5\"}", "legendFormat": "p50 {{stage}}" },
+        { "expr": "clipper_stage_duration_seconds{quantile=\"0.95\"}", "legendFormat": "p95 {{stage}}" },
+        { "expr": "clipper_stage_duration_seconds{quantile=\"0.99\"}", "legendFormat": "p99 {{stage}}" }
+      ]
+    },
+    {
+      "id": 3, "title": "Stage error rate (per 5m)", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [{ "expr": "sum by (queue, stage) (rate(clipper_errors_total[5m]))", "legendFormat": "{{queue}}/{{stage}}" }]
+    },
+    {
+      "id": 4, "title": "Retries (per 5m)", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [{ "expr": "sum by (queue, stage) (rate(clipper_job_retries_total[5m]))", "legendFormat": "{{queue}}/{{stage}}" }]
+    },
+    {
+      "id": 5, "title": "Jobs completed vs failed (per 5m)", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [{ "expr": "sum by (stage, status) (rate(clipper_jobs_total[5m]))", "legendFormat": "{{stage}} {{status}}" }]
+    },
+    {
+      "id": 6, "title": "HTTP request rate by status class", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [{ "expr": "sum by (status) (rate(clipper_http_requests_total[5m]))", "legendFormat": "{{status}}" }]
+    },
+    {
+      "id": 7, "title": "HTTP latency p95 (s)", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "targets": [{ "expr": "clipper_http_request_duration_seconds{quantile=\"0.95\"}", "legendFormat": "p95 {{method}}" }]
+    }
+  ]
+}

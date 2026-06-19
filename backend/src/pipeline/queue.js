@@ -11,6 +11,7 @@
  */
 import { q } from '../db/index.js';
 import { id } from '../lib/ids.js';
+import { instrumentStage } from '../lib/telemetry.js';
 
 export const STAGES = ['ingest', 'transcribe', 'analyze', 'score', 'generate'];
 const NEXT = Object.fromEntries(STAGES.map((s, i) => [s, STAGES[i + 1] || null]));
@@ -84,7 +85,12 @@ async function runOne(job) {
   const handler = handlers[job.stage];
   try {
     if (!handler) throw new Error(`no handler for stage ${job.stage}`);
-    const out = await handler(job.recording_id, job.payload || {});
+    // R1: trace + meter each stage on the recording's trace (one trace per
+    // recording → the whole ingest→generate lifecycle). Re-throws on failure,
+    // so the retry/backoff path below is unchanged.
+    const out = await instrumentStage(
+      { queue: 'pipeline', stage: job.stage, recordingId: job.recording_id, attempt: job.attempts },
+      () => handler(job.recording_id, job.payload || {}));
     await q(`UPDATE pipeline_jobs SET status = 'done', finished_at = now(), updated_at = now(),
              error = NULL, payload = payload || $2 WHERE id = $1`, [job.id, out || {}]);
     const next = NEXT[job.stage];

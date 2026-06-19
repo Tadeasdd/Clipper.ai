@@ -30,6 +30,7 @@ import { startMetricsPoller } from './metrics/index.js';
 import { startQualityMonitor } from './metrics/monitor.js';
 import { assertProdConfig, corsOptions } from './lib/config.js';
 import { log, reportError } from './lib/log.js';
+import { httpMetrics, renderProm, registerGauge } from './lib/telemetry.js';
 
 // M7: refuse to boot insecurely in production (dev/test are untouched).
 assertProdConfig();
@@ -55,7 +56,29 @@ app.use((req, res, next) => {
   res.set('X-Request-Id', req.id);
   next();
 });
+app.use(httpMetrics()); // R1: count + time every request
 app.use(express.json({ limit: '2mb' }));
+
+// R1: queue depth is read live from the DB at scrape time.
+registerGauge('clipper_queue_depth', 'jobs per queue, stage and state', async () => {
+  const out = [];
+  const pj = await q(`SELECT stage, status, count(*)::int n FROM pipeline_jobs GROUP BY stage, status`);
+  for (const r of pj.rows) out.push({ labels: { queue: 'pipeline', stage: r.stage, state: r.status }, value: r.n });
+  const pub = await q(`SELECT status, count(*)::int n FROM publish_jobs GROUP BY status`);
+  for (const r of pub.rows) out.push({ labels: { queue: 'publish', stage: 'publish', state: r.status }, value: r.n });
+  return out;
+});
+
+// R1: Prometheus scrape endpoint. Guarded by METRICS_TOKEN when set (a scraper
+// presents it as a bearer); open in dev/CI when unset. Outside /api on purpose.
+app.get('/metrics', async (req, res) => {
+  const token = process.env.METRICS_TOKEN;
+  if (token && (req.headers.authorization || '').replace(/^Bearer /, '') !== token && req.query.token !== token) {
+    return res.status(401).type('text/plain').send('unauthorized\n');
+  }
+  try { res.type('text/plain; version=0.0.4').send(await renderProm()); }
+  catch (e) { reportError(e, { path: '/metrics', requestId: req.id }); res.status(500).type('text/plain').send('# metrics error\n'); }
+});
 // NOTE: no body parser touches /api/intake/upload — express.json only consumes
 // application/json, so file PUTs stream through untouched and saveStream pipes
 // req straight to disk (never buffered in memory).

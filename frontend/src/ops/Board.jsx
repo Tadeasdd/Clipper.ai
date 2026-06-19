@@ -135,6 +135,66 @@ function SlaPanel() {
   );
 }
 
+/* O2 — capacity & workload: per-reviewer open load + throughput, the review
+   backlog, and the forecast clear-time at the measured rate. The "balance"
+   button spreads the unassigned backlog across the pool. Same Panel idiom; no
+   new colors — overloaded forecast reuses T.amber/T.red, healthy T.dim. */
+function CapacityPanel() {
+  const { data, error, loading, refresh } = usePoll(ops.opsCapacity, { ms: 8000 });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  const reviewers = data?.reviewers || [];
+  const bk = data?.backlog;
+  const fc = data?.forecastHours;
+  const balance = async () => {
+    setBusy(true); setErr(null);
+    try { await ops.balanceReview(); refresh(); }
+    catch (ex) { setErr(ex); }
+    finally { setBusy(false); }
+  };
+  return (
+    <Panel style={{ marginBottom: 18 }} className="ops-rise">
+      <PanelHead
+        title="Capacity & workload — review pipeline"
+        right={
+          <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+            <Mono style={{ fontSize: 10.5, color: fc == null ? T.dim : fc > 48 ? T.red : fc > 24 ? T.amber : T.dim }}>
+              {bk ? `${bk.awaitingReview} to review${bk.unassigned ? ` · ${bk.unassigned} unassigned` : ''}` : '…'}
+              {fc != null ? ` · ~${fmtHours(fc)} to clear` : (bk?.awaitingReview ? ' · no rate yet' : '')}
+            </Mono>
+            {bk?.unassigned > 0 && (
+              <button onClick={balance} disabled={busy} className="mono" style={{ ...btnStyle(T.green), opacity: busy ? 0.5 : 1 }}>
+                {busy ? 'balancing…' : 'balance'}
+              </button>
+            )}
+          </div>
+        }
+      />
+      {error && !data && <ErrorBand error={error} retry={refresh} />}
+      {loading && !data && !error && <Empty>loading…</Empty>}
+      {data && !reviewers.length && <Empty>no reviewers or editors on staff yet</Empty>}
+      {reviewers.length > 0 && (
+        <div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px,1.6fr) 100px 110px 130px', gap: 12, padding: '8px 16px', borderTop: `1px solid ${T.lineSoft}` }}>
+            {['Reviewer', 'Role', 'Open', 'Throughput'].map((h, i) => (
+              <Label key={h} style={{ textAlign: i >= 2 ? 'right' : 'left' }}>{h}</Label>
+            ))}
+          </div>
+          {reviewers.map((rv) => (
+            <div key={rv.id} className="ops-row" style={{ display: 'grid', gridTemplateColumns: 'minmax(180px,1.6fr) 100px 110px 130px', gap: 12, alignItems: 'center', padding: '10px 16px', borderTop: `1px solid ${T.lineSoft}` }}>
+              <div style={{ fontSize: 13, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rv.email}</div>
+              <Mono style={{ fontSize: 11, color: T.dim }}>{rv.role}</Mono>
+              <Mono style={{ fontSize: 11.5, color: rv.open > 0 ? T.text : T.dim, textAlign: 'right' }}>{rv.open}</Mono>
+              <Mono style={{ fontSize: 11.5, color: T.dim, textAlign: 'right' }}>{rv.throughputPerDay}/day</Mono>
+            </div>
+          ))}
+          {err && <Mono style={{ fontSize: 10.5, color: T.red, padding: '6px 16px', display: 'block' }}>{String(err.message)}</Mono>}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 export default function Board() {
   const { data, error, loading, refresh } = usePoll(ops.jobs, { ms: 3000 });
   const jobs = data?.jobs || [];
@@ -154,6 +214,7 @@ export default function Board() {
       />
       <IncomingQueue />
       <SlaPanel />
+      <CapacityPanel />
       <Panel className="ops-rise" style={{ animationDelay: '0.06s' }}>
         <PanelHead title="Pipeline — every recording, right now" right={<Label>ingest → transcribe → analyze → score → generate</Label>} />
         {error && !data && <ErrorBand error={error} retry={refresh} />}

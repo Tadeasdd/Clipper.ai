@@ -126,6 +126,7 @@ services:
         npm run smoke:margin &&
         npm run smoke:billing &&
         npm run smoke:sla &&
+        npm run smoke:capacity &&
         npm run smoke:shutdown &&
         npm run smoke:resilience &&
         npm run smoke:slo &&

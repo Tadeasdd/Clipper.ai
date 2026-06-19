@@ -10,6 +10,7 @@ import { snapshotCalibration, calibrationHistory, windowedCalibration } from '..
 import { recentTraces, traceFor } from '../lib/telemetry.js';
 import { evaluateSlos } from '../ops/slo.js';
 import { turnaroundByClient } from '../ops/sla.js';
+import { workloadForecast } from '../ops/capacity.js';
 import { recordingCost, costRollup } from '../ops/cost-ledger.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
 import { validate } from '../lib/validate.js';
@@ -236,6 +237,16 @@ r.get('/turnaround', requireAuth(...INTERNAL), async (req, res, next) => {
     const slo = await evaluateSlos({ alert: false });
     report.slo = (slo.objectives || []).find((o) => o.objective === 'turnaround_p95_seconds') || null;
     res.json(report);
+  } catch (e) { next(e); }
+});
+
+// GET /api/analytics/capacity — O2 capacity & workload: per-reviewer open load
+// and throughput, the review backlog depth, and the forecast clear-time at the
+// measured rate (the board's "how long until we're caught up" number).
+r.get('/capacity', requireAuth(...INTERNAL), async (req, res, next) => {
+  try {
+    const days = Math.min(90, Math.max(1, Number(req.query.days || 7)));
+    res.json(await workloadForecast(days));
   } catch (e) { next(e); }
 });
 

@@ -126,6 +126,7 @@ function ReviewCard({ item, tab, onDone }) {
             <Mono style={{ fontSize: 10.5, color: T.dim }}>
               <Link to={`/ops/recordings/${item.recording_id}`} style={{ color: T.dim }}>{item.recording_id}</Link>
               {' '}· {fmtClock(item.t_start_s)}–{fmtClock(item.t_end_s)} · {Math.round(len)}s · in queue {fmtAgo(item.created_at)}
+              {item.assignee_email && <> · assigned {item.assignee_email}</>}
             </Mono>
           </div>
           <Mono style={{ fontSize: 20, color: T.green }}>{item.score ?? '—'}</Mono>

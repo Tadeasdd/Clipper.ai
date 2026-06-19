@@ -23,6 +23,7 @@ import { Router } from 'express';
 import { q } from '../db/index.js';
 import { id } from '../lib/ids.js';
 import { autoScheduleApproved } from '../publish/index.js';
+import { assignClip, balanceAssignments, leastLoadedReviewer } from '../ops/capacity.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
 import { validate, paginate } from '../lib/validate.js';
 
@@ -77,19 +78,28 @@ r.get('/queue', requireAuth(), async (req, res, next) => {
       return res.status(400).json({ error: 'unreviewable status' });
     }
     const params = [status];
-    let clientCond = '';
-    if (clientId) { params.push(clientId); clientCond = `AND r.client_id = $2`; }
+    const conds = [];
+    if (clientId) { params.push(clientId); conds.push(`r.client_id = $${params.length}`); }
+    // O2: filter a worklist to one owner ('unassigned' for the backlog).
+    const assignedTo = req.user.role === 'client' ? undefined : req.query.assignedTo;
+    if (assignedTo === 'unassigned') {
+      conds.push('cl.assigned_to IS NULL');
+    } else if (assignedTo) {
+      params.push(assignedTo); conds.push(`cl.assigned_to = $${params.length}`);
+    }
+    const filterCond = conds.length ? `AND ${conds.join(' AND ')}` : '';
     const { limit, offset } = paginate(req, { def: 200, max: 200 });
     params.push(limit, offset);
     const { rows } = await q(`
       SELECT cl.id, cl.recording_id, cl.t_start_s, cl.t_end_s, cl.score, cl.signals,
              cl.hook, cl.captions, cl.format, cl.asset_key IS NOT NULL AS rendered,
-             cl.status, cl.created_at,
+             cl.status, cl.created_at, cl.assigned_to, au.email AS assignee_email,
              r.client_id, c.name AS client_name, r.kind
       FROM clips cl
       JOIN recordings r ON r.id = cl.recording_id
       JOIN clients c ON c.id = r.client_id
-      WHERE cl.status = $1 ${clientCond}
+      LEFT JOIN users au ON au.id = cl.assigned_to
+      WHERE cl.status = $1 ${filterCond}
       ORDER BY cl.created_at ASC LIMIT $${params.length - 1} OFFSET $${params.length}`, params);
     res.json({ status, items: rows });
   } catch (e) { next(e); }
@@ -185,5 +195,29 @@ r.post('/:clipId/resubmit', requireAuth(...INTERNAL), validate(notesOnly), async
     res.json({ clipId: clip.id, from: 'changes_requested', to: 'awaiting_review', event });
   } catch (e) { next(e); }
 });
+
+// POST /api/review/assign/balance — O2: spread the unassigned awaiting_review
+// backlog across the reviewer/editor pool, least-loaded-first. Ops action.
+// (Registered before /:clipId/assign so 'assign' is never read as a clip id.)
+r.post('/assign/balance', requireAuth('ops', 'account_manager'), async (_req, res, next) => {
+  try { res.json(await balanceAssignments()); } catch (e) { next(e); }
+});
+
+// POST /api/review/:clipId/assign { userId? } — O2: assign one clip's review to a
+// reviewer/editor; with no userId, auto-pick the least-loaded. Orthogonal to the
+// status machine (sets assigned_to only). 409 if the clip isn't assignable.
+r.post('/:clipId/assign', requireAuth(...INTERNAL), validate({ userId: { type: 'string', maxLength: 80 } }),
+  async (req, res, next) => {
+    try {
+      const userId = req.body?.userId || await leastLoadedReviewer();
+      if (!userId) return res.status(409).json({ error: 'no reviewer/editor available to assign' });
+      const result = await assignClip(req.params.clipId, userId);
+      if (!result.ok) {
+        const code = result.reason === 'clip is not in an assignable state' ? 409 : 400;
+        return res.status(code).json({ error: result.reason });
+      }
+      res.json({ clipId: req.params.clipId, assigned: true, assignee: result.assignee });
+    } catch (e) { next(e); }
+  });
 
 export default r;

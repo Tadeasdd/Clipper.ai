@@ -150,6 +150,11 @@ jobs:
       - run: npm run smoke:sla
         timeout-minutes: 3
 
+      # ── O2: review work assigns + balances across the reviewer/editor pool,
+      #        backlog clear-time forecasts from measured throughput.
+      - run: npm run smoke:capacity
+        timeout-minutes: 3
+
       # ── R3: timeouts + circuit breakers + bulkheads on external calls.
       - run: npm run smoke:resilience
         timeout-minutes: 2

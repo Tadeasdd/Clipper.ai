@@ -5,7 +5,7 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ops, usePoll, fmtAgo, fmtClock } from './api.js';
-import { PageTitle, Panel, PanelHead, ErrorBand, Empty, StatusChip, Label, Mono, T, STATUS_COLOR, btnStyle } from './OpsApp.jsx';
+import { PageTitle, Panel, PanelHead, DataStates, Empty, StatusChip, Label, Mono, T, STATUS_COLOR, btnStyle } from './OpsApp.jsx';
 import { StageRail } from './Board.jsx';
 import ClipGrid from './ClipGrid.jsx';
 
@@ -84,8 +84,7 @@ export default function RecordingDetail() {
           </span>
         )}
       />
-      {error && !data && <Panel><ErrorBand error={error} retry={refresh} /></Panel>}
-      {loading && !data && !error && <Panel><Empty>loading…</Empty></Panel>}
+      <DataStates error={error} loading={loading} data={data} refresh={refresh} panel />
       {data && (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 18, marginBottom: 18 }}>

@@ -4,7 +4,7 @@
    the dashboard — no new colors/SVGs/fonts. */
 import React, { useState } from 'react';
 import { ops, usePoll, fmtAgo } from './api.js';
-import { PageTitle, Panel, PanelHead, ErrorBand, Empty, Label, Mono, T, btnStyle } from './OpsApp.jsx';
+import { PageTitle, Panel, PanelHead, DataStates, Label, Mono, T, btnStyle } from './OpsApp.jsx';
 
 const AREAS = ['all', 'intake', 'processing', 'review', 'publish', 'billing', 'admin'];
 const areaColor = (a) => (a === 'review' ? T.amber : a === 'admin' || a === 'billing' || a === 'processing' ? T.dim : T.green);
@@ -29,9 +29,7 @@ export default function Activity() {
       />
       <Panel className="ops-rise">
         <PanelHead title="Every material action, newest first" right={<Label>{events.length} events</Label>} />
-        {error && !data && <ErrorBand error={error} retry={refresh} />}
-        {loading && !data && !error && <Empty>loading…</Empty>}
-        {data && !events.length && <Empty>no activity in this view yet</Empty>}
+        <DataStates error={error} loading={loading} data={data} refresh={refresh} isEmpty={!events.length} empty="no activity in this view yet" />
         {events.map((e) => (
           <div key={e.id} className="ops-row" style={{ display: 'grid', gridTemplateColumns: '90px 110px minmax(220px,1fr) 150px 90px', gap: 12, alignItems: 'center', padding: '10px 16px', borderTop: `1px solid ${T.lineSoft}` }}>
             <Mono style={{ fontSize: 10.5, color: areaColor(e.area) }}>{e.area}</Mono>

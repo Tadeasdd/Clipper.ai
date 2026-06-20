@@ -10,7 +10,7 @@
    until platform adapters exist. */
 import React from 'react';
 import { ops, usePoll } from './api.js';
-import { PageTitle, Panel, PanelHead, ErrorBand, Empty, Label, Mono, T, StatusChip } from './OpsApp.jsx';
+import { PageTitle, Panel, PanelHead, DataStates, Label, Mono, T, StatusChip } from './OpsApp.jsx';
 
 function Metric({ label, value, unit, note, accent }) {
   return (
@@ -47,8 +47,7 @@ function Analytics() {
   return (
     <>
       <PageTitle kicker="Operations · the loop" title="Ops analytics" />
-      {error && !data && <Panel><ErrorBand error={error} retry={refresh} /></Panel>}
-      {loading && !data && !error && <Panel><Empty>loading…</Empty></Panel>}
+      <DataStates error={error} loading={loading} data={data} refresh={refresh} panel />
       {data && (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, marginBottom: 14 }} className="ops-rise">
@@ -111,15 +110,7 @@ function Publish() {
         <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr 0.7fr 1fr 1.3fr 80px', gap: 12, padding: '9px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
           {cols.map((c, i) => <Label key={i}>{c}</Label>)}
         </div>
-        {error && !data && <ErrorBand error={error} retry={refresh} />}
-        {loading && !data && !error && <Empty>loading…</Empty>}
-        {data && !items.length && (
-          <Empty>
-            nothing queued — clips land here on sign-off (auto-scheduled onto every
-            connected platform) or via POST /api/publish; the scheduler drains them
-            at their scheduled time
-          </Empty>
-        )}
+        <DataStates error={error} loading={loading} data={data} refresh={refresh} isEmpty={!items.length} empty="nothing queued — clips land here on sign-off (auto-scheduled onto every connected platform) or via POST /api/publish; the scheduler drains them at their scheduled time" />
         {items.map((i) => (
           <div key={i.id} className="ops-row" style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr 0.7fr 1fr 1.3fr 80px', gap: 12, alignItems: 'center', padding: '10px 16px', borderTop: `1px solid ${T.lineSoft}` }}>
             <div style={{ minWidth: 0 }}>
@@ -168,9 +159,7 @@ function Margin() {
       <div style={{ display: 'grid', gridTemplateColumns: grid, gap: 12, padding: '9px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
         {cols.map((c, i) => <Label key={i}>{c}</Label>)}
       </div>
-      {error && !data && <ErrorBand error={error} retry={refresh} />}
-      {loading && !data && !error && <Empty>loading…</Empty>}
-      {data && !clients.length && <Empty>no clients on a plan yet — margin appears as recordings accrue cost against plan revenue</Empty>}
+      <DataStates error={error} loading={loading} data={data} refresh={refresh} isEmpty={!clients.length} empty="no clients on a plan yet — margin appears as recordings accrue cost against plan revenue" />
       {clients.map((c) => (
         <div key={c.clientId} className="ops-row" style={{ display: 'grid', gridTemplateColumns: grid, gap: 12, alignItems: 'center', padding: '10px 16px', borderTop: `1px solid ${T.lineSoft}` }}>
           <Mono style={{ fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.client}</Mono>

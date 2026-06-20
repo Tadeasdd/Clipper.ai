@@ -5,7 +5,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ops, usePoll, fmtAgo, fmtClock } from './api.js';
-import { PageTitle, Panel, PanelHead, ErrorBand, Empty, StatusChip, Label, Mono, T, STATUS_COLOR, btnStyle } from './OpsApp.jsx';
+import { PageTitle, Panel, PanelHead, DataStates, StatusChip, Label, Mono, T, STATUS_COLOR, btnStyle } from './OpsApp.jsx';
 
 const STAGES = ['ingest', 'transcribe', 'analyze', 'score', 'generate'];
 
@@ -56,9 +56,7 @@ function IncomingQueue() {
   return (
     <Panel style={{ marginBottom: 18 }} className="ops-rise">
       <PanelHead title="Incoming content queue" right={<Label>{data ? `${data.items.length} waiting` : '…'}</Label>} />
-      {error && !data && <ErrorBand error={error} retry={refresh} />}
-      {loading && !data && !error && <Empty>loading…</Empty>}
-      {data && !data.items.length && <Empty>nothing waiting — every submission is in the pipeline or done</Empty>}
+      <DataStates error={error} loading={loading} data={data} refresh={refresh} isEmpty={!data?.items.length} empty="nothing waiting — every submission is in the pipeline or done" />
       {data && data.items.length > 0 && (
         <div>
           {data.items.map((i) => (
@@ -103,9 +101,7 @@ function SlaPanel() {
           </div>
         }
       />
-      {error && !data && <ErrorBand error={error} retry={refresh} />}
-      {loading && !data && !error && <Empty>loading…</Empty>}
-      {data && !clients.length && <Empty>no deliveries yet — turnaround appears once recordings are published</Empty>}
+      <DataStates error={error} loading={loading} data={data} refresh={refresh} isEmpty={!clients.length} empty="no deliveries yet — turnaround appears once recordings are published" />
       {clients.length > 0 && (
         <div>
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(160px,1.4fr) 90px 90px 110px 120px 110px', gap: 12, padding: '8px 16px', borderTop: `1px solid ${T.lineSoft}` }}>
@@ -170,9 +166,7 @@ function CapacityPanel() {
           </div>
         }
       />
-      {error && !data && <ErrorBand error={error} retry={refresh} />}
-      {loading && !data && !error && <Empty>loading…</Empty>}
-      {data && !reviewers.length && <Empty>no reviewers or editors on staff yet</Empty>}
+      <DataStates error={error} loading={loading} data={data} refresh={refresh} isEmpty={!reviewers.length} empty="no reviewers or editors on staff yet" />
       {reviewers.length > 0 && (
         <div>
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px,1.6fr) 100px 110px 130px', gap: 12, padding: '8px 16px', borderTop: `1px solid ${T.lineSoft}` }}>
@@ -217,9 +211,7 @@ export default function Board() {
       <CapacityPanel />
       <Panel className="ops-rise" style={{ animationDelay: '0.06s' }}>
         <PanelHead title="Pipeline — every recording, right now" right={<Label>ingest → transcribe → analyze → score → generate</Label>} />
-        {error && !data && <ErrorBand error={error} retry={refresh} />}
-        {loading && !data && !error && <Empty>loading…</Empty>}
-        {data && !jobs.length && <Empty>no recordings yet — submissions appear here the moment intake accepts them</Empty>}
+        <DataStates error={error} loading={loading} data={data} refresh={refresh} isEmpty={!jobs.length} empty="no recordings yet — submissions appear here the moment intake accepts them" />
         {jobs.map((r) => {
           const failed = (r.stages || []).find((s) => s.status === 'failed');
           return (

@@ -4,7 +4,7 @@
    says exactly that. */
 import React, { useState } from 'react';
 import { ops, usePoll, fmtAgo } from './api.js';
-import { PageTitle, Panel, PanelHead, ErrorBand, Empty, Label, Mono, T, btnStyle } from './OpsApp.jsx';
+import { PageTitle, Panel, PanelHead, DataStates, Label, Mono, T, btnStyle } from './OpsApp.jsx';
 
 const field = () => ({
   width: '100%', boxSizing: 'border-box', fontSize: 12.5, padding: '8px 11px',
@@ -91,9 +91,7 @@ function HealthPanel() {
     <Panel style={{ marginBottom: 16 }} className="ops-rise">
       <PanelHead title="Client health & lifecycle"
         right={<Label>{t ? `${t.atRisk} at-risk · ${t.onboarding} onboarding` : '…'}</Label>} />
-      {error && !data && <ErrorBand error={error} retry={refresh} />}
-      {loading && !data && !error && <Empty>loading…</Empty>}
-      {data && !clients.length && <Empty>no clients yet</Empty>}
+      <DataStates error={error} loading={loading} data={data} refresh={refresh} isEmpty={!clients.length} empty="no clients yet" />
       {clients.length > 0 && (
         <div>
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(160px,1.5fr) 100px 80px 110px 1fr', gap: 12, padding: '8px 16px', borderTop: `1px solid ${T.lineSoft}` }}>
@@ -138,9 +136,7 @@ export default function Clients() {
       <HealthPanel />
       <Panel className="ops-rise">
         <PanelHead title="Accounts" right={<Label>{clients.length} clients</Label>} />
-        {error && !data && <ErrorBand error={error} retry={refresh} />}
-        {loading && !data && !error && <Empty>loading…</Empty>}
-        {data && !clients.length && <Empty>no clients yet — they're created here after the strategy call</Empty>}
+        <DataStates error={error} loading={loading} data={data} refresh={refresh} isEmpty={!clients.length} empty="no clients yet — they're created here after the strategy call" />
         {clients.map((c) => (
           <div key={c.id} style={{ borderTop: `1px solid ${T.lineSoft}` }}>
             <div className="ops-row" style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr 1fr 110px 80px', gap: 12, alignItems: 'center', padding: '11px 16px' }}>

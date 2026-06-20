@@ -6,7 +6,7 @@
    in place (PATCH). Status changes live in the review desk (F4.4). */
 import React, { useState } from 'react';
 import { ops, usePoll, fmtClock } from './api.js';
-import { Panel, PanelHead, ErrorBand, Empty, StatusChip, Label, Mono, T, btnStyle } from './OpsApp.jsx';
+import { Panel, PanelHead, DataStates, StatusChip, Label, Mono, T, btnStyle } from './OpsApp.jsx';
 
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
 
@@ -124,9 +124,7 @@ export default function ClipGrid({ recordingId }) {
         <Label>Clip candidates — scored, with the evidence</Label>
         <Label>{clips.length ? `${clips.length} candidates · top ${clips[0].score}` : ''}</Label>
       </div>
-      {error && !data && <Panel><ErrorBand error={error} retry={refresh} /></Panel>}
-      {loading && !data && !error && <Panel><Empty>loading…</Empty></Panel>}
-      {data && !clips.length && <Panel><Empty>no candidates yet — the score stage creates them from analyze's moments</Empty></Panel>}
+      <DataStates error={error} loading={loading} data={data} refresh={refresh} isEmpty={!clips.length} empty="no candidates yet — the score stage creates them from analyze's moments" panel />
       {clips.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 14 }}>
           {clips.map((c) => <ClipCard key={c.id} clip={c} onChanged={refresh} />)}

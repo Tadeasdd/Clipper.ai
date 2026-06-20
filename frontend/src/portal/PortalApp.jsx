@@ -11,12 +11,13 @@
    to the session's client in the query. The portal never passes a clientId
    it wasn't given by /api/auth/me, and couldn't widen its view if it did. */
 import React, { useEffect, useState } from 'react';
-import { Routes, Route, NavLink, Link } from 'react-router-dom';
+import { Routes, Route, NavLink, Link, useLocation } from 'react-router-dom';
 import { portal, uploadFile, auth, setSession, usePoll, fmtClock, fmtAgo } from './api.js';
 // U3: the primitives identical to /ops live in one leaf module (imports only
 // React, so composing them here never drags the ops surfaces into the portal
 // chunk — the reason they were duplicated in the first place).
 import { T as baseT, Mono, Label, Panel, PanelHead, btnStyle, field } from '../components/surface-ui.jsx';
+import { RouteErrorBoundary } from '../components/error-boundary.jsx'; // U4: keep the portal shell alive when a route throws
 
 /* ── design tokens (same palette as /ops; `sky` is the portal's one extra
       token, spread onto the shared base so the rest stay single-source) ──── */
@@ -57,6 +58,15 @@ const Empty = ({ children }) => (
   <div className="mono" style={{ padding: '22px 16px', fontSize: 12, color: T.dim, lineHeight: 1.7 }}>{children}</div>
 );
 const btn = btnStyle; // U3: shared with /ops; alias keeps the btn(...) call sites untouched
+/* U4 — the portal's calmer state idiom in one place: the error band (in its own
+   Panel) and, only once a load has settled with nothing to show, the empty Panel.
+   No "loading…" placeholder — that is deliberate to the portal's quieter design. */
+const States = ({ error, loading, refresh, isEmpty, empty }) => (
+  <>
+    {error && <Panel style={{ marginBottom: 16 }}><ErrorBand error={error} retry={refresh} /></Panel>}
+    {!error && !loading && isEmpty && <Panel><Empty>{empty}</Empty></Panel>}
+  </>
+);
 const PageTitle = ({ kicker, title, right }) => (
   <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
     <div>
@@ -261,14 +271,10 @@ function Deliverables() {
         </div>
       } />
       <UpdatesPanel />
-      {error && <Panel style={{ marginBottom: 16 }}><ErrorBand error={error} retry={refresh} /></Panel>}
-      {!error && !loading && !shown.length && (
-        <Panel><Empty>
-          {filter === 'delivered'
-            ? 'Nothing delivered yet. Clips land here once they clear your sign-off — check the Sign-off tab, or send us new content from Submit.'
-            : 'Nothing in this view yet. Submit long-form content and the studio cuts it into clips; you\'ll see them appear here as production runs.'}
-        </Empty></Panel>
-      )}
+      <States error={error} loading={loading} refresh={refresh} isEmpty={!shown.length}
+        empty={filter === 'delivered'
+          ? 'Nothing delivered yet. Clips land here once they clear your sign-off — check the Sign-off tab, or send us new content from Submit.'
+          : 'Nothing in this view yet. Submit long-form content and the studio cuts it into clips; you\'ll see them appear here as production runs.'} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 14 }}>
         {shown.map((c) => <DeliverableCard key={c.id} clip={c} />)}
       </div>
@@ -375,13 +381,8 @@ function Signoff() {
         account, it's scheduled the moment you approve. Every decision and note here lands in the
         audit trail under your name.
       </p>
-      {error && <Panel style={{ marginBottom: 16 }}><ErrorBand error={error} retry={refresh} /></Panel>}
-      {!error && !loading && !items.length && (
-        <Panel><Empty>
-          Nothing waiting on you. The studio sends clips here once they clear internal review —
-          you'll see them as soon as they're ready for your sign-off.
-        </Empty></Panel>
-      )}
+      <States error={error} loading={loading} refresh={refresh} isEmpty={!items.length}
+        empty="Nothing waiting on you. The studio sends clips here once they clear internal review — you'll see them as soon as they're ready for your sign-off." />
       <div style={{ display: 'grid', gap: 14 }}>
         {items.map((item) => <SignoffCard key={item.id} item={item} onDone={refresh} />)}
       </div>
@@ -543,6 +544,7 @@ const NAV = [
 ];
 
 function Shell({ user, onLogout, children }) {
+  const loc = useLocation(); // U4: re-keys the route boundary so navigation clears a stale error
   return (
     <div style={{ minHeight: '100vh', position: 'relative' }}>
       <header style={{ position: 'sticky', top: 0, zIndex: 40, borderBottom: `1px solid ${T.line}`, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)' }}>
@@ -567,7 +569,7 @@ function Shell({ user, onLogout, children }) {
         </div>
       </header>
       <main style={{ maxWidth: 1100, margin: '0 auto', padding: '26px 20px 80px', position: 'relative' }}>
-        {children}
+        <RouteErrorBoundary key={loc.pathname} scope="portal">{children}</RouteErrorBoundary>
       </main>
     </div>
   );

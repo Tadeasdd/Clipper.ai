@@ -1,16 +1,30 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { CheckCircle2, MessageCircle } from 'lucide-react';
 import { track } from '../lib/analytics.jsx';
+import { postFeedback } from '../lib/api.js';
 import { prefersReducedMotion } from '../lib/motion.jsx';
 
 function FeedbackWidget({ jobId }) {
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
   const [rating, setRating] = useState(null);
   const [note, setNote] = useState('');
-  const submit = () => {
-    setSent(true);
-    setTimeout(() => { setOpen(false); setSent(false); setRating(null); setNote(''); }, 1400);
+  // U4: a real submit — persists to /api/feedback. The confirmation shows ONLY
+  // on a real 2xx; a failure surfaces honestly instead of faking success.
+  const submit = async () => {
+    if (!rating) return;
+    setBusy(true); setErr(null);
+    try {
+      await postFeedback({ jobId, rating, note: note || undefined });
+      setSent(true);
+      setTimeout(() => { setOpen(false); setSent(false); setRating(null); setNote(''); }, 1400);
+    } catch (e) {
+      setErr(e);
+    } finally {
+      setBusy(false);
+    }
   };
   return (
     <div className="fixed bottom-5 right-5 z-[80] flex flex-col items-end">
@@ -28,7 +42,8 @@ function FeedbackWidget({ jobId }) {
                 <button onClick={() => setRating('down')} className={`flex-1 py-2 rounded-lg border text-sm transition ${rating === 'down' ? 'border-amber-400 bg-amber-400/10 text-amber-400' : 'border-stone-800 text-stone-400 hover:border-stone-700'}`}>Off</button>
               </div>
               <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional note\u2026" rows={2} className="w-full rounded-lg bg-stone-900/60 border border-stone-800 px-3 py-2 text-sm text-stone-200 placeholder:text-stone-600 focus:border-stone-600 resize-none mb-3" />
-              <button onClick={submit} disabled={!rating} className="w-full py-2 rounded-lg bg-[var(--color-brand)] text-black text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed transition">Send</button>
+              <button onClick={submit} disabled={!rating || busy} className="w-full py-2 rounded-lg bg-[var(--color-brand)] text-black text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed transition">{busy ? 'Sending\u2026' : 'Send'}</button>
+              {err && <div className="text-[11px] text-amber-400 mt-2">Couldn't send \u2014 {String(err.message || err)}. Try again.</div>}
             </>
           )}
         </div>

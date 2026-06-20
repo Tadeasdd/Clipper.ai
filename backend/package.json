@@ -37,6 +37,7 @@
     "smoke:health": "node scripts/smoke-health.mjs",
     "smoke:notify": "node scripts/smoke-notify.mjs",
     "smoke:audit": "node scripts/smoke-audit.mjs",
+    "smoke:feedback": "node scripts/smoke-feedback.mjs",
     "smoke:prod": "node scripts/smoke-prod.mjs",
     "seed:demo": "node scripts/seed-demo.mjs",
     "eval": "node scripts/eval.mjs",

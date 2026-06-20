@@ -13,7 +13,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ops, usePoll, fmtAgo, fmtClock } from './api.js';
-import { PageTitle, Panel, PanelHead, ErrorBand, Empty, StatusChip, Label, Mono, T, btnStyle } from './OpsApp.jsx';
+import { PageTitle, Panel, PanelHead, DataStates, StatusChip, Label, Mono, T, btnStyle } from './OpsApp.jsx';
 import { SignalBlock, ClipPreview } from './ClipGrid.jsx';
 
 const TABS = [
@@ -167,9 +167,7 @@ export default function ReviewDesk() {
         ))}
       </div>
       <Label style={{ marginBottom: 10 }}>{TABS.find((t) => t.status === tab)?.who}</Label>
-      {error && !data && <Panel><ErrorBand error={error} retry={refresh} /></Panel>}
-      {loading && !data && !error && <Panel><Empty>loading…</Empty></Panel>}
-      {data && !items.length && <Panel><Empty>nothing in this worklist — the machine is ahead of you</Empty></Panel>}
+      <DataStates error={error} loading={loading} data={data} refresh={refresh} isEmpty={!items.length} empty="nothing in this worklist — the machine is ahead of you" panel />
       <div style={{ display: 'grid', gap: 14 }}>
         {items.map((i) => <ReviewCard key={i.id} item={i} tab={tab} onDone={refresh} />)}
       </div>

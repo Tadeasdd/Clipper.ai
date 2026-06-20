@@ -6,11 +6,12 @@
    utilitarian command deck. Mono everywhere data lives, serif only for the
    page title. No marketing chrome, no orbs; a faint engineering grid. */
 import React, { useEffect, useState } from 'react';
-import { Routes, Route, NavLink, Link } from 'react-router-dom';
+import { Routes, Route, NavLink, Link, useLocation } from 'react-router-dom';
 import { auth, setSession, getUser, ops, usePoll } from './api.js';
 // U3: the identical inline-style primitives now live in one leaf module shared
 // with /portal. Re-exported below so ops sub-pages keep importing them from here.
 import { T, Mono, Label, Panel, PanelHead, btnStyle, field } from '../components/surface-ui.jsx';
+import { RouteErrorBoundary } from '../components/error-boundary.jsx'; // U4: keep the shell alive when a route throws
 
 export { T, Mono, Label, Panel, PanelHead, btnStyle };
 export const STATUS_COLOR = {
@@ -47,6 +48,19 @@ export const ErrorBand = ({ error, retry }) => (
 export const Empty = ({ children }) => (
   <div className="mono" style={{ padding: '22px 16px', fontSize: 12, color: T.dim }}>{children}</div>
 );
+/* U4 — the loading/empty/error triplet every ops poll renders, in one place.
+   Renders exactly what the views inlined: the error band only when there is no
+   data to keep showing, the "loading…" placeholder on the first load, and the
+   per-panel empty message. `panel` wraps a state in its own <Panel> for the
+   surfaces (ClipGrid, Measure) that show these as standalone cards. Returns null
+   in the happy path, so it adds nothing to the rendered output there. */
+export const DataStates = ({ error, loading, data, refresh, isEmpty, empty, panel }) => {
+  const wrap = (el) => (panel ? <Panel>{el}</Panel> : el);
+  if (error && !data) return wrap(<ErrorBand error={error} retry={refresh} />);
+  if (loading && !data && !error) return wrap(<Empty>loading…</Empty>);
+  if (data && isEmpty) return wrap(<Empty>{empty}</Empty>);
+  return null;
+};
 
 /* ── sign in (B7: real sessions against /api/auth) ────────────────────── */
 function Login({ onAuthed }) {
@@ -130,6 +144,7 @@ const NAV = [
 
 function Shell({ user, onLogout, children }) {
   const { data: health } = usePoll(() => fetch(((import.meta.env && import.meta.env.VITE_API_BASE) || '') + '/api/health').then((r) => r.json()), { ms: 10000 });
+  const loc = useLocation(); // U4: re-keys the route boundary so navigation clears a stale error
   return (
     <div style={{ minHeight: '100vh', position: 'relative' }}>
       {/* engineering grid backdrop */}
@@ -165,7 +180,7 @@ function Shell({ user, onLogout, children }) {
         </div>
       </header>
       <main style={{ maxWidth: 1280, margin: '0 auto', padding: '26px 20px 80px', position: 'relative' }}>
-        {children}
+        <RouteErrorBoundary key={loc.pathname} scope="ops">{children}</RouteErrorBoundary>
       </main>
     </div>
   );

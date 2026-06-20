@@ -21,6 +21,7 @@ jobs:
       - run: npm run typecheck    # U5: checkJs over the data/API layer
       - run: npm run test:ui      # U5: usePoll state-machine component tests
       - run: npm run build
+      - run: npm run budget       # P1: gzip-exact perf budget on the landing-route initial graph
       - run: npm run smoke
       # Fail on high/critical vulns in SHIPPED (production) dependencies — the
       # real attack surface of the deployed app.
@@ -32,6 +33,27 @@ jobs:
       # dependency-review cover dev-dep drift on PRs.
       - name: npm audit (informational, includes dev deps)
         run: npm audit || true
+
+  # ── P1: Lighthouse CI — real headless-Chrome perf signal on the BUILT landing
+  #    page. Separate job (the action provisions Chrome + network), so the core
+  #    frontend/backend gates above stay fully offline. The deterministic
+  #    byte-budget gate is `npm run budget` inside the frontend job; this adds the
+  #    runtime score + render-blocking + script-weight assertions (lighthouserc.json).
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: frontend/package-lock.json }
+      - name: Build the frontend bundle
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+      - name: Lighthouse CI (perf budget on the built landing page)
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          configPath: ./frontend/lighthouserc.json
 
   backend:
     runs-on: ubuntu-latest

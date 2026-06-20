@@ -13,7 +13,8 @@
     "audit:ci": "npm audit --omit=dev --audit-level=high",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
-    "test:ui": "node scripts/ui-tests.mjs"
+    "test:ui": "node scripts/ui-tests.mjs",
+    "budget": "node scripts/bundle-budget.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.460.0",

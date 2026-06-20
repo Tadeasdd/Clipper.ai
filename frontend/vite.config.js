@@ -45,6 +45,27 @@ const cspMeta = () => ({
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), cspMeta()],
+  /* P1: code-splitting + perf budgets. Routes are already React.lazy-split in
+     App.jsx (a chunk per page/studio/ops/portal), and Landing.jsx lazy-loads
+     its below-the-fold visuals. Here we (a) emit the build manifest so
+     scripts/bundle-budget.mjs can measure the landing-route initial graph
+     offline, and (b) hoist the React/router runtime into a single long-lived
+     `vendor` chunk so it caches once across every route instead of riding
+     inside the entry chunk. Pure output reorganization — no module's code
+     changes, so the rendered pages stay pixel-identical. */
+  build: {
+    manifest: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('/node_modules/react') || id.includes('/node_modules/scheduler/')) {
+            return 'vendor';
+          }
+          return undefined;
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     // Proxy API calls to the backend in local dev (Stage F4+).

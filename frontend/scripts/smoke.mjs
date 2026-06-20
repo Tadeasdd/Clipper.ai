@@ -4,6 +4,14 @@ import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { readdirSync } from 'node:fs';
 
 GlobalRegistrator.register({ url: 'http://localhost/' });
+// Mirror the BUILT index.html: its <div id="root"> plus the global stylesheet
+// <link> Vite injects. The link matters because Vite's dynamic-import preload
+// helper skips preloading a CSS dep whose <link> is already in the document
+// (the real-browser case); without it here, lazy route chunks (e.g. /ops) would
+// try to fetch the stylesheet — which happy-dom disables — and reject. P1's
+// vendor split made route chunks reach that global CSS, exposing the gap.
+const cssFile = readdirSync('dist/assets').find((f) => f.startsWith('index-') && f.endsWith('.css'));
+document.head.innerHTML = cssFile ? `<link rel="stylesheet" href="/assets/${cssFile}">` : '';
 document.body.innerHTML = '<div id="root"></div>';
 // happy-dom lacks a couple of APIs the app feature-detects; provide inert stubs.
 if (!window.IntersectionObserver) {

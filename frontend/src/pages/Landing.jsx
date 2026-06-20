@@ -1,9 +1,25 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, lazy, Suspense } from 'react';
 import { ArrowUpRight, ChevronRight } from 'lucide-react';
-import { BentoDeliverables, ContentMath, InteractiveDemo, Manifesto, PipelineExplorer, SignaturePath, TrustStrip, ViralityChart, Waitlist, WhyClipper } from '../components/landing-visuals.jsx';
-import { FAQ } from '../components/site-chrome.jsx';
+import { PipelineExplorer, SignaturePath } from '../components/landing-visuals.jsx';
 import { NeonGrid, Reveal } from '../components/ui.jsx';
 import { prefersReducedMotion } from '../lib/motion.jsx';
+
+/* P1: the hero (SignaturePath + PipelineExplorer) ships in the Landing chunk so
+   the first screen paints immediately. Everything below the fold loads as its
+   own chunk after — each from its leaf module, so the initial Landing chunk
+   carries only the hero and the rest stream in on demand. Each lazy visual gets
+   its own Suspense(fallback=null) boundary below; Suspense renders no wrapper
+   element and the modules are unchanged, so the fully-loaded DOM is identical
+   to the eager version (verified by full-page screenshot diff). */
+const InteractiveDemo = lazy(() => import('../components/visuals/InteractiveDemo.jsx').then((m) => ({ default: m.InteractiveDemo })));
+const Manifesto = lazy(() => import('../components/visuals/Manifesto.jsx').then((m) => ({ default: m.Manifesto })));
+const ContentMath = lazy(() => import('../components/visuals/ContentMath.jsx').then((m) => ({ default: m.ContentMath })));
+const ViralityChart = lazy(() => import('../components/visuals/ViralityChart.jsx').then((m) => ({ default: m.ViralityChart })));
+const BentoDeliverables = lazy(() => import('../components/visuals/BentoDeliverables.jsx').then((m) => ({ default: m.BentoDeliverables })));
+const WhyClipper = lazy(() => import('../components/visuals/WhyClipper.jsx').then((m) => ({ default: m.WhyClipper })));
+const TrustStrip = lazy(() => import('../components/visuals/TrustStrip.jsx').then((m) => ({ default: m.TrustStrip })));
+const Waitlist = lazy(() => import('../components/visuals/Waitlist.jsx').then((m) => ({ default: m.Waitlist })));
+const FAQ = lazy(() => import('../components/chrome/FAQ.jsx').then((m) => ({ default: m.FAQ })));
 
 function Landing({ onStart, goto, bookCall }) {
   // Phase 2 — subtle scroll parallax on the hero visual (dependency-free).
@@ -108,11 +124,11 @@ function Landing({ onStart, goto, bookCall }) {
           loop sat directly above this and replayed the same one-video→six-clips
           concept, which read as the demo running twice — removed in favour of the
           one interactive demo the visitor actually controls. */}
-      <InteractiveDemo openApp={onStart} />
+      <Suspense fallback={null}><InteractiveDemo openApp={onStart} /></Suspense>
 
-      <Manifesto />
+      <Suspense fallback={null}><Manifesto /></Suspense>
 
-      <ContentMath bookCall={bookCall} />
+      <Suspense fallback={null}><ContentMath bookCall={bookCall} /></Suspense>
 
       {/* Live Virality Metrics */}
       <section className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-8 py-12 border-t border-white/[0.12]">
@@ -135,19 +151,19 @@ function Landing({ onStart, goto, bookCall }) {
               </div>
             </div>
           </div>
-          <ViralityChart />
+          <Suspense fallback={null}><ViralityChart /></Suspense>
         </Reveal>
       </section>
 
-      <BentoDeliverables bookCall={bookCall} />
+      <Suspense fallback={null}><BentoDeliverables bookCall={bookCall} /></Suspense>
 
-      <WhyClipper bookCall={bookCall} />
+      <Suspense fallback={null}><WhyClipper bookCall={bookCall} /></Suspense>
 
-      <TrustStrip />
+      <Suspense fallback={null}><TrustStrip /></Suspense>
 
-      <div id="book-call"><Waitlist /></div>
+      <div id="book-call"><Suspense fallback={null}><Waitlist /></Suspense></div>
 
-      <FAQ />
+      <Suspense fallback={null}><FAQ /></Suspense>
 
       {/* Closing CTA — the last thing on the page carries the two actions */}
       <section className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-8 pt-12 pb-16 border-t border-white/[0.12] mt-4">

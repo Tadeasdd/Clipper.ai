@@ -1,0 +1,8 @@
+{
+  "comment": "P1 frontend performance budgets, gzipped bytes, enforced by scripts/bundle-budget.mjs in CI. Set with headroom above the current build; tighten as the bundle shrinks, never loosen silently. entryGraphGzip = shared JS every route loads (entry chunk + React/router vendor). landingFirstPaintGzip = bytes to paint '/' (entry graph + landing hero chunk; below-the-fold visuals are deferred and excluded). maxChunkGzip = ceiling for any single chunk (the React vendor chunk is the largest).",
+  "budgets": {
+    "entryGraphGzip": 92000,
+    "landingFirstPaintGzip": 102000,
+    "maxChunkGzip": 65536
+  }
+}

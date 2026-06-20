@@ -127,6 +127,10 @@ function UploadView({ onFile, fileRef, history = [], onLoadRun, onDeleteRun }) {
       </div>
 
       <div
+        role="button"
+        tabIndex={0}
+        aria-label="Upload a file or drag one here"
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileRef.current?.click(); } }}
         onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
         onDragLeave={() => setDrag(false)}
         onDrop={(e) => { e.preventDefault(); setDrag(false); onFile(e.dataTransfer.files[0]); }}
@@ -171,6 +175,9 @@ function UploadView({ onFile, fileRef, history = [], onLoadRun, onDeleteRun }) {
             {history.slice(0, 6).map((run) => (
               <div
                 key={run.id}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && onLoadRun) { e.preventDefault(); onLoadRun(run); } }}
                 className="group flex items-center gap-4 p-4 rounded-xl border border-stone-800 bg-stone-900/30 hover:border-[var(--color-brand)]/30 hover:bg-[var(--color-brand)]/[0.02] transition cursor-pointer"
                 onClick={() => onLoadRun && onLoadRun(run)}
               >

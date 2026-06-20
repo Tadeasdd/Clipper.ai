@@ -11,6 +11,8 @@
   --color-brand-bright: #a6ff63;
   --color-brand-deep: #2fcf0c;
   --color-ink: #000;
+  /* U5 a11y: stone-500 nudged #78716c -> #7c756f for WCAG AA on black (4.38 -> 4.63). Most-used secondary text shade; imperceptible lightening, deliberate sign-off. */
+  --color-stone-500: #7c756f;
 }
 
 html, body, #root { min-height: 100%; }

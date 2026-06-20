@@ -60,6 +60,7 @@ function HookEditor({ clip, onSaved }) {
   }
   return (
     <div>
+      {/* eslint-disable-next-line jsx-a11y/no-autofocus -- intentional: focus the note editor the moment it opens */}
       <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={2} autoFocus
         onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save(); if (e.key === 'Escape') setEditing(false); }}
         style={{ width: '100%', boxSizing: 'border-box', fontSize: 13, lineHeight: 1.5, padding: '6px 8px', background: 'rgba(255,255,255,0.05)', border: `1px solid color-mix(in srgb, ${T.green} 33.333%, transparent)`, borderRadius: 6, color: T.text, outline: 'none', resize: 'vertical', fontFamily: 'inherit' }} />
@@ -82,6 +83,7 @@ export function ClipPreview({ clip, height = 230 }) {
     );
   }
   return (
+    // eslint-disable-next-line jsx-a11y/media-has-caption -- user-uploaded clip preview; no caption asset exists
     <video controls preload="metadata" onError={() => setFailed(true)}
       src={ops.assetUrl(clip.id)}
       style={{ width: '100%', height, objectFit: 'contain', background: '#000', borderRadius: 8, display: 'block' }} />

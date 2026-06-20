@@ -83,6 +83,7 @@ function ClipPreview({ clip, height = 210 }) {
   return (
     <div style={{ height, borderRadius: 8, overflow: 'hidden', border: `1px solid ${T.lineSoft}`, background: '#000', display: 'grid', placeItems: 'center' }}>
       {rendered
+        // eslint-disable-next-line jsx-a11y/media-has-caption -- user-uploaded clip preview; no caption asset exists
         ? <video src={portal.assetUrl(clip.id)} controls preload="metadata" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
         : <Mono style={{ fontSize: 11, color: T.dim, padding: 12, textAlign: 'center' }}>preview renders when production finishes</Mono>}
     </div>

@@ -238,7 +238,7 @@ function CrosshairCursor() {
 class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { hasError: false }; }
   static getDerivedStateFromError() { return { hasError: true }; }
-  componentDidCatch(error) { try { track('app_error', { message: String((error && error.message) || error) }); } catch (e) {} }
+  componentDidCatch(error) { try { track('app_error', { message: String((error && error.message) || error) }); } catch { /* best-effort */ } }
   render() {
     if (this.state.hasError) {
       return (

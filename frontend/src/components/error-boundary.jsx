@@ -11,7 +11,7 @@ export class RouteErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { hasError: false }; }
   static getDerivedStateFromError() { return { hasError: true }; }
   componentDidCatch(error) {
-    try { track('app_error', { scope: this.props.scope || 'route', message: String((error && error.message) || error) }); } catch (e) {}
+    try { track('app_error', { scope: this.props.scope || 'route', message: String((error && error.message) || error) }); } catch { /* analytics is best-effort */ }
   }
   render() {
     if (!this.state.hasError) return this.props.children;

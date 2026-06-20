@@ -13,7 +13,7 @@ import React from 'react';
 export const T = {
   line: 'rgba(255,255,255,0.08)',
   lineSoft: 'rgba(255,255,255,0.05)',
-  dim: '#71717a',
+  dim: '#76767f', // U5 a11y: nudged #71717a -> #76767f for WCAG AA on black (4.35 -> 4.67)
   text: '#e7e5e4',
   green: 'var(--color-brand)',
   amber: '#fbbf24',

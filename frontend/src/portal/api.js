@@ -40,7 +40,7 @@ export async function uploadFile(recordingId, file) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const err = new Error(data.error || `upload failed (${res.status})`);
+    const err = /** @type {Error & { status?: number }} */ (new Error(data.error || `upload failed (${res.status})`));
     err.status = res.status;
     throw err;
   }

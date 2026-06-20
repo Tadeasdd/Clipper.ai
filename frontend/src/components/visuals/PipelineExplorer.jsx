@@ -101,13 +101,13 @@ function PipelineExplorer() {
   };
   const onDown = (e) => {
     stopAuto(); setTouched(true); setDragging(true); dragRef.current = true; setPinned(null);
-    if (e.currentTarget.setPointerCapture) { try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) {} }
+    if (e.currentTarget.setPointerCapture) { try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* pointer capture is best-effort */ } }
     setFromX(e.clientX);
   };
   const onMove = (e) => { if (!dragRef.current) return; setFromX(e.clientX); };
   const onUp = (e) => {
     setDragging(false); dragRef.current = false;
-    if (e.currentTarget.releasePointerCapture) { try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (err) {} }
+    if (e.currentTarget.releasePointerCapture) { try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* pointer capture is best-effort */ } }
     scheduleResume();
   };
   const onNode = (i) => { stopAuto(); setTouched(true); setPinned(i); apply((i + 0.5) / N); scheduleResume(); };

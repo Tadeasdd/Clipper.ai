@@ -37,7 +37,7 @@ const _seoUpsertLink = (rel, href) => {
 
 const applySeo = (page, view) => {
   if (typeof document === 'undefined') return;
-  try { document.documentElement.lang = 'en'; } catch (e) {}
+  try { document.documentElement.lang = 'en'; } catch { /* best-effort */ }
   _seoUpsertMeta('name', 'theme-color', '#000000');
   const key = view === 'app' ? 'studio' : (page || 'home');
   const e = SEO_BY_PAGE[key] || SEO_BY_PAGE.home;

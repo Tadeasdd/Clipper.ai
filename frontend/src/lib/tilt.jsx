@@ -79,7 +79,7 @@ function useTiltEngine() {
       window.removeEventListener('scroll', relax);
       cancelAnimationFrame(s.raf);
       s.raf = 0;
-      if (s.el) { try { s.el.style.transform = ''; } catch (e) {} }
+      if (s.el) { try { s.el.style.transform = ''; } catch { /* best-effort */ } }
       s.el = null; s.tx = 0; s.ty = 0; s.cx = 0; s.cy = 0;
     };
 

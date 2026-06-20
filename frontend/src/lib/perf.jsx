@@ -6,7 +6,7 @@ import { _seoUpsertMeta } from './seo.jsx';
    Honest hints only — these are the exact hosts the runtime uses. */
 const injectPerfHints = () => {
   if (typeof document === 'undefined' || !document.head) return;
-  try { _seoUpsertMeta('name', 'color-scheme', 'dark'); } catch (e) {}
+  try { _seoUpsertMeta('name', 'color-scheme', 'dark'); } catch { /* best-effort */ }
   /* Display face: Newsreader (an editorial serif drawn for news media — on-subject for a
      content-operations company, and its true italics carry the accent spans the headlines
      already use). Falls back to Georgia if the stylesheet doesn't load. */

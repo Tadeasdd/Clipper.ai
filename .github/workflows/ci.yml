@@ -17,6 +17,9 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm, cache-dependency-path: frontend/package-lock.json }
       - run: npm ci
+      - run: npm run lint        # U5: ESLint (react-hooks + jsx-a11y), 0 errors
+      - run: npm run typecheck    # U5: checkJs over the data/API layer
+      - run: npm run test:ui      # U5: usePoll state-machine component tests
       - run: npm run build
       - run: npm run smoke
       # Fail on high/critical vulns in SHIPPED (production) dependencies — the

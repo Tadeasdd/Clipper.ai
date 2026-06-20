@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "module": "esnext",
+    "target": "es2022",
+    "moduleResolution": "bundler",
+    "strict": false,
+    "noImplicitAny": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "types": []
+  },
+  "//": "U5 pragmatic checkJs: gates the data/API layer where type bugs bite. The bespoke marketing/ops-view JSX (115 incidental tsc findings, mostly untyped props) is intentionally out of scope — see EXCELLENCE_PLAN U5.",
+  "include": ["src/lib/api.js", "src/ops/api.js", "src/portal/api.js", "src/vite-env.d.ts"]
+}

@@ -75,7 +75,7 @@ function FAQ() {
               The answers <span className="italic text-stone-400">to the questions we keep getting.</span>
             </h2>
             <p className="text-stone-400 leading-relaxed">
-              Don't see yours? <a className="text-[var(--color-brand)] hover:underline cursor-pointer">Email us</a>. We read everything.
+              Don't see yours? <a href="mailto:hello@clipper.ai" className="text-[var(--color-brand)] hover:underline cursor-pointer">Email us</a>. We read everything.
             </p>
           </div>
 

@@ -17,7 +17,7 @@ export async function json(method, path, body) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const err = new Error(data.error || `request failed (${res.status})`);
+    const err = /** @type {Error & { status?: number, data?: any }} */ (new Error(data.error || `request failed (${res.status})`));
     err.status = res.status;
     err.data = data;
     throw err;
@@ -64,14 +64,24 @@ export const ops = {
 export function usePoll(fn, { ms = 3000, deps = [] } = {}) {
   const [state, setState] = useState({ data: null, error: null, loading: true });
   const alive = useRef(true);
+  // U5: hold the latest poll fn in a ref so `tick` stays stable yet never calls
+  // a stale closure — callers pass a fresh `fn` (e.g. () => ops.clips()) each
+  // render, and the old code captured the first one. This removes the
+  // eslint-disable while fixing that latent stale-closure bug.
+  const fnRef = useRef(fn);
+  useEffect(() => { fnRef.current = fn; });
   const tick = useCallback(async () => {
     try {
-      const data = await fn();
+      const data = await fnRef.current();
       if (alive.current) setState({ data, error: null, loading: false });
     } catch (e) {
       if (alive.current) setState((s) => ({ data: s.data, error: e, loading: false }));
     }
-  }, deps); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
+  // Re-subscribe when the interval or the caller's poll key changes. Serialising
+  // `deps` (callers pass primitives) gives the effect a stable, complete dep
+  // list — so exhaustive-deps is satisfied with no disable.
+  const depsKey = JSON.stringify(deps);
   useEffect(() => {
     alive.current = true;
     tick();
@@ -79,7 +89,7 @@ export function usePoll(fn, { ms = 3000, deps = [] } = {}) {
       if (typeof document === 'undefined' || !document.hidden) tick();
     }, ms);
     return () => { alive.current = false; clearInterval(id); };
-  }, [tick, ms]);
+  }, [tick, ms, depsKey]);
   return { ...state, refresh: tick };
 }
 

@@ -54,6 +54,7 @@ function CommandPalette({ open, onClose, goto, bookCall, openApp }) {
   let lastGroup = null;
   return (
     <>
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- dismiss backdrop; keyboard users close the palette with Escape (handled in the keydown listener above) */}
       <div className="cmdk-backdrop" onClick={onClose} />
       <div className="cmdk-panel" role="dialog" aria-modal="true" aria-label="Command palette">
         <div className="flex items-center gap-3 px-4 py-3.5 border-b border-white/[0.08]">

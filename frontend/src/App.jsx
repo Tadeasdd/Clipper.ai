@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { useLocation, useNavigate, Routes, Route } from 'react-router-dom';
 import { track } from './lib/analytics.jsx';
 import { applySeo, injectJsonLd } from './lib/seo.jsx';
-import { injectPerfHints } from './lib/perf.jsx';
+import { injectPerfHints, initWebVitals } from './lib/perf.jsx';
 import { MotionConfig } from './lib/motion.jsx';
 import { SAMPLE_RECORDINGS, STEP_STAGE, runDemoPipeline, fetchShowcase } from './lib/demo.jsx';
 import { useTiltEngine } from './lib/tilt.jsx';
@@ -281,6 +281,10 @@ function ClipperAppInner() {
   useEffect(() => { if (!isOps && !isPortal) applySeo(page, view); }, [isOps, isPortal, page, view]);
   useEffect(() => { injectJsonLd(); }, []);
   useEffect(() => { injectPerfHints(); }, []);
+  // P2: start Core Web Vitals collection once per page (self-guarded, renders
+  // nothing). Beacons LCP/INP/CLS/FCP/TTFB to /api/rum at page-hide; honors
+  // DNT/GPC and excludes /ops + /portal internally.
+  useEffect(() => { initWebVitals(); }, []);
 
   // Conversion funnel — scroll-depth milestones, once each per page. rAF-throttled, passive.
   useEffect(() => {

@@ -87,6 +87,67 @@ function Analytics() {
         </>
       )}
       <Margin />
+      <WebVitals />
+    </>
+  );
+}
+
+// P2 — Core Web Vitals (RUM): per-metric field p75 with web.dev rating colors,
+// sample counts, and a trend arrow vs the previous window so a regression is
+// visible. First-party signal beaconed from lib/perf.jsx (no third-party
+// analytics). Same Panel/Label/Mono idiom as Margin; adds no existing-layout
+// change. INP is the worst-interaction approximation, labeled as such.
+function WebVitals() {
+  const { data, error, loading, refresh } = usePoll(ops.webVitals, { ms: 30000 });
+  const metrics = data?.metrics || [];
+  const ratingColor = (r) => (r === 'good' ? T.green : r === 'poor' ? T.red : r === 'needs-improvement' ? T.amber : T.dim);
+  const trendMark = (t) => (t === 'worse' ? '▲' : t === 'better' ? '▼' : '—');
+  const trendColor = (t) => (t === 'worse' ? T.red : t === 'better' ? T.green : T.dim);
+  const fmt = (m, v) => (v == null ? '—' : m === 'cls' ? Number(v).toFixed(3) : Math.round(v).toLocaleString());
+  const grid = '1.6fr 0.8fr 0.8fr 0.7fr';
+  const cols = ['page', 'lcp p75', 'samples', 'rating'];
+  return (
+    <>
+      <Panel className="ops-rise" style={{ animationDelay: '0.18s', marginTop: 14 }}>
+        <PanelHead title="Core Web Vitals — field p75 (RUM), real visitor sessions"
+          right={<Label>{data?.periodDays ? `last ${data.periodDays}d` : ''}{data?.regressions?.length ? ` · ${data.regressions.length} regressing` : ''}</Label>} />
+        <DataStates error={error} loading={loading} data={data} refresh={refresh}
+          isEmpty={!metrics.some((m) => m.samples)}
+          empty="no field data yet — Core Web Vitals beacon in from real visitor sessions on the marketing site (lib/perf.jsx → /api/rum), then p75 and trend appear here" />
+        {metrics.some((m) => m.samples) && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, padding: '14px 16px' }}>
+            {metrics.map((m) => (
+              <div key={m.metric} style={{ border: `1px solid ${T.lineSoft}`, borderRadius: 10, padding: '12px 14px' }}>
+                <Label style={{ marginBottom: 8 }}>{m.metric.toUpperCase()}{m.metric === 'inp' ? ' · approx' : ''}</Label>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+                  <Mono style={{ fontSize: 26, color: ratingColor(m.rating), lineHeight: 1 }}>{fmt(m.metric, m.p75)}</Mono>
+                  {m.metric !== 'cls' && m.p75 != null && <Mono style={{ fontSize: 11, color: T.dim }}>ms</Mono>}
+                  <Mono style={{ fontSize: 13, color: trendColor(m.trend), marginLeft: 'auto' }} title={`vs previous window p75 ${m.previousP75 ?? '—'}`}>{trendMark(m.trend)}</Mono>
+                </div>
+                <Mono style={{ fontSize: 9.5, color: T.dim, display: 'block', marginTop: 8 }}>
+                  {m.samples ? `${m.samples} samples · ${m.rating || '—'}` : 'no samples'}
+                </Mono>
+              </div>
+            ))}
+          </div>
+        )}
+      </Panel>
+      {data?.byPath?.length > 0 && (
+        <Panel className="ops-rise" style={{ animationDelay: '0.24s', marginTop: 14 }}>
+          <PanelHead title="Slowest pages — LCP p75 by route" right={<Label>{data.byPath.length} routes</Label>} />
+          <div style={{ display: 'grid', gridTemplateColumns: grid, gap: 12, padding: '9px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
+            {cols.map((c, i) => <Label key={i}>{c}</Label>)}
+          </div>
+          {data.byPath.map((p) => (
+            <div key={p.path} className="ops-row" style={{ display: 'grid', gridTemplateColumns: grid, gap: 12, alignItems: 'center', padding: '10px 16px', borderTop: `1px solid ${T.lineSoft}` }}>
+              <Mono style={{ fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.path}</Mono>
+              <Mono style={{ fontSize: 11, color: ratingColor(p.rating) }}>{fmt('lcp', p.lcpP75)} ms</Mono>
+              <Mono style={{ fontSize: 11, color: T.dim }}>{p.samples}</Mono>
+              <Mono style={{ fontSize: 10, color: ratingColor(p.rating) }}>{p.rating}</Mono>
+            </div>
+          ))}
+        </Panel>
+      )}
     </>
   );
 }

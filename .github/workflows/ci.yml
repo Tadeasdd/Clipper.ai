@@ -195,6 +195,11 @@ jobs:
       - run: npm run smoke:audit
         timeout-minutes: 3
 
+      # ── P2: Core Web Vitals RUM — public beacon persists with server-derived
+      #        ratings; ops aggregate computes p75 + trend; read is walled.
+      - run: npm run smoke:rum
+        timeout-minutes: 3
+
       # ── R3: timeouts + circuit breakers + bulkheads on external calls.
       - run: npm run smoke:resilience
         timeout-minutes: 2

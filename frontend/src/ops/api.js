@@ -57,6 +57,8 @@ export const ops = {
   balanceReview: () => json('POST', '/api/review/assign/balance', {}),
   opsHealth: () => json('GET', '/api/clients/health'),
   opsAudit: (area) => json('GET', `/api/audit${area ? `?area=${area}` : ''}`),
+  // P2: Core Web Vitals (RUM) aggregate — per-metric p75, rating split, trend.
+  webVitals: (days = 7) => json('GET', `/api/rum?days=${days}`),
 };
 
 /** Poll an endpoint on an interval. Pauses when the tab is hidden; exposes

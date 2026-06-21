@@ -112,6 +112,20 @@ export const auth = {
   bootstrap: (email, password) => json('POST', '/api/auth/bootstrap', { email, password }),
   me: () => json('GET', '/api/auth/me'),
   logout: () => json('POST', '/api/auth/logout'),
+  // C2 — MFA challenge completion + self-service enrolment.
+  mfaLogin: (challenge, code) => json('POST', '/api/auth/mfa/login', { challenge, code }),
+  mfaSetup: (challenge) => json('POST', '/api/auth/mfa/setup', { challenge }),
+  mfaSetupConfirm: (challenge, code) => json('POST', '/api/auth/mfa/setup/confirm', { challenge, code }),
+  mfaStatus: () => json('GET', '/api/auth/mfa'),
+  mfaEnroll: () => json('POST', '/api/auth/mfa/enroll'),
+  mfaVerify: (code) => json('POST', '/api/auth/mfa/verify', { code }),
+  mfaDisable: (code) => json('POST', '/api/auth/mfa/disable', { code }),
+  // C2 — session management (a session's own holder lists + revokes).
+  sessions: () => json('GET', '/api/auth/sessions'),
+  revokeSession: (id) => json('DELETE', `/api/auth/sessions/${id}`),
+  revokeOtherSessions: () => json('POST', '/api/auth/sessions/revoke-others'),
+  // C2 — SSO: the browser navigates here; the server 302s through the IdP.
+  ssoStartUrl: (provider) => `${API_BASE}/api/auth/sso/${provider}/start?redirect=/ops`,
 };
 
 /* ── tiny shared formatters ─────────────────────────────────────────────── */

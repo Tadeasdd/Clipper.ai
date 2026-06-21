@@ -69,41 +69,108 @@ function Login({ onAuthed }) {
   const [password, setPassword] = useState('');
   const [err, setErr] = useState(null);
   const [busy, setBusy] = useState(false);
+  // C2: a login can resolve to a second step (MFA code) or forced MFA enrolment.
+  const [step, setStep] = useState('password'); // password | mfa | enrol
+  const [challenge, setChallenge] = useState(null);
+  const [code, setCode] = useState('');
+  const [enrol, setEnrol] = useState(null); // { secret, otpauthUri }
+  const [recovery, setRecovery] = useState(null);
+  const [providers, setProviders] = useState([]);
   useEffect(() => {
-    auth.status().then((st) => st.bootstrapRequired && setMode('bootstrap')).catch(() => {});
+    auth.status().then((st) => {
+      if (st.bootstrapRequired) setMode('bootstrap');
+      setProviders(st.ssoProviders || []);
+    }).catch(() => {});
   }, []);
+
+  const finish = (user) => { setSession(user); onAuthed(user); };
   const submit = async () => {
     setBusy(true); setErr(null);
     try {
       const r = mode === 'bootstrap' ? await auth.bootstrap(email, password) : await auth.login(email, password);
-      setSession(r.user); // the token rode home as an httpOnly cookie; we keep only the user
-      onAuthed(r.user);
+      if (r.mfaRequired) { setChallenge(r.challenge); setStep('mfa'); }
+      else if (r.mfaEnrolmentRequired) { setChallenge(r.challenge); setEnrol(await auth.mfaSetup(r.challenge)); setStep('enrol'); }
+      else finish(r.user); // the token rode home as an httpOnly cookie; we keep only the user
     } catch (e) { setErr(e); }
     finally { setBusy(false); }
   };
+  const submitMfa = async () => {
+    setBusy(true); setErr(null);
+    try { finish((await auth.mfaLogin(challenge, code)).user); }
+    catch (e) { setErr(e); }
+    finally { setBusy(false); }
+  };
+  const submitEnrol = async () => {
+    setBusy(true); setErr(null);
+    try {
+      const r = await auth.mfaSetupConfirm(challenge, code);
+      setRecovery(r.recoveryCodes); // shown once; then they sign in again with a code
+    } catch (e) { setErr(e); }
+    finally { setBusy(false); }
+  };
+
+  const secondFactor = step === 'mfa' || step === 'enrol';
   return (
     <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24 }}>
       <div style={{ maxWidth: 460, width: '100%' }}>
         <Label style={{ marginBottom: 10 }}>Clipper.ai · internal</Label>
         <h1 className="serif" style={{ fontSize: 34, color: T.text, marginBottom: 14 }}>
-          {mode === 'bootstrap' ? 'Create the first ops account' : 'Operations console'}
+          {mode === 'bootstrap' ? 'Create the first ops account'
+            : step === 'mfa' ? 'Two-factor authentication'
+            : step === 'enrol' ? 'Set up two-factor authentication'
+            : 'Operations console'}
         </h1>
         <p style={{ fontSize: 13.5, color: T.dim, lineHeight: 1.65, marginBottom: 22 }}>
           {mode === 'bootstrap'
             ? 'No accounts exist yet. This creates the founding ops account — every later account is created from inside, by an ops user, with an initial password its holder then changes.'
+            : step === 'mfa' ? 'Enter the 6-digit code from your authenticator app — or a recovery code if you’ve lost the device.'
+            : step === 'enrol' ? 'Your organisation requires two-factor authentication. Add this secret to an authenticator app, then enter the code it shows.'
             : 'The machinery behind the managed service — the content queue, the pipeline board, clip review, publishing, and the loop. Sessions are server-side and revocable; client users land in their own portal, never here.'}
         </p>
-        <div style={{ display: 'grid', gap: 8 }}>
-          <input type="email" value={email} placeholder="email" autoComplete="username"
-            onChange={(e) => setEmail(e.target.value)} className="mono" style={field} />
-          <input type="password" value={password} placeholder={mode === 'bootstrap' ? 'password (≥ 8 characters)' : 'password'}
-            autoComplete="current-password"
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && submit()} className="mono" style={field} />
-          <button onClick={submit} disabled={busy} className="mono" style={{ ...btnStyle(T.green), padding: '10px 18px', opacity: busy ? 0.5 : 1 }}>
-            {busy ? '…' : mode === 'bootstrap' ? 'create account & enter' : 'sign in'}
-          </button>
-        </div>
+
+        {recovery ? (
+          <div style={{ display: 'grid', gap: 10 }}>
+            <Mono style={{ fontSize: 11.5, color: T.text }}>Recovery codes — save these now; each works once.</Mono>
+            <div className="mono" style={{ ...field, lineHeight: 1.9, whiteSpace: 'pre-wrap' }}>{recovery.join('\n')}</div>
+            <button onClick={() => { setRecovery(null); setStep('password'); setCode(''); setPassword(''); }}
+              className="mono" style={{ ...btnStyle(T.green), padding: '10px 18px' }}>done — sign in</button>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: 8 }}>
+            {!secondFactor && (
+              <>
+                <input type="email" value={email} placeholder="email" autoComplete="username"
+                  onChange={(e) => setEmail(e.target.value)} className="mono" style={field} />
+                <input type="password" value={password} placeholder={mode === 'bootstrap' ? 'password (≥ 8 characters)' : 'password'}
+                  autoComplete="current-password"
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && submit()} className="mono" style={field} />
+                <button onClick={submit} disabled={busy} className="mono" style={{ ...btnStyle(T.green), padding: '10px 18px', opacity: busy ? 0.5 : 1 }}>
+                  {busy ? '…' : mode === 'bootstrap' ? 'create account & enter' : 'sign in'}
+                </button>
+                {mode !== 'bootstrap' && providers.includes('local') && (
+                  <button onClick={() => { window.location.href = auth.ssoStartUrl('local'); }} className="mono" style={{ ...btnStyle(), padding: '10px 18px' }}>
+                    continue with SSO
+                  </button>
+                )}
+              </>
+            )}
+            {step === 'enrol' && enrol && (
+              <div className="mono" style={{ ...field, fontSize: 11, color: T.dim, wordBreak: 'break-all' }}>{enrol.secret}</div>
+            )}
+            {secondFactor && (
+              <>
+                <input inputMode="numeric" value={code} placeholder="6-digit code" autoComplete="one-time-code"
+                  onChange={(e) => setCode(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (step === 'mfa' ? submitMfa() : submitEnrol())} className="mono" style={field} />
+                <button onClick={step === 'mfa' ? submitMfa : submitEnrol} disabled={busy} className="mono"
+                  style={{ ...btnStyle(T.green), padding: '10px 18px', opacity: busy ? 0.5 : 1 }}>
+                  {busy ? '…' : step === 'mfa' ? 'verify & enter' : 'confirm & continue'}
+                </button>
+              </>
+            )}
+          </div>
+        )}
         {err && <Mono style={{ display: 'block', fontSize: 11, color: T.red, marginTop: 10 }}>{String(err.message)}</Mono>}
         <p className="mono" style={{ fontSize: 10.5, color: '#52525b', marginTop: 14, lineHeight: 1.6 }}>
           server-side sessions · bearer for the API, httpOnly cookie for media · rate-limited
@@ -140,6 +207,7 @@ const NAV = [
   { to: '/ops/publish', label: 'Publish' },
   { to: '/ops/analytics', label: 'Analytics' },
   { to: '/ops/activity', label: 'Activity' },
+  { to: '/ops/security', label: 'Security' },
 ];
 
 function Shell({ user, onLogout, children }) {
@@ -203,6 +271,91 @@ const Stub = ({ kicker, title, body }) => (
   </>
 );
 
+/* ── account security (C2): self-service MFA + session management ───────── */
+function SecurityPanel() {
+  const [mfa, setMfa] = useState(null);          // { enabled, required }
+  const [sessions, setSessions] = useState([]);
+  const [enrol, setEnrol] = useState(null);      // { secret, otpauthUri }
+  const [recovery, setRecovery] = useState(null);
+  const [code, setCode] = useState('');
+  const [err, setErr] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const refresh = () => {
+    auth.mfaStatus().then(setMfa).catch((e) => setErr(e));
+    auth.sessions().then((r) => setSessions(r.sessions || [])).catch(() => {});
+  };
+  useEffect(refresh, []);
+
+  const guard = (fn) => async () => { setBusy(true); setErr(null); try { await fn(); } catch (e) { setErr(e); } finally { setBusy(false); } };
+  const startEnrol = guard(async () => setEnrol(await auth.mfaEnroll()));
+  const verifyEnrol = guard(async () => { setRecovery((await auth.mfaVerify(code)).recoveryCodes); setEnrol(null); setCode(''); refresh(); });
+  const disable = guard(async () => { await auth.mfaDisable(code); setCode(''); refresh(); });
+  const revoke = (id) => guard(async () => { await auth.revokeSession(id); refresh(); })();
+  const revokeOthers = guard(async () => { await auth.revokeOtherSessions(); refresh(); });
+
+  return (
+    <>
+      <PageTitle kicker="account security" title="Security" />
+      <Panel>
+        <Label style={{ marginBottom: 10 }}>Two-factor authentication</Label>
+        {!mfa ? <Empty>loading…</Empty> : recovery ? (
+          <div style={{ display: 'grid', gap: 10, maxWidth: 360 }}>
+            <Mono style={{ fontSize: 11.5, color: T.text }}>Recovery codes — save these now; each works once.</Mono>
+            <div className="mono" style={{ ...field, lineHeight: 1.9, whiteSpace: 'pre-wrap' }}>{recovery.join('\n')}</div>
+            <button onClick={() => setRecovery(null)} className="mono" style={{ ...btnStyle(T.green), padding: '8px 16px' }}>done</button>
+          </div>
+        ) : mfa.enabled ? (
+          <div style={{ display: 'grid', gap: 8, maxWidth: 360 }}>
+            <Mono style={{ fontSize: 11.5, color: T.green }}><Dot color={T.green} />enabled{mfa.required ? ' · required by policy' : ''}</Mono>
+            {!mfa.required && (
+              <>
+                <input inputMode="numeric" value={code} placeholder="current code to disable" onChange={(e) => setCode(e.target.value)} className="mono" style={field} />
+                <button onClick={disable} disabled={busy} className="mono" style={{ ...btnStyle(), padding: '8px 16px' }}>disable MFA</button>
+              </>
+            )}
+          </div>
+        ) : enrol ? (
+          <div style={{ display: 'grid', gap: 8, maxWidth: 360 }}>
+            <Mono style={{ fontSize: 11, color: T.dim }}>Add this secret to your authenticator app:</Mono>
+            <div className="mono" style={{ ...field, fontSize: 11, wordBreak: 'break-all' }}>{enrol.secret}</div>
+            <input inputMode="numeric" value={code} placeholder="6-digit code" onChange={(e) => setCode(e.target.value)} className="mono" style={field} />
+            <button onClick={verifyEnrol} disabled={busy} className="mono" style={{ ...btnStyle(T.green), padding: '8px 16px' }}>verify & enable</button>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: 8, maxWidth: 360 }}>
+            <Mono style={{ fontSize: 11.5, color: T.dim }}>{mfa.required ? 'Required by policy — not yet enabled.' : 'Not enabled.'}</Mono>
+            <button onClick={startEnrol} disabled={busy} className="mono" style={{ ...btnStyle(T.green), padding: '8px 16px' }}>enable MFA</button>
+          </div>
+        )}
+      </Panel>
+
+      <Panel style={{ marginTop: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <Label>Active sessions</Label>
+          <button onClick={revokeOthers} disabled={busy} className="mono" style={btnStyle()}>sign out other sessions</button>
+        </div>
+        {sessions.length === 0 ? <Empty>no active sessions</Empty> : (
+          <div style={{ display: 'grid', gap: 6 }}>
+            {sessions.map((s) => (
+              <div key={s.id || s.created_at} className="mono ops-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 10px', borderRadius: 6, fontSize: 11.5 }}>
+                <Dot color={s.current ? T.green : T.dim} />
+                <span style={{ color: T.text }}>{s.auth_method || 'password'}</span>
+                <span style={{ color: T.dim }}>{s.ip || '—'}</span>
+                <span style={{ color: T.dim, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.user_agent || ''}</span>
+                <span style={{ color: T.dim }}>{s.last_seen_at ? new Date(s.last_seen_at).toLocaleString() : ''}</span>
+                {s.current ? <span style={{ color: T.green }}>this session</span>
+                  : s.id ? <button onClick={() => revoke(s.id)} disabled={busy} className="mono" style={btnStyle()}>revoke</button> : null}
+              </div>
+            ))}
+          </div>
+        )}
+      </Panel>
+      {err && <Mono style={{ display: 'block', fontSize: 11, color: T.red, marginTop: 10 }}>{String(err.message)}</Mono>}
+    </>
+  );
+}
+
 /* Surfaces land phase by phase; stubs say exactly what they're waiting on. */
 import Board from './Board.jsx';
 import RecordingDetail from './RecordingDetail.jsx';
@@ -240,6 +393,7 @@ export default function OpsApp() {
           <Route path="publish" element={<Measure surface="publish" />} />
           <Route path="analytics" element={<Measure surface="analytics" />} />
           <Route path="activity" element={<Activity />} />
+          <Route path="security" element={<SecurityPanel />} />
           <Route path="*" element={<Stub kicker="404" title="No such surface" body={<Link to="/ops" className="mono" style={btnStyle()}>back to the board</Link>} />} />
         </Routes>
       </Shell>

@@ -19,6 +19,7 @@
     "smoke:labels": "node scripts/smoke-labels.mjs",
     "smoke:auth": "node scripts/smoke-auth.mjs",
     "smoke:authz": "node scripts/smoke-authz.mjs",
+    "smoke:identity": "node scripts/smoke-identity.mjs",
     "smoke:provenance": "node scripts/smoke-provenance.mjs",
     "smoke:cache": "node scripts/smoke-cache.mjs",
     "smoke:drift": "node scripts/smoke-drift.mjs",

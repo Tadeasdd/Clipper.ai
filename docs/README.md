@@ -5,16 +5,28 @@ scored, captioned, publish-ready short-form out. Customers buy a managed service
 and outcomes — the ops dashboard is the product; the software serves delivery.
 (See each plan for the full positioning contract.)
 
+## Onboarding (read in this order)
+
+1. `CLAUDE.md` — always-loaded context: load-bearing parts, conventions, verify commands.
+2. `ARCHITECTURE.md` — how the system is put together.
+3. `DEV_STACK.md` — run the whole stack locally with one command.
+4. `adr/` — the decision records: why it's shaped this way.
+5. `RUNBOOKS.md` — the operator's index of everyday procedures.
+6. `INCIDENT_RESPONSE.md` — what to do when something is on fire.
+
 ## The plans
 
-| Plan | File | Run with | Covers |
-|------|------|----------|--------|
-| MVP | `MVP_BACKEND_PLAN.md` | `/milestone M#` | Make it work: real ASR, transcript+LLM scoring, hooks+captions, ingest, queue reliability, real publish, hardening, tests |
-| Excellence | `EXCELLENCE_PLAN.md` | `/harden S#` `/harden U#` | Make it safe & clean: SSRF, cookie/CSRF, validation/limits, IDOR, headers/CSP, logging; UI de-vibe (color tokens, modularization, states) with the design preserved |
-| Capstone | `CAPSTONE_PLAN.md` | `/elevate <id>` | Make it excellent: AI quality eval (Q), reliability (R), unit economics (E), compliance/identity (C), dev-experience (D), performance/E2E (P), service-ops depth (O) |
+| Plan       | File                  | Run with                  | Covers                                                                                                                                                               |
+| ---------- | --------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MVP        | `MVP_BACKEND_PLAN.md` | `/milestone M#`           | Make it work: real ASR, transcript+LLM scoring, hooks+captions, ingest, queue reliability, real publish, hardening, tests                                            |
+| Excellence | `EXCELLENCE_PLAN.md`  | `/harden S#` `/harden U#` | Make it safe & clean: SSRF, cookie/CSRF, validation/limits, IDOR, headers/CSP, logging; UI de-vibe (color tokens, modularization, states) with the design preserved  |
+| Capstone   | `CAPSTONE_PLAN.md`    | `/elevate <id>`           | Make it excellent: AI quality eval (Q), reliability (R), unit economics (E), compliance/identity (C), dev-experience (D), performance/E2E (P), service-ops depth (O) |
 
 `CLAUDE.md` (repo root) is the always-loaded context: the "load-bearing — don't
 rewrite" list, conventions, and the verify-after-every-change commands.
+
+**Current status (honest):** MVP M1–M8 ✅, Excellence S0–S6 + U1–U5 ✅, Capstone
+Q/R/E/C/D/P/O largely ✅ (D4 in progress).
 
 ## How to execute
 
@@ -40,19 +52,31 @@ The short version:
 Two rules hold throughout: **S0 lands before anything ships**, and **U1 (color
 tokens) lands before any other UI/perf item**.
 
+## Architecture & operations docs
+
+| Doc                       | Covers                                       |
+| ------------------------- | -------------------------------------------- |
+| `ARCHITECTURE.md`         | System design                                |
+| `adr/`                    | Decision records                             |
+| `BUILD_STAGES.md`         | Original B/F roadmap — see its status banner |
+| `DEV_STACK.md`            | One-command local stack                      |
+| `RUNBOOKS.md`             | Operator procedures                          |
+| `INCIDENT_RESPONSE.md`    | Incident playbooks                           |
+| `COMMITS_AND_RELEASES.md` | Commit hooks + releases                      |
+
 ## Security & compliance docs
 
-| Doc | Covers |
-|-----|--------|
-| `THREAT_MODEL.md` | STRIDE per component, each threat linked to its S/C/R mitigation + residual risks (C5) |
-| `SOC2_READINESS.md` | Trust Services Criteria mapped to real controls, with coverage + honest gaps (C5) |
-| `SUBPROCESSORS.md` | Sub-processor register + DPA summary; offline-by-default disclosure (C5) |
-| `SECRETS.md` | Secret-manager seam + rotatable envelope encryption (C3) |
-| `IDENTITY.md` | SSO, MFA, account security (C2) |
-| `DATA_LIFECYCLE.md` | At-rest encryption, retention, GDPR erasure (C1) |
-| `DR.md` · `RUNBOOK_BACKUPS.md` | Backups, tested restore/PITR, chaos (R5) |
-| `SLO.md` | SLIs/SLOs, error budgets (R4) |
-| `SUPPLY_CHAIN.md` | SBOM, signed provenance, pinned deps, Dependabot (C4) |
+| Doc                            | Covers                                                                                 |
+| ------------------------------ | -------------------------------------------------------------------------------------- |
+| `THREAT_MODEL.md`              | STRIDE per component, each threat linked to its S/C/R mitigation + residual risks (C5) |
+| `SOC2_READINESS.md`            | Trust Services Criteria mapped to real controls, with coverage + honest gaps (C5)      |
+| `SUBPROCESSORS.md`             | Sub-processor register + DPA summary; offline-by-default disclosure (C5)               |
+| `SECRETS.md`                   | Secret-manager seam + rotatable envelope encryption (C3)                               |
+| `IDENTITY.md`                  | SSO, MFA, account security (C2)                                                        |
+| `DATA_LIFECYCLE.md`            | At-rest encryption, retention, GDPR erasure (C1)                                       |
+| `DR.md` · `RUNBOOK_BACKUPS.md` | Backups, tested restore/PITR, chaos (R5)                                               |
+| `SLO.md`                       | SLIs/SLOs, error budgets (R4)                                                          |
+| `SUPPLY_CHAIN.md`              | SBOM, signed provenance, pinned deps, Dependabot (C4)                                  |
 
 ## Non-negotiables (enforced by the commands)
 

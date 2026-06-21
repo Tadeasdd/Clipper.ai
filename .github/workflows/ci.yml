@@ -299,6 +299,64 @@ jobs:
           npm run integration:f4
           npm run integration:f5
 
+  # ── P3: Playwright E2E + visual-regression DESIGN LOCK. Runs INSIDE the same
+  #    pinned image the baselines were generated in (playwright:v1.61.0-jammy) so
+  #    the screenshot compare is byte-stable. The journey specs drive the REAL
+  #    built app in a real browser against a live backend + Postgres (lead→call,
+  #    ops approve, portal approve), asserting the authoritative Postgres outcome;
+  #    the visual specs lock every marketing page to the committed *-linux.png so a
+  #    stray pixel (moved element, recoloured token, changed copy) fails the gate.
+  #    Offline: local drivers, no external keys. The image already ships Node 24 +
+  #    npm + ffmpeg, so no setup-node / apt install is needed.
+  e2e:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.0-jammy
+      # Chromium needs a real /dev/shm or it crashes on the big full-page shots.
+      options: --ipc=host
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: clipper
+          POSTGRES_PASSWORD: clipper
+          POSTGRES_DB: clipper
+        options: >-
+          --health-cmd "pg_isready -U clipper"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # In a container job the DB service is reached by its label, not localhost.
+      DATABASE_URL: postgres://clipper:clipper@postgres:5432/clipper
+    steps:
+      - uses: actions/checkout@v4
+      - name: Backend deps + boot the API (auto-migrates on start)
+        working-directory: backend
+        run: |
+          npm ci
+          node src/server.js &
+          node -e "const t=Date.now();(async()=>{while(Date.now()-t<60000){try{const r=await fetch('http://localhost:8080/api/health');if(r.ok){process.exit(0)}}catch{};await new Promise(r=>setTimeout(r,1000))}process.exit(1)})()"
+      - name: Build the frontend against the in-container API
+        working-directory: frontend
+        env:
+          # Baked at build time; the browser then calls the backend cross-port and
+          # the session cookie rides (CORS reflects the preview origin, credentials).
+          VITE_API_BASE: http://localhost:8080
+        run: |
+          npm ci
+          npm run build
+      - name: Playwright journeys + visual design lock
+        working-directory: frontend
+        run: npx playwright test
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7
+
   # ── secret scanning: fail the build on a committed credential.
   gitleaks:
     runs-on: ubuntu-latest

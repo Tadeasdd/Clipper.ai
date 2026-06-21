@@ -36,6 +36,7 @@ import { startBillingReporter, stopBillingReporter } from './billing/index.js';
 import { startNotifier, stopNotifier } from './notify/index.js';
 import { startQualityMonitor, stopQualityMonitor } from './metrics/monitor.js';
 import { assertProdConfig, corsOptions } from './lib/config.js';
+import { startRetentionSweep } from './lib/retention.js'; // C1: content lifecycle
 import { log, reportError } from './lib/log.js';
 import { httpMetrics, renderProm, registerGauge } from './lib/telemetry.js';
 import { isDraining, onShutdown, gracefulShutdown, readiness } from './lib/lifecycle.js';
@@ -156,6 +157,8 @@ await migrate();
 // to run them separately via `npm run worker` (SKIP LOCKED makes both safe).
 if (process.env.WORKERS_ENABLED !== 'false') {
   startWorkers(); startPublisher(); startMetricsPoller(); startQualityMonitor(); startBillingReporter(); startNotifier();
+  const stopRetention = startRetentionSweep(); // C1: off unless CONTENT_RETENTION_SWEEP_MS is set
+  onShutdown(() => stopRetention());
   // R2: on shutdown, the job queues drain in-flight work (zero loss); the
   // metrics poller + calibration monitor + billing reporter just stop (their
   // work self-heals — pending billable outcomes flush on the next boot's sweep).

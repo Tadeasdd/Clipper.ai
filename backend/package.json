@@ -41,6 +41,7 @@
     "smoke:rum": "node scripts/smoke-rum.mjs",
     "smoke:prod": "node scripts/smoke-prod.mjs",
     "smoke:perf": "node scripts/smoke-perf.mjs",
+    "smoke:lifecycle": "node scripts/smoke-lifecycle.mjs",
     "seed:demo": "node scripts/seed-demo.mjs",
     "eval": "node scripts/eval.mjs",
     "audit:ci": "npm audit --omit=dev --audit-level=high"

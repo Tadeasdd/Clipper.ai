@@ -9,4 +9,4 @@ const driver = process.env.STORAGE_DRIVER === 's3'
   ? await import('./s3.js')
   : await import('./local.js');
 
-export const { createUploadTarget, saveStream, objectInfo, localPathFor, putFile } = driver;
+export const { createUploadTarget, saveStream, objectInfo, localPathFor, putFile, deleteObject } = driver;

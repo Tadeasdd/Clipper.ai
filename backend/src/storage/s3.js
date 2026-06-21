@@ -1,6 +1,6 @@
 /** S3 driver — presigned PUT, client uploads directly. Loaded only when
  *  STORAGE_DRIVER=s3, so local dev needs no AWS SDK config. */
-import { S3Client, PutObjectCommand, HeadObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, HeadObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { createWriteStream, createReadStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import { tmpdir } from 'node:os';
@@ -20,7 +20,9 @@ const safe = (name) => name.replace(/[^\w.\-]+/g, '_').slice(0, 120);
 
 export async function createUploadTarget(recordingId, filename) {
   const key = `recordings/${recordingId}/${safe(filename || 'upload.bin')}`;
-  const uploadUrl = await getSignedUrl(s3, new PutObjectCommand({ Bucket: BUCKET, Key: key }), { expiresIn: 3600 });
+  // C1: SSE-S3 (AES256) at rest. The signed URL carries the header so the direct
+  // client PUT lands encrypted; bucket-default encryption is the belt to this braces.
+  const uploadUrl = await getSignedUrl(s3, new PutObjectCommand({ Bucket: BUCKET, Key: key, ServerSideEncryption: 'AES256' }), { expiresIn: 3600 });
   return { mode: 's3', key, uploadUrl };
 }
 
@@ -38,9 +40,15 @@ export async function localPathFor(key) {
 }
 
 export async function putFile(key, srcPath) {
-  await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: createReadStream(srcPath) }));
+  await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: createReadStream(srcPath), ServerSideEncryption: 'AES256' }));
   const head = await s3.send(new HeadObjectCommand({ Bucket: BUCKET, Key: key }));
   return { key, bytes: head.ContentLength };
+}
+
+/** C1: hard-delete an object (retention purge / GDPR erasure). Idempotent. */
+export async function deleteObject(key) {
+  try { await s3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key })); return true; }
+  catch { return false; }
 }
 
 export async function objectInfo(key) {

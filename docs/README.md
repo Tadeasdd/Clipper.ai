@@ -40,6 +40,20 @@ The short version:
 Two rules hold throughout: **S0 lands before anything ships**, and **U1 (color
 tokens) lands before any other UI/perf item**.
 
+## Security & compliance docs
+
+| Doc | Covers |
+|-----|--------|
+| `THREAT_MODEL.md` | STRIDE per component, each threat linked to its S/C/R mitigation + residual risks (C5) |
+| `SOC2_READINESS.md` | Trust Services Criteria mapped to real controls, with coverage + honest gaps (C5) |
+| `SUBPROCESSORS.md` | Sub-processor register + DPA summary; offline-by-default disclosure (C5) |
+| `SECRETS.md` | Secret-manager seam + rotatable envelope encryption (C3) |
+| `IDENTITY.md` | SSO, MFA, account security (C2) |
+| `DATA_LIFECYCLE.md` | At-rest encryption, retention, GDPR erasure (C1) |
+| `DR.md` · `RUNBOOK_BACKUPS.md` | Backups, tested restore/PITR, chaos (R5) |
+| `SLO.md` | SLIs/SLOs, error budgets (R4) |
+| `SUPPLY_CHAIN.md` | SBOM, signed provenance, pinned deps, Dependabot (C4) |
+
 ## Non-negotiables (enforced by the commands)
 
 - Offline-first: `builtin`/`local`/dry-run drivers always work with no keys.

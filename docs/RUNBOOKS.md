@@ -35,6 +35,8 @@ page does not duplicate them — it points to them and lists the everyday comman
 | Back up the database      | `backend/ops/backup/backup.sh` (pg_dump custom format → `$BACKUP_DIR`)                                                                                        |
 | Restore the database      | `backend/ops/backup/restore.sh <dump>` (pg_restore into `$RESTORE_DB`) — see [`DR.md`](DR.md) / [`RUNBOOK_BACKUPS.md`](RUNBOOK_BACKUPS.md)                    |
 | Verify a deploy           | the smoke suite (`npm run smoke`, `smoke:pipeline`, `smoke:review`, `smoke:publish`, `smoke:metrics`, `smoke:auth`, …) and `npm run eval` (clip-quality gate) |
+| Deploy (canary)           | `make deploy-staging` or `ops/deploy/canary.sh --target staging` — health-gated, auto-rollback; see [`DEPLOY.md`](DEPLOY.md)                                  |
+| Roll back a bad deploy    | automatic: a canary that fails `/readyz` is discarded and the previous version keeps serving — see [`DEPLOY.md`](DEPLOY.md)                                   |
 
 Makefile targets: `up`, `demo`, `verify`/`smoke`, `seed`, `down`, `logs`.
 

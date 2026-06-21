@@ -1,7 +1,7 @@
 # Clipper.ai — one-command local stack (Capstone D1).
 # Requires Docker (or a compatible engine such as Colima) + the compose plugin.
 
-.PHONY: up demo verify seed smoke down logs
+.PHONY: up demo verify seed smoke down logs deploy-staging canary canary-dry
 
 # Bring up the full app: db + backend (API + workers) + frontend.
 #   frontend → http://localhost:5173   backend → http://localhost:8080
@@ -29,3 +29,12 @@ down:
 
 logs:
 	docker compose logs -f
+
+# ── D5: safe deploys. Canary the new build against the staging overlay, health-
+#    gate it on /readyz, then promote or auto-rollback. See docs/DEPLOY.md.
+deploy-staging canary:
+	bash ops/deploy/canary.sh --target staging
+
+# Print the deploy plan without building or starting anything.
+canary-dry:
+	bash ops/deploy/canary.sh --dry-run

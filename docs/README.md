@@ -61,6 +61,7 @@ tokens) lands before any other UI/perf item**.
 | `BUILD_STAGES.md`         | Original B/F roadmap — see its status banner |
 | `DEV_STACK.md`            | One-command local stack                      |
 | `RUNBOOKS.md`             | Operator procedures                          |
+| `DEPLOY.md`               | Staging, canary deploy & rollback (D5)       |
 | `INCIDENT_RESPONSE.md`    | Incident playbooks                           |
 | `COMMITS_AND_RELEASES.md` | Commit hooks + releases                      |
 

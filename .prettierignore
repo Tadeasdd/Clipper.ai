@@ -12,8 +12,10 @@ package-lock.json
 **/package-lock.json
 CHANGELOG.md
 
-# Hand-aligned GitHub Actions workflows (flow-style maps Prettier would expand).
+# Hand-aligned GitHub Actions workflows + compose files (flow-style maps and
+# healthcheck arrays Prettier would expand into churn).
 .github/
+docker-compose*.yml
 
 # Binary / generated assets Prettier shouldn't touch.
 *.min.js

@@ -1,0 +1,60 @@
+# Clipper.ai — staging + safe deploys (Capstone D5).
+#
+# push to main      → deploy to STAGING automatically (a real canary deploy of the
+#                     full stack on the runner; health-gated, auto-rollback).
+# workflow_dispatch → deploy to PRODUCTION: a single, reviewed action. The job is
+#                     pinned to the `production` GitHub Environment, so if that
+#                     environment requires reviewers, one approval gates the run.
+#
+# Offline-safe: the staging job needs no external secrets (it runs the canary
+# against an ephemeral stack on the runner). The prod job runs `--dry-run` until a
+# real host + secrets are wired, so this workflow is green out of the box.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Deploy target"
+        type: choice
+        options: [staging, production]
+        default: staging
+
+permissions:
+  contents: read
+
+jobs:
+  # ── automatic: every push to main is canary-deployed to staging. The canary
+  #    must pass its /readyz health gate or the deploy auto-rolls-back (exit 1 →
+  #    the job goes red, the stable version is what's left running).
+  staging:
+    if: github.event_name == 'push' || github.event.inputs.target == 'staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: Canary deploy → staging (health-gated, auto-rollback)
+        env:
+          HEALTH_TIMEOUT: "150"
+        run: bash ops/deploy/canary.sh --target staging
+      - name: Tear down the ephemeral stack
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.staging.yml --profile canary down -v || true
+
+  # ── manual + reviewed: production. Pin to the `production` environment so its
+  #    protection rules (required reviewers) make this "one reviewed action".
+  #    Ships in --dry-run until a real host/registry + secrets are configured;
+  #    flip to a real deploy by providing CONFIRM_PROD + the host secrets and
+  #    dropping --dry-run.
+  production:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'production'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Canary deploy → production (reviewed; dry-run until a host is wired)
+        run: bash ops/deploy/canary.sh --target prod --dry-run

@@ -7,6 +7,7 @@ import { validate, paginate } from '../lib/validate.js';
 import { meterStatus } from '../lib/metering.js';
 import { clientHealth, healthOverview } from '../ops/health.js';
 import { audit } from '../lib/audit.js';
+import { purgeRecordings } from '../lib/retention.js';
 
 const r = Router();
 
@@ -102,6 +103,23 @@ r.patch('/:id', requireAuth('ops', 'account_manager'), validate(clientSchema), a
       clientId: req.params.id, entityType: 'client', entityId: req.params.id,
       summary: lifecycleStage ? `Lifecycle → ${lifecycleStage}` : 'Client updated', meta: { lifecycleStage } });
     res.json(rows[0]);
+  } catch (e) { next(e); }
+});
+
+// C1 — GDPR right-to-erasure. Removes ALL of a client's content + derivatives
+// (raw media, rendered clips, published outbox objects) and the DB rows that
+// descend from them, in one transaction, and records an auditable manifest. The
+// client ACCOUNT row and the audit trail survive — erasure is of content, not
+// identity, and the deletion itself must remain provable. Ops-only.
+r.delete('/:id/content', requireAuth('ops'), async (req, res, next) => {
+  try {
+    const exists = await q('SELECT id FROM clients WHERE id = $1', [req.params.id]);
+    if (!exists.rows.length) return res.status(404).json({ error: 'unknown client' });
+    const recs = await q('SELECT id FROM recordings WHERE client_id = $1', [req.params.id]);
+    const manifest = await purgeRecordings(recs.rows.map((x) => x.id), {
+      reason: 'erasure', clientId: req.params.id, actorId: req.user?.id,
+    });
+    res.json({ clientId: req.params.id, erased: manifest });
   } catch (e) { next(e); }
 });
 

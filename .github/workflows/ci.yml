@@ -199,6 +199,11 @@ jobs:
       - run: npm run smoke:audit
         timeout-minutes: 3
 
+      # ── C1: content at-rest encryption + GDPR erasure + retention purge,
+      #        all offline (Postgres only, dev-default content key).
+      - run: npm run smoke:lifecycle
+        timeout-minutes: 3
+
       # ── P2: Core Web Vitals RUM — public beacon persists with server-derived
       #        ratings; ops aggregate computes p75 + trend; read is walled.
       - run: npm run smoke:rum

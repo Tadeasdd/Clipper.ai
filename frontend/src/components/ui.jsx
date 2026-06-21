@@ -244,7 +244,9 @@ class ErrorBoundary extends React.Component {
       return (
         <div style={{ minHeight: '100vh', background: '#000', color: '#e7e5e4', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', sans-serif", padding: '24px' }}>
           <div style={{ maxWidth: 420, textAlign: 'center' }}>
-            <div style={{ fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#78716c', marginBottom: 12 }}>Something went wrong</div>
+            {/* P4 a11y: #78716c is 4.37:1 on black (sub-AA); nudged to #7c756f
+                (4.63:1), the same AA-compliant shade U5 adopted for --color-stone-500. */}
+            <div style={{ fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#7c756f', marginBottom: 12 }}>Something went wrong</div>
             <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', marginBottom: 12, lineHeight: 1.1 }}>This page hit an unexpected error.</h1>
             <p style={{ color: '#a8a29e', lineHeight: 1.6, marginBottom: 24 }}>Reloading usually clears it. If it keeps happening, let us know and we will take a look.</p>
             <button onClick={() => { if (typeof window !== 'undefined') window.location.reload(); }} style={{ background: 'var(--color-brand)', color: '#000', border: 'none', padding: '10px 22px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>Reload</button>

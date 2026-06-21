@@ -1,0 +1,30 @@
+# Dependencies, build output, and generated artifacts.
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+storybook-static/
+**/storybook-static/
+.lighthouseci/
+coverage/
+sbom/
+package-lock.json
+**/package-lock.json
+CHANGELOG.md
+
+# Binary / generated assets Prettier shouldn't touch.
+*.min.js
+*.min.css
+*.png
+*.jpg
+*.svg
+
+# Playwright visual-regression baselines + reports.
+**/*-snapshots/**
+playwright-report/
+test-results/
+
+# U-track preservation contract: the SVG-heavy landing visuals are pixel-locked
+# (P3 visual-regression). Never let a formatter rewrite them.
+frontend/src/components/landing-visuals.jsx
+frontend/src/components/visuals/

@@ -1,0 +1,24 @@
+{
+  "name": "clipper-ai",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Clipper.ai — repo-level developer tooling: pre-commit hooks, commit hygiene, and release automation (Capstone D2). The product code lives in backend/ and frontend/.",
+  "scripts": {
+    "prepare": "husky",
+    "format": "prettier --check .",
+    "format:write": "prettier --write .",
+    "secretscan": "secretlint \"**/*\"",
+    "commitlint": "commitlint",
+    "release": "commit-and-tag-version",
+    "release:dry": "commit-and-tag-version --dry-run"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.6.1",
+    "@secretlint/secretlint-rule-preset-recommend": "^9.0.0",
+    "commit-and-tag-version": "^12.5.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.3.0",
+    "prettier": "^3.4.2",
+    "secretlint": "^9.0.0"
+  }
+}

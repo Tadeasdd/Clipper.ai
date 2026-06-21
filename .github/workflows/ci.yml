@@ -471,3 +471,60 @@ jobs:
       - uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high
+
+  # ── C4: supply-chain provenance. Emit a CycloneDX SBOM for each npm package
+  #    (straight from the lockfile, no install) on every run; upload it as a build
+  #    artifact. On push (where OIDC is available), sign a SLSA build-provenance
+  #    attestation over the built frontend bundle and a signed SBOM attestation —
+  #    keyless via Sigstore, no secrets. The attest steps are gated to push so
+  #    fork PRs (which can't mint an OIDC token) never fail the gate.
+  sbom:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write       # mint the OIDC token Sigstore signs with (push only)
+      attestations: write   # write the attestation to the repo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      # Install both trees so the SBOM reflects the actually-resolved dependency
+      # graph (npm ls). A lockfile-only scan trips on optional platform packages
+      # whose transitive deps the lockfile doesn't fully pin; the installed tree
+      # (platform-filtered) is clean.
+      - name: Install dependencies
+        run: |
+          ( cd backend && npm ci )
+          ( cd frontend && npm ci )
+      - name: Generate CycloneDX SBOMs
+        run: |
+          set -e
+          mkdir -p sbom
+          ( cd backend  && npx --yes @cyclonedx/cyclonedx-npm@5.0.0 --output-format JSON --output-file ../sbom/backend.cdx.json )
+          ( cd frontend && npx --yes @cyclonedx/cyclonedx-npm@5.0.0 --output-format JSON --output-file ../sbom/frontend.cdx.json )
+          # Sanity-check both are well-formed CycloneDX before publishing them.
+          for f in sbom/backend.cdx.json sbom/frontend.cdx.json; do
+            node -e "const s=require('./$f');if(s.bomFormat!=='CycloneDX')process.exit(1);console.log('$f',s.specVersion,(s.components||[]).length,'components')"
+          done
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom/
+          retention-days: 90
+      # The shipped artifact is the built frontend bundle; attest provenance over it.
+      - name: Build the frontend bundle (attestation subject)
+        if: github.event_name == 'push'
+        working-directory: frontend
+        run: npm run build
+      - name: Attest build provenance (SLSA) for the frontend bundle
+        if: github.event_name == 'push'
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: frontend/dist/**
+      - name: Attest the SBOM for the frontend bundle
+        if: github.event_name == 'push'
+        uses: actions/attest-sbom@v2
+        with:
+          subject-path: frontend/dist/**
+          sbom-path: sbom/frontend.cdx.json

@@ -13,10 +13,20 @@
  * with this source (same contract as lib/crypto.js / PUBLISH_TOKEN_KEY). */
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:crypto';
 import { Transform } from 'node:stream';
+import { getSecret } from './secrets.js';
 
-const KEY = scryptSync(
-  process.env.CONTENT_ENCRYPTION_KEY || 'dev-content-key — set CONTENT_ENCRYPTION_KEY in production',
-  'clipper-content-v1', 32);
+// C3: the content key now comes through the secret manager (lib/secrets) rather
+// than straight off process.env. Derivation (scrypt + the 'clipper-content-v1'
+// salt) is unchanged, so existing encrypted objects stay readable. Derived
+// lazily + memoized so it sees secrets resolved at boot; resetContentKey() lets
+// a test or a rotation pick up a changed CONTENT_ENCRYPTION_KEY.
+export const DEV_CONTENT_KEY = 'dev-content-key — set CONTENT_ENCRYPTION_KEY in production';
+let KEY_CACHE = null;
+function key() {
+  if (!KEY_CACHE) KEY_CACHE = scryptSync(getSecret('CONTENT_ENCRYPTION_KEY') || DEV_CONTENT_KEY, 'clipper-content-v1', 32);
+  return KEY_CACHE;
+}
+export function resetContentKey() { KEY_CACHE = null; }
 
 // On-disk layout: MAGIC(4) | VERSION(1) | IV(12) | <ciphertext> | TAG(16).
 // The GCM auth tag is only known after the cipher finishes and a stream can't
@@ -33,7 +43,7 @@ export const OVERHEAD_BYTES = HEADER_BYTES + TAG_BYTES;
 /** A Transform that turns a plaintext media stream into an encrypted at-rest one. */
 export function encryptTransform() {
   const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', KEY, iv);
+  const cipher = createCipheriv('aes-256-gcm', key(), iv);
   let headerSent = false;
   const header = () => Buffer.concat([MAGIC, Buffer.from([VERSION]), iv]);
   return new Transform({
@@ -75,7 +85,7 @@ export function decryptTransform() {
           if (header.length < HEADER_BYTES) return cb();
           if (!isEncrypted(header)) return cb(new Error('content-crypto: missing magic header'));
           const iv = header.subarray(MAGIC.length + 1, MAGIC.length + 1 + 12);
-          decipher = createDecipheriv('aes-256-gcm', KEY, iv);
+          decipher = createDecipheriv('aes-256-gcm', key(), iv);
           chunk = header.subarray(HEADER_BYTES);
         }
         // Keep the final TAG_BYTES buffered; everything before is ciphertext.

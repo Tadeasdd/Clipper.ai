@@ -8,7 +8,8 @@ import { Router } from 'express';
 import { createHmac, timingSafeEqual, randomBytes } from 'node:crypto';
 import { q } from '../db/index.js';
 import { id } from '../lib/ids.js';
-import { encryptJson } from '../lib/crypto.js';
+import { encryptJson, DEV_PUBLISH_KEY } from '../lib/crypto.js';
+import { getSecret } from '../lib/secrets.js';
 import { objectInfo, localPathFor } from '../storage/index.js';
 import { PLATFORMS, scheduleClip } from '../publish/index.js';
 import { requireAuth, INTERNAL } from '../lib/auth.js';
@@ -29,7 +30,7 @@ const YT_SCOPES = [
 const STATE_TTL_S = 600;
 const oauthRedirectUri = () =>
   `${(process.env.OAUTH_REDIRECT_BASE || 'http://localhost:8080').replace(/\/$/, '')}/api/publish/connections/youtube/oauth/callback`;
-const stateKey = () => process.env.PUBLISH_TOKEN_KEY || 'dev-publish-key — set PUBLISH_TOKEN_KEY in production';
+const stateKey = () => getSecret('PUBLISH_TOKEN_KEY') || DEV_PUBLISH_KEY;
 
 // State is stateless and HMAC-signed: the authenticated /start endpoint binds
 // the clientId into it, the unauthenticated callback trusts only what verifies.

@@ -21,7 +21,8 @@ import {
   requireAuth, loginAllowed, recordLoginAttempt, clearLoginAttempts, COOKIE, SESSION_TTL_H,
   listSessions, revokeSessionById, revokeOtherSessions,
 } from '../lib/auth.js';
-import { encryptJson, decryptJson } from '../lib/crypto.js';
+import { encryptJson, decryptJson, DEV_PUBLISH_KEY } from '../lib/crypto.js';
+import { getSecret } from '../lib/secrets.js';
 import {
   generateSecret, verifyTotp, otpauthUri, generateRecoveryCodes, spendRecoveryCode,
 } from '../lib/totp.js';
@@ -54,7 +55,7 @@ const sessionMeta = (req, authMethod) => ({ ip: req.ip, userAgent: req.headers['
  *  with a key derived from the same secret credential encryption uses; it carries
  *  only a user id + purpose + expiry, never anything sensitive. */
 const CHALLENGE_KEY = scryptSync(
-  process.env.PUBLISH_TOKEN_KEY || 'dev-publish-key — set PUBLISH_TOKEN_KEY in production',
+  getSecret('PUBLISH_TOKEN_KEY') || DEV_PUBLISH_KEY,
   'clipper-challenge-v1', 32);
 const CHALLENGE_TTL_MS = Number(process.env.MFA_CHALLENGE_TTL_MS || 5 * 60_000);
 

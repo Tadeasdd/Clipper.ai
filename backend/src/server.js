@@ -44,8 +44,9 @@ import { circuitGauge } from './lib/resilience.js';
 import { sloGauge } from './ops/slo.js';
 import { costGauge } from './ops/cost-ledger.js';
 
-// M7: refuse to boot insecurely in production (dev/test are untouched).
-assertProdConfig();
+// M7/C3: load secrets via the manager and refuse to boot insecurely in
+// production (dev/test are untouched).
+await assertProdConfig();
 
 const app = express();
 app.disable('x-powered-by');

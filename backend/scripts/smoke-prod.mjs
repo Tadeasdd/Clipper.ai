@@ -26,10 +26,15 @@ function bootExit(env) {
 }
 
 // ── 1. production boot must FAIL FAST on insecure secrets ────────────────────
-let res = await bootExit({ NODE_ENV: 'production', DATABASE_URL: DB, PUBLISH_TOKEN_KEY: '', PORT: '8096', WORKERS_ENABLED: 'false' });
+const STRONG_CONTENT_KEY = 'a-strong-prod-content-value';
+let res = await bootExit({ NODE_ENV: 'production', DATABASE_URL: DB, PUBLISH_TOKEN_KEY: '', CONTENT_ENCRYPTION_KEY: STRONG_CONTENT_KEY, PORT: '8096', WORKERS_ENABLED: 'false' });
 assert(res.code !== 0 && /PUBLISH_TOKEN_KEY/.test(res.err),
   `boot fails fast in production without PUBLISH_TOKEN_KEY (exit ${res.code})`);
-res = await bootExit({ NODE_ENV: 'production', DATABASE_URL: '', PUBLISH_TOKEN_KEY: STRONG_KEY, PORT: '8096', WORKERS_ENABLED: 'false' });
+// C3: the content-at-rest key is now equally load-bearing in production.
+res = await bootExit({ NODE_ENV: 'production', DATABASE_URL: DB, PUBLISH_TOKEN_KEY: STRONG_KEY, CONTENT_ENCRYPTION_KEY: '', PORT: '8096', WORKERS_ENABLED: 'false' });
+assert(res.code !== 0 && /CONTENT_ENCRYPTION_KEY/.test(res.err),
+  `boot fails fast in production without CONTENT_ENCRYPTION_KEY (exit ${res.code})`);
+res = await bootExit({ NODE_ENV: 'production', DATABASE_URL: '', PUBLISH_TOKEN_KEY: STRONG_KEY, CONTENT_ENCRYPTION_KEY: STRONG_CONTENT_KEY, PORT: '8096', WORKERS_ENABLED: 'false' });
 assert(res.code !== 0 && /DATABASE_URL/.test(res.err),
   `boot fails fast in production without DATABASE_URL (exit ${res.code})`);
 
@@ -38,6 +43,7 @@ const PORT = 8097, BASE = `http://localhost:${PORT}`;
 const srv = spawn('node', [SERVER], {
   env: {
     ...process.env, NODE_ENV: 'production', DATABASE_URL: DB, PUBLISH_TOKEN_KEY: STRONG_KEY,
+    CONTENT_ENCRYPTION_KEY: STRONG_CONTENT_KEY,
     CORS_ORIGINS: 'https://app.clipper.ai', PORT: String(PORT), WORKERS_ENABLED: 'false',
     STORAGE_DIR: process.env.STORAGE_DIR || '/tmp/clipper-prod-store', RATELIMIT_LEADS_PER_MIN: '3',
   },

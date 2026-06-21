@@ -449,7 +449,13 @@ jobs:
       - uses: github/codeql-action/init@v3
         with:
           languages: javascript-typescript
+      # CodeQL still runs the full JS/TS analysis on every push. The SARIF UPLOAD
+      # to Code Scanning needs GitHub Advanced Security, which a private repo
+      # doesn't have — that upload returns a "configuration error". continue-on-error
+      # keeps that from failing CI (the analysis is non-blocking signal); enable GHAS
+      # and results start flowing to the Security tab with no further change here.
       - uses: github/codeql-action/analyze@v3
+        continue-on-error: true
 
   # ── dependency review: block PRs that introduce high-severity dependencies.
   dependency-review:

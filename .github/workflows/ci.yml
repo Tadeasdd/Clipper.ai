@@ -84,10 +84,16 @@ jobs:
         with: { node-version: 22, cache: npm, cache-dependency-path: backend/package-lock.json }
       - run: npm ci
       - run: node --check src/server.js
+      # ── D3: unit coverage gate — pure core logic (stats/validate/password-policy)
+      #    must stay ≥ the c8 threshold. Offline, no DB, so it runs first.
+      - run: npm run coverage
       # ── P5: index audit — every hot query hits an index (EXPLAIN with
       #    enable_seqscan=off). Schema-only, no data/keys; runs early off the
       #    Postgres service.
       - run: npm run smoke:perf
+      # ── D3: migration drift/forward-safe — every migration applies cleanly on a
+      #    fresh DB and a second migrate() is a no-op (creates/drops a throwaway DB).
+      - run: npm run test:migration
       - name: Audit shipped dependencies
         run: npm run audit:ci
 
@@ -118,6 +124,10 @@ jobs:
           node src/server.js &
           for i in $(seq 1 20); do curl -sf localhost:8080/api/health && break || sleep 1; done
           npm run smoke
+      # ── D3: API contract — the live response shapes the dashboards/portal depend
+      #    on are honoured (a dropped/renamed/retyped field fails this gate).
+      - run: npm run test:contract
+        timeout-minutes: 2
 
       # ── M1: offline whisper ASR → real word timestamps in analyze windows.
       - run: npm run smoke:transcribe
@@ -431,6 +441,21 @@ jobs:
       - name: k6 load test — hot read paths p95 + error-rate targets
         working-directory: backend
         run: k6 run loadtest/read-paths.js
+
+  # ── D3: mutation testing on the pure core logic (stats/validate/password-policy).
+  #    Offline, no DB — its own job so it parallelises and never slows the main
+  #    backend path. Stryker reports the mutation score and fails below the break
+  #    threshold in stryker.conf.json (a gutted test suite can't pass silently).
+  mutation:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: backend } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - run: npm ci
+      - name: Mutation score (break gate in stryker.conf.json)
+        run: npm run test:mutation
 
   # ── secret scanning: fail the build on a committed credential.
   gitleaks:

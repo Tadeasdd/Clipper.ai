@@ -12,6 +12,9 @@ package-lock.json
 **/package-lock.json
 CHANGELOG.md
 
+# Hand-aligned GitHub Actions workflows (flow-style maps Prettier would expand).
+.github/
+
 # Binary / generated assets Prettier shouldn't touch.
 *.min.js
 *.min.css

@@ -47,7 +47,13 @@
     "rewrap": "node scripts/rewrap-secrets.mjs",
     "seed:demo": "node scripts/seed-demo.mjs",
     "eval": "node scripts/eval.mjs",
-    "audit:ci": "npm audit --omit=dev --audit-level=high"
+    "audit:ci": "npm audit --omit=dev --audit-level=high",
+    "test": "npm run coverage",
+    "test:unit": "node --test test/unit/*.test.mjs",
+    "coverage": "c8 --check-coverage --lines 95 --functions 100 --branches 90 --include 'src/lib/stats.js' --include 'src/lib/validate.js' --include 'src/lib/password-policy.js' --reporter text --reporter lcov node --test test/unit/*.test.mjs",
+    "test:mutation": "stryker run",
+    "test:contract": "node --test test/contract/*.test.mjs",
+    "test:migration": "node --test test/migration/*.test.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1066.0",
@@ -55,5 +61,9 @@
     "cors": "^2.8.5",
     "express": "^4.21.0",
     "pg": "^8.21.0"
+  },
+  "devDependencies": {
+    "@stryker-mutator/core": "^8.7.1",
+    "c8": "^10.1.3"
   }
 }

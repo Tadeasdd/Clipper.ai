@@ -315,6 +315,10 @@ jobs:
       - run: npm ci
       - name: Build Storybook (catalogue builds)
         run: npm run build-storybook
+      # The test-runner uses its own bundled Playwright; install the browser it
+      # expects so it never falls back to the image's possibly-mismatched revision.
+      - name: Install the test-runner's Chromium
+        run: npx playwright install chromium
       - name: Serve the static build + axe every story (a11y gate)
         run: |
           npx http-server storybook-static -p 6006 -s &

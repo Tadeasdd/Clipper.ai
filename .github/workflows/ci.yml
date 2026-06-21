@@ -331,12 +331,9 @@ jobs:
       DATABASE_URL: postgres://clipper:clipper@postgres:5432/clipper
     steps:
       - uses: actions/checkout@v4
-      - name: Backend deps + boot the API (auto-migrates on start)
+      - name: Backend deps
         working-directory: backend
-        run: |
-          npm ci
-          node src/server.js &
-          node -e "const t=Date.now();(async()=>{while(Date.now()-t<60000){try{const r=await fetch('http://localhost:8080/api/health');if(r.ok){process.exit(0)}}catch{};await new Promise(r=>setTimeout(r,1000))}process.exit(1)})()"
+        run: npm ci
       - name: Build the frontend against the in-container API
         working-directory: frontend
         env:
@@ -346,9 +343,16 @@ jobs:
         run: |
           npm ci
           npm run build
-      - name: Playwright journeys + visual design lock
+      # The backend MUST be booted in the SAME step as the test run: in a
+      # container job a server backgrounded in an earlier step doesn't survive
+      # into a later one (each step is its own exec session), which left the
+      # journey specs hitting a dead :8080. Boot it here, wait for health, test.
+      - name: Boot the API + run Playwright (journeys + visual design lock)
         working-directory: frontend
-        run: npx playwright test
+        run: |
+          ( cd ../backend && node src/server.js ) &
+          node -e "const t=Date.now();(async()=>{while(Date.now()-t<60000){try{const r=await fetch('http://localhost:8080/api/health');if(r.ok){process.exit(0)}}catch{};await new Promise(r=>setTimeout(r,1000))}process.exit(1)})()"
+          npx playwright test
       - name: Upload Playwright report on failure
         if: failure()
         uses: actions/upload-artifact@v4

@@ -84,6 +84,10 @@ jobs:
         with: { node-version: 22, cache: npm, cache-dependency-path: backend/package-lock.json }
       - run: npm ci
       - run: node --check src/server.js
+      # ── P5: index audit — every hot query hits an index (EXPLAIN with
+      #    enable_seqscan=off). Schema-only, no data/keys; runs early off the
+      #    Postgres service.
+      - run: npm run smoke:perf
       - name: Audit shipped dependencies
         run: npm run audit:ci
 
@@ -360,6 +364,68 @@ jobs:
           name: playwright-report
           path: frontend/playwright-report/
           retention-days: 7
+
+  # ── P4: Storybook design-system docs. Two gates: (1) `build-storybook` proves
+  #    the catalogue builds (offline, no keys); (2) the axe test-runner visits
+  #    every story in a real browser and fails on any a11y violation — the
+  #    "a11y addon clean" acceptance, enforced not just surfaced. Runs in the same
+  #    pinned Playwright image as the P3 e2e job (browser + byte-stable), Node 24.
+  storybook:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.0-jammy
+      options: --ipc=host
+    defaults: { run: { working-directory: frontend } }
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - name: Build Storybook (catalogue builds)
+        run: npm run build-storybook
+      # The test-runner uses its own bundled Playwright; install the browser it
+      # expects so it never falls back to the image's possibly-mismatched revision.
+      - name: Install the test-runner's Chromium
+        run: npx playwright install chromium
+      - name: Serve the static build + axe every story (a11y gate)
+        run: |
+          npx http-server storybook-static -p 6006 -s &
+          npx wait-on tcp:127.0.0.1:6006
+          npm run test-storybook -- --url http://127.0.0.1:6006 --maxWorkers=2
+
+  # ── P5: k6 load test — the hot read paths must meet their p95 + error-rate
+  #    targets at the target concurrency (loadtest/read-paths.js + README). A
+  #    dedicated job so the core offline gates never depend on k6; boots the real
+  #    backend against the Postgres service, no external keys.
+  loadtest:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: clipper
+          POSTGRES_PASSWORD: clipper
+          POSTGRES_DB: clipper
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U clipper"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://clipper:clipper@localhost:5432/clipper
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - uses: grafana/setup-k6-action@v1
+      - name: Boot the API (auto-migrates on start)
+        working-directory: backend
+        run: |
+          npm ci
+          node src/server.js &
+          for i in $(seq 1 30); do curl -sf localhost:8080/api/health && break || sleep 1; done
+      - name: k6 load test — hot read paths p95 + error-rate targets
+        working-directory: backend
+        run: k6 run loadtest/read-paths.js
 
   # ── secret scanning: fail the build on a committed credential.
   gitleaks:

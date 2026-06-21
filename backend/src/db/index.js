@@ -5,8 +5,20 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const { Pool } = pg;
+// P5: pool tuning. The bare pool had no bound or timeouts — one slow/leaky
+// dependency could exhaust connections or hang a request indefinitely. Bounded
+// size + connect/idle timeouts + a generous statement_timeout (kills a runaway
+// query instead of pinning a connection forever) make the single-node ops box
+// predictable under load. Every knob is env-overridable; the defaults are safe
+// for CI and offline dev (statement_timeout is generous enough for every real
+// query + migration). The export shape (pool, q, migrate) is unchanged.
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgres://clipper:clipper@localhost:5432/clipper',
+  max: Number(process.env.PG_POOL_MAX || 10),
+  idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT_MS || 30000),
+  connectionTimeoutMillis: Number(process.env.PG_CONNECT_TIMEOUT_MS || 5000),
+  statement_timeout: Number(process.env.PG_STATEMENT_TIMEOUT_MS || 30000),
+  application_name: 'clipper-ops',
 });
 
 export const q = (text, params) => pool.query(text, params);

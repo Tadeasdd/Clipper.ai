@@ -63,7 +63,7 @@
     "pg": "^8.21.0"
   },
   "devDependencies": {
-    "@stryker-mutator/core": "^8.7.1",
+    "@stryker-mutator/core": "^9.6.1",
     "c8": "^10.1.3"
   }
 }

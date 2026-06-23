@@ -1,0 +1,18 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "packageManager": "npm",
+  "testRunner": "command",
+  "commandRunner": {
+    "command": "node --test test/unit/*.test.mjs"
+  },
+  "coverageAnalysis": "off",
+  "mutate": ["src/lib/stats.js", "src/lib/validate.js", "src/lib/password-policy.js"],
+  "reporters": ["clear-text", "progress"],
+  "thresholds": {
+    "high": 90,
+    "low": 75,
+    "break": 70
+  },
+  "tempDirName": ".stryker-tmp",
+  "cleanTempDir": true
+}

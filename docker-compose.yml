@@ -21,7 +21,10 @@ services:
       POSTGRES_PASSWORD: clipper
       POSTGRES_DB: clipper
     ports:
-      - "5432:5432"
+      # Host publish is a convenience for tools on the host; the app reaches the
+      # DB over the compose network (db:5432). Override DB_HOST_PORT to avoid a
+      # clash with another local Postgres (e.g. a staging canary run).
+      - "${DB_HOST_PORT:-5432}:5432"
     volumes:
       - clipper-db:/var/lib/postgresql/data
     healthcheck:

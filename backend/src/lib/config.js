@@ -1,23 +1,38 @@
-/** M7 — production config guards.
+/** M7 — production config guards. C3 — secret-manager-backed boot.
  *
- *  In production the offline-friendly defaults are dangerous: the dev
- *  PUBLISH_TOKEN_KEY makes every stored credential decryptable, and an unset
- *  DATABASE_URL would silently fall back to a local insecure DSN. Fail fast on
- *  boot rather than run insecurely. In dev/test (NODE_ENV !== 'production')
- *  none of this applies, so the smokes and offline dev are untouched.
+ *  In production the offline-friendly defaults are dangerous: a dev key makes
+ *  stored credentials/media decryptable, and an unset DATABASE_URL would silently
+ *  fall back to a local insecure DSN. Fail fast on boot rather than run
+ *  insecurely. In dev/test (NODE_ENV !== 'production') none of the key/DSN checks
+ *  apply, so the smokes and offline dev are untouched.
+ *
+ *  Keys are resolved through the secret manager (lib/secrets), so a deployment
+ *  can source them from a manager instead of env — initSecrets() runs first and
+ *  fails fast if the configured manager is unreachable.
  */
-const DEV_TOKEN_KEY = 'dev-publish-key — set PUBLISH_TOKEN_KEY in production';
+import { getSecret, initSecrets } from './secrets.js';
+import { DEV_PUBLISH_KEY } from './crypto.js';
+import { DEV_CONTENT_KEY } from './content-crypto.js';
 
-export function assertProdConfig(env = process.env) {
-  if (env.NODE_ENV !== 'production') return;
+const MIN_KEY_LEN = 16;
+
+function checkKey(problems, name, devDefault, risk) {
+  const val = getSecret(name);
+  if (!val || val === devDefault) problems.push(`${name} is unset or the dev default (${risk})`);
+  else if (val.length < MIN_KEY_LEN) problems.push(`${name} is too short (use a strong random secret, ≥${MIN_KEY_LEN} chars)`);
+}
+
+export async function assertProdConfig(env = process.env) {
+  const provider = await initSecrets(); // fail fast if the secret manager is unreachable
+  if (env.NODE_ENV !== 'production') return { provider };
   const problems = [];
-  const key = env.PUBLISH_TOKEN_KEY;
-  if (!key || key === DEV_TOKEN_KEY) problems.push('PUBLISH_TOKEN_KEY is unset or the dev default (stored credentials would be decryptable)');
-  else if (key.length < 16) problems.push('PUBLISH_TOKEN_KEY is too short (use a strong random secret, ≥16 chars)');
+  checkKey(problems, 'PUBLISH_TOKEN_KEY', DEV_PUBLISH_KEY, 'stored credentials would be decryptable');
+  checkKey(problems, 'CONTENT_ENCRYPTION_KEY', DEV_CONTENT_KEY, 'stored client media would be decryptable');
   if (!env.DATABASE_URL) problems.push('DATABASE_URL is unset (refusing the insecure local fallback in production)');
   if (problems.length) {
     throw new Error(`refusing to boot in production with insecure config:\n  - ${problems.join('\n  - ')}`);
   }
+  return { provider };
 }
 
 /** CORS options for the `cors` middleware. With CORS_ORIGINS set (a comma list)

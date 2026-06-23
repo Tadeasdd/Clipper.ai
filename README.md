@@ -74,3 +74,10 @@ Current status: **F1–F5 ✅ · B1–B7 ✅** — the full staged plan is built
 - `frontend/dist` → any static host (Vercel, Netlify, Cloudflare Pages).
 - `backend` → any Node host + managed Postgres; apply `backend/src/db/schema.sql`.
 - CI builds both on every push (`.github/workflows/ci.yml`).
+
+## Contributing
+
+Run `npm install` once at the repo root to activate the local pre-commit hooks
+(format + secret-scan + lint/typecheck) and the commit-message gate. Commit
+conventions, the hook chain, and how releases are cut are documented in
+[`docs/COMMITS_AND_RELEASES.md`](docs/COMMITS_AND_RELEASES.md).

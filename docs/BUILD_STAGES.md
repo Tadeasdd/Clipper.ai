@@ -5,6 +5,15 @@ Guiding rule from the business model: **when choosing between software customers
 use and software employees use to deliver client outcomes, choose the latter.**
 The ops dashboard is the product; the client dashboard is a window into it.
 
+> **Status (read this first).** The B1–B7 / F1–F5 ✅ marks below describe the
+> **machinery and offline drivers** — the queue, status machine, storage, auth,
+> and the `builtin`/`local` pipeline. They do **not** by themselves describe the
+> **content intelligence** that is the actual product (semantic moment scoring,
+> real editor-grade hooks, live publish + metrics). That layer is the **MVP track
+> (M1–M8) — now delivered** (`MVP_BACKEND_PLAN.md`), and it is hardened/extended
+> by the Excellence (S/U) and Capstone (Q/R/E/C/D/P/O) tracks. For the
+> authoritative current status of the whole program, see `docs/README.md`.
+
 Stages are ordered so every stage ships something usable. Frontend stages are
 `F#`, backend stages are `B#`. Dependencies are noted.
 
@@ -13,6 +22,7 @@ Stages are ordered so every stage ships something usable. Frontend stages are
 ## Frontend
 
 ### F1 — Marketing site live (✅ this repo)
+
 - The sandbox (`frontend/src/App.jsx`) running as a real Vite + React +
   Tailwind v4 build. Verified: `npm run build` passes.
 - PostHog analytics, runtime SEO/JSON-LD, the interactive Studio demo,
@@ -21,6 +31,7 @@ Stages are ordered so every stage ships something usable. Frontend stages are
 - **Done when:** site is on a domain, PostHog receives real events.
 
 ### F2 — Split the monolith (✅)
+
 - Break `App.jsx` (~7.7k lines) into modules: `pages/`, `components/`,
   `lib/` (track, SEO, demo pipeline). No behavior change — pure refactor,
   protected by the F1 build as a regression check.
@@ -34,6 +45,7 @@ Stages are ordered so every stage ships something usable. Frontend stages are
   test (`npm run smoke`) wired into CI.
 
 ### F3 — Lead capture wired to backend (✅)
+
 - The waitlist/strategy-call forms currently capture to PostHog only.
   Point them at `POST /api/clients` + a `/api/leads` endpoint (B2).
 - **Depends on:** B1–B2.
@@ -45,7 +57,9 @@ Stages are ordered so every stage ships something usable. Frontend stages are
   Postgres.
 
 ### F4 — Operations dashboard (the primary product) (✅)
+
 Internal app, separate route tree (`/ops`), role-gated:
+
 1. **Incoming content queue** — `GET /api/intake/queue`
 2. **Processing status board** — per-recording stage timeline
    (`GET /api/jobs`), mirroring the demo's `PIPELINE_STAGES`
@@ -54,6 +68,7 @@ Internal app, separate route tree (`/ops`), role-gated:
 5. **Publishing queue** — per-client, per-platform calendar
 6. **Client management** — plans, cadence, brand config
 7. **Ops analytics** — approval rate, turnaround SLA, score-vs-performance
+
 - Reuse the Studio demo's visual language (it's effectively the ops UI mockup).
 - **Depends on:** B2–B4. ✅
   Done, built in phases (one commit each, each live-verified against the
@@ -76,13 +91,15 @@ Internal app, separate route tree (`/ops`), role-gated:
   - **F4.6** measure: real QA approval rate + median pipeline turnaround
     (the B6 slice computable today, in `/api/analytics/ops`); publish queue
     renders the B5 contract; score↔performance stays honestly "awaits B6"
-  `npm run integration:f4` renders the BUILT dashboard in happy-dom against
-  the live backend, clicks approve (typed note) + send through two
-  worklists, and verifies both transitions + audit rows in Postgres.
-  Publish/analytics surfaces fill in as B5/B6 land.
+    `npm run integration:f4` renders the BUILT dashboard in happy-dom against
+    the live backend, clicks approve (typed note) + send through two
+    worklists, and verifies both transitions + audit rows in Postgres.
+    Publish/analytics surfaces fill in as B5/B6 land.
 
 ### F5 — Client dashboard (limited visibility)
+
 Secondary by design. Four surfaces only:
+
 - Upload content (file or URL)
 - View deliverables
 - Approve content (the client side of the review workflow)
@@ -101,18 +118,19 @@ Secondary by design. Four surfaces only:
     pinned submissions (ops still see the full queue).
   - **Report** renders the B6 client report (`/api/analytics/clients/:id`),
     which 403s server-side if a client asks for a different client.
-  `npm run integration:f5` runs the whole thing in happy-dom against the
-  live backend with two clients seeded: verifies the fence (the neighbor's
-  data never renders), clicks approve with a note and checks the status
-  transition + audit attribution in Postgres, submits a URL through the
-  built UI and checks the `recordings` row, and renders the report.
-  `smoke-auth` also asserts the intake-queue fence at the API level.
+    `npm run integration:f5` runs the whole thing in happy-dom against the
+    live backend with two clients seeded: verifies the fence (the neighbor's
+    data never renders), clicks approve with a note and checks the status
+    transition + audit attribution in Postgres, submits a URL through the
+    built UI and checks the `recordings` row, and renders the report.
+    `smoke-auth` also asserts the intake-queue fence at the API level.
 
 ---
 
 ## Backend
 
 ### B1 — Skeleton (✅ this repo)
+
 - Express API with health check and every stage route stubbed
   (`backend/src/server.js`, `routes/`). Verified: boots, routes respond.
 - Postgres schema covering the whole operating system
@@ -121,6 +139,7 @@ Secondary by design. Four surfaces only:
 - **Done when:** schema applied to a real Postgres, API deployed.
 
 ### B2 — Intake + client records (✅)
+
 - Real `POST /api/intake`: presigned S3 upload or URL pull; create
   `recordings` row; feed the ops queue.
 - `clients` CRUD + `leads` endpoint for F3.
@@ -133,8 +152,10 @@ Secondary by design. Four surfaces only:
   including the done-criterion: bytes on disk, recording in the queue.
 
 ### B3 — The pipeline (the heart of the company) (✅)
+
 Queue workers (BullMQ + Redis or pg-boss), one per stage — stubs are in
 `backend/src/pipeline/`:
+
 1. `ingest` — probe media, normalize, store
 2. `transcribe` — provider-agnostic, word-level timestamps
 3. `analyze` — NLP/multimodal pass: high-retention moments, emotional peaks,
@@ -142,6 +163,7 @@ Queue workers (BullMQ + Redis or pg-boss), one per stage — stubs are in
 4. `score` — rank candidates (v1: heuristic + LLM; later retrained on B6 data)
 5. `generate` — cut, reframe to 9:16, caption burn-in, hook variants,
    platform-specific formatting (ffmpeg)
+
 - **Done when:** one recording in → scored, rendered clip candidates out,
   visible in the ops board with per-stage status and retry. ✅
   Done: `pipeline_jobs` is the queue itself (FOR UPDATE SKIP LOCKED; workers
@@ -156,6 +178,7 @@ Queue workers (BullMQ + Redis or pg-boss), one per stage — stubs are in
   source URL parks → retries on demand.
 
 ### B4 — Review workflow (✅)
+
 - Internal QA decisions (`POST /api/review/:clipId/decision`) with the
   status machine already encoded in the schema:
   `candidate → awaiting_review → approved_internal → awaiting_client → approved`.
@@ -178,6 +201,7 @@ Queue workers (BullMQ + Redis or pg-boss), one per stage — stubs are in
   QA → send → client sign-off. Both in CI.
 
 ### B5 — Publishing (✅)
+
 - Platform adapters (YouTube Shorts, TikTok, Instagram Reels, LinkedIn, X)
   behind one interface; per-client OAuth tokens stored encrypted.
 - Scheduler drains `publish_jobs` at `scheduled_at`; failures retry and
@@ -204,6 +228,7 @@ Queue workers (BullMQ + Redis or pg-boss), one per stage — stubs are in
   with errors, retry, and delivery links.
 
 ### B6 — Measurement + the optimization loop (✅)
+
 - Pollers pull per-post metrics into `clip_metrics`.
 - Client report aggregation (`GET /api/analytics/clients/:id`) for F5.
 - The differentiator: correlate `clips.score` with realized performance and
@@ -230,14 +255,15 @@ Queue workers (BullMQ + Redis or pg-boss), one per stage — stubs are in
     which ones it used in its payload. `POST /api/analytics/retrain` runs a
     cycle; the ops analytics surface shows ρ + weights with a retrain
     button.
-  Smokes: `npm run smoke:metrics` (39 assertions, including a PLANTED
-  signal→performance relationship the loop must detect and move toward) and
-  the pipeline smoke's B6 continuation (the real published clip gets
-  captured, appears in the client report, and its score stage records the
-  retrained weights it used). Both in CI. Under the local driver the
-  correlation reads near zero by design; live drivers make it the model.
+    Smokes: `npm run smoke:metrics` (39 assertions, including a PLANTED
+    signal→performance relationship the loop must detect and move toward) and
+    the pipeline smoke's B6 continuation (the real published clip gets
+    captured, appears in the client report, and its score stage records the
+    retrained weights it used). Both in CI. Under the local driver the
+    correlation reads near zero by design; live drivers make it the model.
 
 ### B7 — Auth, roles, hardening (✅)
+
 - Roles per the org: ops, editor, reviewer, account_manager, client
   (already in the `users` schema). Session auth, rate limits, audit log
   (review_events is the start), backups.

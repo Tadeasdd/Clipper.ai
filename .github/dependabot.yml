@@ -1,0 +1,43 @@
+# C4 — automated dependency updates.
+# Dependabot opens update PRs on a schedule; each PR fires the `pull_request`
+# trigger, so the full CI gate (ci.yml) runs against it before it can merge.
+# Three ecosystems: the two npm packages and the GitHub Actions used by CI
+# itself (so action versions stay current and can be pinned over time).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    versioning-strategy: increase
+    groups:
+      # One PR for routine patch/minor bumps keeps the noise down; majors still
+      # come as individual PRs so a breaking change is reviewed on its own.
+      backend-minor-patch:
+        applies-to: version-updates
+        update-types: [minor, patch]
+    labels: [dependencies, backend]
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    versioning-strategy: increase
+    groups:
+      frontend-minor-patch:
+        applies-to: version-updates
+        update-types: [minor, patch]
+    labels: [dependencies, frontend]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      actions-all:
+        applies-to: version-updates
+        patterns: ['*']
+    labels: [dependencies, ci]

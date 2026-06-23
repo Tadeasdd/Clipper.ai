@@ -7,6 +7,7 @@ import { q } from '../db/index.js';
 import { id } from '../lib/ids.js';
 import { requireAuth, INTERNAL, hashPassword } from '../lib/auth.js';
 import { validate, paginate } from '../lib/validate.js';
+import { passwordError } from '../lib/password-policy.js';
 import { audit } from '../lib/audit.js';
 
 const r = Router();
@@ -24,9 +25,8 @@ r.post('/', requireAuth('ops', 'account_manager'), validate({
 }), async (req, res, next) => {
   try {
     const { email, role, clientId, password } = req.body || {};
-    if (!password || String(password).length < 8) {
-      return res.status(400).json({ error: 'password (≥ 8 characters) required — the account holder changes it after first sign-in' });
-    }
+    const pwErr = !password ? 'password required — the account holder changes it after first sign-in' : passwordError(password);
+    if (pwErr) return res.status(400).json({ error: pwErr });
     const trimmed = String(email || '').trim().toLowerCase();
     if (!EMAIL.test(trimmed)) return res.status(400).json({ error: 'valid email required' });
     if (!ROLES.includes(role)) return res.status(400).json({ error: `role must be one of ${ROLES.join(' | ')}` });

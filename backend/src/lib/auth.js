@@ -8,6 +8,7 @@
 import { randomBytes, scryptSync, timingSafeEqual, createHash } from 'node:crypto';
 import { q } from '../db/index.js';
 import { log } from './log.js';
+import { id } from './ids.js';
 
 export const INTERNAL = ['ops', 'editor', 'reviewer', 'account_manager'];
 export const SESSION_TTL_H = Number(process.env.SESSION_TTL_H || 24 * 7);
@@ -30,17 +31,53 @@ export function verifyPassword(password, stored) {
 /* ── sessions ──────────────────────────────────────────────────────────── */
 const sha256 = (s) => createHash('sha256').update(s).digest('hex');
 
-export async function createSession(userId) {
+/** Create a session. `meta` (C2) records how + from where it was minted so the
+ *  security panel can list and revoke it; all fields are optional, so the old
+ *  one-arg call sites keep working unchanged. */
+export async function createSession(userId, meta = {}) {
   const token = randomBytes(24).toString('hex');
+  const sessionId = id('ses');
   const expiresAt = new Date(Date.now() + SESSION_TTL_H * 3600_000);
-  await q('INSERT INTO sessions (token_hash, user_id, expires_at) VALUES ($1, $2, $3)',
-    [sha256(token), userId, expiresAt]);
-  return { token, expiresAt };
+  await q(`INSERT INTO sessions (token_hash, user_id, expires_at, id, ip, user_agent, auth_method, last_seen_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, now())`,
+    [sha256(token), userId, expiresAt, sessionId,
+     meta.ip || null, (meta.userAgent || '').slice(0, 300) || null, meta.authMethod || 'password']);
+  return { token, expiresAt, sessionId };
 }
 
 export async function revokeSession(token) {
   await q('UPDATE sessions SET revoked_at = now() WHERE token_hash = $1 AND revoked_at IS NULL',
     [sha256(token)]);
+}
+
+/* ── session management (C2): list + revoke your own sessions ─────────────── */
+/** Active sessions for a user, newest first; `current` marks the caller's own. */
+export async function listSessions(userId, currentToken) {
+  const { rows } = await q(`
+    SELECT id, ip, user_agent, auth_method, created_at, last_seen_at, expires_at,
+           (token_hash = $2) AS current
+    FROM sessions
+    WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > now()
+    ORDER BY created_at DESC`,
+    [userId, sha256(currentToken || '')]);
+  return rows;
+}
+
+/** Revoke one of a user's own sessions by its public id. Returns true if a row
+ *  was revoked (scoped to userId so nobody can revoke another account's). */
+export async function revokeSessionById(userId, sessionId) {
+  const { rowCount } = await q(
+    'UPDATE sessions SET revoked_at = now() WHERE id = $1 AND user_id = $2 AND revoked_at IS NULL',
+    [sessionId, userId]);
+  return rowCount > 0;
+}
+
+/** "Sign out everywhere else" — revoke every active session except the caller's. */
+export async function revokeOtherSessions(userId, currentToken) {
+  const { rowCount } = await q(
+    'UPDATE sessions SET revoked_at = now() WHERE user_id = $1 AND token_hash <> $2 AND revoked_at IS NULL',
+    [userId, sha256(currentToken || '')]);
+  return rowCount;
 }
 
 function tokenFrom(req) {
@@ -51,12 +88,22 @@ function tokenFrom(req) {
 
 async function userForToken(token) {
   if (!token) return null;
+  const hash = sha256(token);
   const { rows } = await q(`
-    SELECT u.id, u.email, u.role, u.client_id
+    SELECT u.id, u.email, u.role, u.client_id, s.last_seen_at
     FROM sessions s JOIN users u ON u.id = s.user_id
     WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > now()`,
-    [sha256(token)]);
-  return rows[0] || null;
+    [hash]);
+  const row = rows[0];
+  if (!row) return null;
+  // Best-effort, throttled activity stamp (≤ 1 write/min) so the session list
+  // shows honest "last active" without a write on every authed request.
+  const last = row.last_seen_at ? new Date(row.last_seen_at).getTime() : 0;
+  if (Date.now() - last > 60_000) {
+    q('UPDATE sessions SET last_seen_at = now() WHERE token_hash = $1', [hash]).catch(() => {});
+  }
+  const { last_seen_at, ...user } = row;
+  return user;
 }
 
 /* ── middleware ────────────────────────────────────────────────────────── */

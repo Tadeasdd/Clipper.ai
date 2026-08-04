@@ -35,7 +35,7 @@ jobs:
     timeout-minutes: 25
     environment: staging
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Canary deploy → staging (health-gated, auto-rollback)
         env:
           HEALTH_TIMEOUT: "150"
@@ -55,6 +55,6 @@ jobs:
     timeout-minutes: 25
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Canary deploy → production (reviewed; dry-run until a host is wired)
         run: bash ops/deploy/canary.sh --target prod --dry-run
